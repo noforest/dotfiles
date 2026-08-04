@@ -11,8 +11,32 @@
 
 local M = {}
 
-local hl_cache = {}   ---@type table<string, string>
+local hl_cache = {}   ---@type table<string, string>          clé "fg/bg" -> nom du groupe
+local hl_defs = {}    ---@type table<string, vim.api.keyset.highlight>  nom -> définition
 local hl_count = 0
+local hooked = false
+
+---Réapplique tous les groupes créés jusqu'ici.
+---Nécessaire parce qu'un `:colorscheme` fait `:highlight clear` et efface donc
+---les groupes de l'art — c'est ce qui rendait le dashboard monochrome, la
+---config étant chargée AVANT que le colorscheme ne soit appliqué.
+local function reapply()
+    for name, def in pairs(hl_defs) do
+        vim.api.nvim_set_hl(0, name, def)
+    end
+end
+
+local function ensure_hook()
+    if hooked then
+        return
+    end
+    hooked = true
+    vim.api.nvim_create_autocmd("ColorScheme", {
+        group = vim.api.nvim_create_augroup("AnsiArtHighlights", { clear = true }),
+        callback = reapply,
+        desc = "Réapplique les couleurs de l'art ANSI après un changement de thème",
+    })
+end
 
 ---Crée (ou réutilise) un groupe de surbrillance pour un couple avant-plan / arrière-plan.
 ---@param fg string|nil  "#rrggbb"
@@ -26,9 +50,12 @@ local function hl_group(fg, bg)
     if hl_cache[key] then
         return hl_cache[key]
     end
+    ensure_hook()
     hl_count = hl_count + 1
     local name = ("SnacksAnsiArt%d"):format(hl_count)
-    vim.api.nvim_set_hl(0, name, { fg = fg, bg = bg })
+    local def = { fg = fg, bg = bg }
+    hl_defs[name] = def
+    vim.api.nvim_set_hl(0, name, def)
     hl_cache[key] = name
     return name
 end

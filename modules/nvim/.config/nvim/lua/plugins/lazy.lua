@@ -2648,12 +2648,16 @@ require("lazy").setup({
                             dlines = vim.list_slice(dlines, 1, visible)
                         end
 
+                        -- Deux éléments plutôt qu'un : dans D:format, dès que `text` est
+                        -- défini, snacks ignore `icon` et `title` (le bloc `text` remplace
+                        -- la colonne centrale). Le titre doit donc être son propre élément.
                         return {
-                            pane = 1,
-                            icon = " ",
-                            title = title,
-                            text = require("ansi_art").parse(table.concat(dlines, "\n")),
-                            padding = 1,
+                            { pane = 1, icon = " ", title = title },
+                            {
+                                pane = 1,
+                                text = require("ansi_art").parse(table.concat(dlines, "\n")),
+                                padding = 1,
+                            },
                         }
                     end,
 
