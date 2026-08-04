@@ -2657,38 +2657,38 @@ require("lazy").setup({
                         Snacks.dashboard.update()
                     end
 
-                    -- -- Aperçu d'image par chafa, au lieu du protocole graphique de snacks.
-                    -- -- Surcharge du module depuis la config plutôt qu'un patch du plugin :
-                    -- -- une mise à jour de snacks ne peut plus l'effacer.
-                    -- -- NOTE: on passe { pty = true } SANS ft. La logique amont est
-                    -- --       `pty = opts.pty ~= false and not opts.ft` : ajouter ft
-                    -- --       désactiverait le terminal et chafa s'afficherait en échappements bruts.
-                    -- local preview = require("snacks.picker.preview")
-                    -- preview.image = function(ctx)
-                    --     local path = Snacks.picker.util.path(ctx.item)
-                    --     if not path then
-                    --         ctx.preview:notify("no image path", "error")
-                    --         return
-                    --     end
-                    --
-                    --     local ext = path:match("^.+%.([^.]+)$")
-                    --     local allowed = { png = true, jpg = true, jpeg = true, gif = true,
-                    --                       bmp = true, webp = true, svg = true }
-                    --     if not (ext and allowed[ext:lower()]) then
-                    --         ctx.preview:notify("Unsupported image format", "warn")
-                    --         return
-                    --     end
-                    --
-                    --     ctx.preview:set_title(ctx.item.title or vim.fn.fnamemodify(path, ":t"))
-                    --     local dim = ctx.preview.win:dim()
-                    --     preview.cmd({
-                    --         "chafa",
-                    --         "--animate=off",
-                    --         "--clear",
-                    --         "--size", dim.width .. "x" .. dim.height,
-                    --         path,
-                    --     }, ctx, { pty = true })
-                    -- end
+                    -- Aperçu d'image par chafa, au lieu du protocole graphique de snacks.
+                    -- Surcharge du module depuis la config plutôt qu'un patch du plugin :
+                    -- une mise à jour de snacks ne peut plus l'effacer.
+                    -- NOTE: on passe { pty = true } SANS ft. La logique amont est
+                    --       `pty = opts.pty ~= false and not opts.ft` : ajouter ft
+                    --       désactiverait le terminal et chafa s'afficherait en échappements bruts.
+                    local preview = require("snacks.picker.preview")
+                    preview.image = function(ctx)
+                        local path = Snacks.picker.util.path(ctx.item)
+                        if not path then
+                            ctx.preview:notify("no image path", "error")
+                            return
+                        end
+
+                        local ext = path:match("^.+%.([^.]+)$")
+                        local allowed = { png = true, jpg = true, jpeg = true, gif = true,
+                                          bmp = true, webp = true, svg = true }
+                        if not (ext and allowed[ext:lower()]) then
+                            ctx.preview:notify("Unsupported image format", "warn")
+                            return
+                        end
+
+                        ctx.preview:set_title(ctx.item.title or vim.fn.fnamemodify(path, ":t"))
+                        local dim = ctx.preview.win:dim()
+                        preview.cmd({
+                            "chafa",
+                            "--animate=off",
+                            "--clear",
+                            "--size", dim.width .. "x" .. dim.height,
+                            path,
+                        }, ctx, { pty = true })
+                    end
                     -- Setup some globals for debugging (lazy-loaded)
                     _G.dd = function(...)
                         Snacks.debug.inspect(...)

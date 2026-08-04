@@ -60,7 +60,7 @@ module_units() {
 # xfconfd réécrit ses XML de façon atomique et les surveille par inotify ; les lier
 # vers le dépôt l'a fait boucler, ce qui a saturé le bus D-Bus de la session et
 # bloqué thunar et flameshot. Ce n'est pas de la configuration, c'est de l'état.
-NEVER_LINK='/\.config/xfce4/xfconf/|/\.config/dconf/|/\.config/pulse/|/\.local/state/|\.lock$|/savedState\.|/recently-used'
+NEVER_LINK='/\.config/systemd/|/\.config/xfce4/xfconf/|/\.config/dconf/|/\.config/pulse/|/\.local/state/|\.lock$|/savedState\.|/recently-used'
 
 cmd_check_never_link() {  # cmd_check_never_link <chemin-relatif> → 0 si interdit
     printf '%s\n' "/$1" | grep -qE "$NEVER_LINK"
