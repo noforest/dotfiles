@@ -1,0 +1,7 @@
+
+[Unit]
+Description=Backup vers Google Drive avec rclone
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/backup-to-gdrive.sh

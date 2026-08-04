@@ -1,0 +1,22 @@
+[Added Associations]
+text/html=firefox-15.desktop;firefox-14.desktop;
+application/pdf=okularApplication_pdf.desktop;firefox.desktop;userapp-nohup okular -- unique-2ZLUN3.desktop;userapp-Firefox-B31122.desktop;userapp-pdf-46AZQ3.desktop;
+image/jpeg=qimgv.desktop;
+image/png=qimgv.desktop;
+application/x-shellscript=nvim.desktop;
+text/markdown=nvim.desktop;
+video/mpeg=vlc.desktop;
+video/x-matroska=vlc.desktop;
+
+[Default Applications]
+text/html=firefox-15.desktop;
+x-scheme-handler/http=firefox.desktop
+x-scheme-handler/https=firefox.desktop
+x-scheme-handler/claude-cli=claude-code-url-handler.desktop
+application/pdf=userapp-pdf-46AZQ3.desktop
+image/jpeg=qimgv.desktop
+image/png=qimgv.desktop
+text/markdown=nvim.desktop
+video/mpeg=vlc.desktop
+video/x-matroska=vlc.desktop
+x-scheme-handler/claude=claude.desktop

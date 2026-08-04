@@ -1,0 +1,10 @@
+
+[Unit]
+Description=Lance le backup chaque week-end
+
+[Timer]
+OnCalendar=Sat,Sun
+Persistent=true
+
+[Install]
+WantedBy=timers.target

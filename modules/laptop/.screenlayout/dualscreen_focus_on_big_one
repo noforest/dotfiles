@@ -1,0 +1,11 @@
+#!/bin/sh
+
+
+# Vérifier si le moniteur externe est connecté
+if xrandr | grep "HDMI-A-0 connected"; then
+  # Si le moniteur externe est connecté, l'utiliser seul
+  xrandr --output HDMI-A-0 --primary --auto --output eDP --off
+else
+  # Si aucun moniteur externe, utiliser uniquement l'écran du laptop
+  xrandr --output eDP --auto
+fi

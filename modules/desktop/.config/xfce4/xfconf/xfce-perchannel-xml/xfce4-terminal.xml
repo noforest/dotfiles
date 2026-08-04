@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<channel name="xfce4-terminal" version="1.0">
+  <property name="misc-default-geometry" type="string" value="80x26"/>
+  <property name="font-name" type="string" value="LiterationMono Nerd Font 12"/>
+  <property name="encoding" type="string" value="UTF-8"/>
+</channel>

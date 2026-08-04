@@ -1,0 +1,2 @@
+#!/bin/sh
+exec /usr/bin/X -nolisten tcp "$@" > ~/.xlog 2>&1

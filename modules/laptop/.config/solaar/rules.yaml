@@ -1,0 +1,7 @@
+%YAML 1.3
+---
+- Key: [Screen Lock, pressed]
+- KeyPress:
+  - XF86_ScreenSaver
+  - click
+...
