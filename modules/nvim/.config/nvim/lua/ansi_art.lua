@@ -16,13 +16,34 @@ local hl_defs = {}    ---@type table<string, vim.api.keyset.highlight>  nom -> d
 local hl_count = 0
 local hooked = false
 
----Réapplique tous les groupes créés jusqu'ici.
----Nécessaire parce qu'un `:colorscheme` fait `:highlight clear` et efface donc
----les groupes de l'art — c'est ce qui rendait le dashboard monochrome, la
----config étant chargée AVANT que le colorscheme ne soit appliqué.
+---Couleurs de `Normal`, lues au moment de l'APPLICATION.
+---Indispensable : la config est chargée par lazy AVANT que le colorscheme ne soit
+---appliqué, et le Normal par défaut de nvim a pour fond #14161b. Figer cette valeur
+---au parsing peignait les cellules inversées en #14161b au lieu de #1e1e2e — un fond
+---légèrement plus sombre que celui du dashboard, visible comme une ombre.
+local function normal_colors()
+    local n = vim.api.nvim_get_hl(0, { name = "Normal", link = false })
+    return n.fg and ("#%06x"):format(n.fg) or "#cdd6f4",
+           n.bg and ("#%06x"):format(n.bg) or "#1e1e2e"
+end
+
+---Remplace les marqueurs par les couleurs courantes de Normal.
+---@param def table définition pouvant contenir "NORMAL_FG" / "NORMAL_BG"
+---@return vim.api.keyset.highlight
+local function resolve(def)
+    local nfg, nbg = normal_colors()
+    local out = { bold = def.bold }
+    out.fg = def.fg == "NORMAL_FG" and nfg or (def.fg == "NORMAL_BG" and nbg or def.fg)
+    out.bg = def.bg == "NORMAL_FG" and nfg or (def.bg == "NORMAL_BG" and nbg or def.bg)
+    return out
+end
+
+---Réapplique tous les groupes créés jusqu'ici, avec les couleurs du thème courant.
+---Nécessaire parce qu'un `:colorscheme` fait `:highlight clear` et efface les
+---groupes de l'art — c'est ce qui rendait le dashboard monochrome.
 local function reapply()
     for name, def in pairs(hl_defs) do
-        vim.api.nvim_set_hl(0, name, def)
+        vim.api.nvim_set_hl(0, name, resolve(def))
     end
 end
 
@@ -43,18 +64,11 @@ end
 ---@param bg string|nil  "#rrggbb"
 ---@param bold boolean|nil
 ---@return string|nil
----Couleurs par défaut du buffer, nécessaires pour la vidéo inversée : inverser
----une cellule sans arrière-plan explicite revient à peindre le fond du terminal.
-local function normal_colors()
-    local n = vim.api.nvim_get_hl(0, { name = "Normal", link = false })
-    return n.fg and ("#%06x"):format(n.fg) or "#cdd6f4",
-           n.bg and ("#%06x"):format(n.bg) or "#1e1e2e"
-end
-
 local function hl_group(fg, bg, bold, reverse)
     if reverse then
-        local nfg, nbg = normal_colors()
-        fg, bg = bg or nbg, fg or nfg
+        -- Marqueurs plutôt que couleurs : elles seront résolues à l'application,
+        -- quand le colorscheme aura été chargé (voir resolve/reapply).
+        fg, bg = bg or "NORMAL_BG", fg or "NORMAL_FG"
     end
     if not fg and not bg and not bold then
         return nil
@@ -68,7 +82,7 @@ local function hl_group(fg, bg, bold, reverse)
     local name = ("SnacksAnsiArt%d"):format(hl_count)
     local def = { fg = fg, bg = bg, bold = bold or nil }
     hl_defs[name] = def
-    vim.api.nvim_set_hl(0, name, def)
+    vim.api.nvim_set_hl(0, name, resolve(def))
     hl_cache[key] = name
     return name
 end
