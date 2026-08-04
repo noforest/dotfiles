@@ -2532,12 +2532,12 @@ require("lazy").setup({
                 enabled = true,
                 -- pane_gap = 8, -- empty columns between vertical panes
                 pane_gap = 16, -- empty columns between vertical panes
-                -- 51 et non 50 : le header ASCII fait 51 colonnes de large. Avec width = 50
-                -- il débordait du panneau 1 et poussait le panneau 2 d'une colonne, mais
-                -- uniquement sur ses propres lignes — l'art se retrouvait décalé en haut et
-                -- pas en bas. Invisible du temps où l'art était une fenêtre flottante,
-                -- positionnée indépendamment du contenu du panneau 1.
-                width = 51,
+                -- NOTE: le header ASCII fait 51 colonnes, donc il déborde d'une colonne.
+                -- Sans conséquence tant que l'art est une fenêtre flottante : celle-ci est
+                -- positionnée indépendamment du contenu du panneau 1. Si l'art repasse un jour
+                -- en texte statique, il faudra remettre 51, sinon ses quatre premières lignes
+                -- (celles qui longent le header) se décalent d'une colonne.
+                width = 50,
                 -- width = 60,
                 -- row = nil,     -- dashboard position. nil for center
                 -- col = nil,     -- dashboard position. nil for center
@@ -2670,26 +2670,22 @@ require("lazy").setup({
                     { section = "startup" },
                     should_show_image() and {
                         {
-                            -- Texte coloré statique, plus une section "terminal".
+                            -- Section terminal avec /usr/bin/cat en dur : chemin absolu, donc
+                            -- insensible à un éventuel alias cat=bat. (Vérifié : nvim utilise
+                            -- /bin/bash -c, où `type cat` répond déjà /usr/sbin/cat — l'alias
+                            -- du .zshrc n'y arrive pas. Le chemin absolu lève le doute.)
                             --
-                            -- POURQUOI : une section terminal est détruite et recréée à chaque
-                            -- dashboard:update(), donc à chaque WinResized — donc à chaque
-                            -- <leader>e. Elle vit dans une fenêtre flottante posée par-dessus le
-                            -- dashboard, redimensionnée à chaque fois : d'où le clignotement et
-                            -- l'art qui se déforme. Aucun réglage de largeur ne corrige ça, le
-                            -- problème est la recréation elle-même.
-                            --
-                            -- lua/ansi_art.lua traduit les couleurs ANSI de chafa en morceaux de
-                            -- texte avec groupes de surbrillance. Le résultat fait partie du
-                            -- buffer du dashboard : jamais relancé, jamais reflowé, il suit la
-                            -- mise en page sans bouger.
-                            --
-                            -- Pour régénérer l'art :
-                            --   chafa --symbols all --size 50 image.png > samurai_logo_blue_doom_5040.txt
-                            text = require("ansi_art").read(
-                                vim.fn.stdpath("config") .. "/samurai_logo_blue_doom_5040.txt"
-                            ) or { { "" } },
+                            -- CONTREPARTIE : une section terminal est recréée à chaque
+                            -- dashboard:update(), donc à chaque WinResized — le clignotement à
+                            -- l'ouverture de <leader>e revient. La version en texte statique
+                            -- (lua/ansi_art.lua, toujours présent) l'évitait :
+                            --   text = require("ansi_art").read(
+                            --       vim.fn.stdpath("config") .. "/samurai_logo_blue_doom_5040.txt") or { { "" } },
+                            section = "terminal",
+                            cmd = "/usr/bin/cat " .. vim.fn.stdpath("config")
+                                .. "/samurai_logo_blue_doom_5040.txt",
                             pane = 2,
+                            height = 35,
                         }
                     },
                 },
