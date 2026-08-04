@@ -1,0 +1,115 @@
+format = """
+[ ](bg:color_gray_background)\
+$os\
+$username\
+[](bg:color_magenta fg:color_gray_background)\
+$directory\
+"""
+
+# right_format = """$cmd_duration  $git_branch$git_commit$git_state$git_status"""
+
+right_format = """
+$cmd_duration \
+$git_branch\
+$git_commit\
+$git_status\
+"""
+
+add_newline = true
+# right_format = """
+# $cmd_duration \
+# """
+
+command_timeout = 1000
+palette = 'gruvbox_dark'
+
+[palettes.gruvbox_dark]
+color_fg0 = '#fbf1c7'
+color_bg1 = '#3c3836'
+color_bg3 = '#665c54'
+color_blue = '#458588'
+color_aqua = '#689d6a'
+color_green = '#98971a'
+color_orange = '#d65d0e'
+color_purple = '#b16286'
+color_red = '#cc241d'
+color_yellow = '#d79921'
+
+color_gray_background='#1f122b'
+color_green_uniclo='#458588'
+color_green_uniclo_darken='#315f61'
+color_yellow_darken='#E5C07B'
+color_gray_dark='#222222'
+color_dark='#000000'
+color_gray90='#e5e5e5'
+color_gray60='#999999'
+color_red_sanguinaire='#962814'
+# color_magenta='#C678DD'
+# color_magenta='#8f47ba'
+color_magenta='#9c4dcb'
+
+
+[os]
+disabled = false
+style = "bg:color_gray_background fg:color_gray90"
+
+[os.symbols]
+Windows = "󰍲 "
+Ubuntu = "󰕈 "
+SUSE = " "
+Raspbian = "󰐿 "
+Mint = "󰣭 "
+Macos = "󰀵 "
+Manjaro = " "
+Linux = "󰌽 "
+Gentoo = "󰣨 "
+Fedora = "󰣛 "
+Alpine = " "
+Amazon = " "
+Android = " "
+Arch = "󰣇 "
+Artix = "󰣇 "
+EndeavourOS = " "
+CentOS = " "
+Debian = "󰣚 "
+Redhat = "󱄛 "
+RedHatEnterprise = "󱄛 "
+Pop = " "
+
+[username]
+show_always = true
+style_user = "bg:color_gray_background fg:color_gray90"
+style_root = "bg:color_gray_background fg:color_gray90"
+format = '[ $user ]($style)'
+
+[directory]
+style = "fg:color_dark bg:color_magenta"
+format = "[ $path ]($style)[](fg:color_magenta) "
+truncation_length = 8
+truncate_to_repo=true
+# truncation_symbol = "…/"
+
+[git_branch]
+symbol = " "
+style = "color_gray_background"
+format = '[](fg:color_gray_background)[[ $symbol $branch ](fg:color_gray90 bg:color_gray_background)]($style)'
+
+[git_status]
+style = "bg:color_gray_background"
+format='([ \[$all_status$ahead_behind\]]($style))'
+ahead = ""
+behind = ""
+diverged = ""
+deleted = ""
+
+[git_commit]
+style = "bg:color_gray_background"
+format='[\($hash$tag\)]($style)'
+
+[cmd_duration]
+min_time = 5000
+style = 'color_gray90'
+format = '\[[$duration]($style)\]'
+
+[character]
+disabled = true

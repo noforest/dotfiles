@@ -1,0 +1,10 @@
+# gui:
+  # showIcons: true
+  # nerdFontsVersion: "3"
+# git:
+#   paging:
+#     colorArg: always
+#     useConfig: true
+
+git:
+  branchLogCmd: git log --graph --color=always --abbrev-commit --oneline {{branchName}} --

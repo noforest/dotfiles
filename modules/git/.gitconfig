@@ -1,0 +1,22 @@
+# Identité et routage par compte : ~/.gitconfig-local, fichier réel de $HOME,
+# hors dépôt (ni lié ni suivi). Modèle : examples/gitconfig-local.
+[include]
+  path = ~/.gitconfig-local
+
+[push]
+  default = matching
+
+[pull]
+  ff = only
+
+[color]
+  #Enable colors in color-supporting terminals
+  ui = auto
+
+[alias]
+  co = checkout
+  st = status
+  ci = commit
+  glog = log --graph --oneline --decorate=short
+[merge]
+	conflictstyle = diff3

@@ -1,0 +1,26 @@
+# Fichiers compilés
+*.o
+*.so
+*.a
+
+# Patches rejetés
+*.rej
+
+# Fichiers de sauvegarde et temporaires
+*~
+*.swp
+*.tmp
+*.bak
+*.orig
+
+# Cache d'éditeurs
+.netrwhist
+tags
+Session.vim
+
+# Divers
+.DS_Store
+*.log
+
+# Ignore les dossiers .git.bak partout dans le dépôt
+**/.git*/
