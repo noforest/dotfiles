@@ -43,7 +43,19 @@ end
 ---@param bg string|nil  "#rrggbb"
 ---@param bold boolean|nil
 ---@return string|nil
-local function hl_group(fg, bg, bold)
+---Couleurs par défaut du buffer, nécessaires pour la vidéo inversée : inverser
+---une cellule sans arrière-plan explicite revient à peindre le fond du terminal.
+local function normal_colors()
+    local n = vim.api.nvim_get_hl(0, { name = "Normal", link = false })
+    return n.fg and ("#%06x"):format(n.fg) or "#cdd6f4",
+           n.bg and ("#%06x"):format(n.bg) or "#1e1e2e"
+end
+
+local function hl_group(fg, bg, bold, reverse)
+    if reverse then
+        local nfg, nbg = normal_colors()
+        fg, bg = bg or nbg, fg or nfg
+    end
     if not fg and not bg and not bold then
         return nil
     end
@@ -96,9 +108,17 @@ local function apply_sgr(params, state)
     while i <= #codes do
         local c = codes[i]
         if c == 0 then
-            state.fg, state.bg, state.bold = nil, nil, nil
+            state.fg, state.bg, state.bold, state.reverse = nil, nil, nil, nil
         elseif c == 1 then
             state.bold = true
+        elseif c == 7 then
+            -- Vidéo inversée : échange avant-plan et arrière-plan.
+            -- chafa s'en sert pour économiser des octets (52 fois dans le logo).
+            -- L'ignorer donnait 52 cellules aux couleurs inversées, ce qui déformait
+            -- visiblement l'image par rapport à ce qu'affiche le terminal.
+            state.reverse = true
+        elseif c == 27 then
+            state.reverse = nil
         elseif c == 22 then
             state.bold = nil
         elseif c == 39 then
@@ -146,7 +166,7 @@ function M.parse(raw)
             local s, e, params, final = line:find("\27%[([0-9;?]*)(%a)", pos)
             if s then
                 if s > pos then
-                    chunks[#chunks + 1] = { line:sub(pos, s - 1), hl = hl_group(state.fg, state.bg) }
+                    chunks[#chunks + 1] = { line:sub(pos, s - 1), hl = hl_group(state.fg, state.bg, state.bold, state.reverse) }
                 end
                 if final == "m" then
                     apply_sgr(params, state)
@@ -155,7 +175,7 @@ function M.parse(raw)
             else
                 local rest = line:sub(pos)
                 if #rest > 0 then
-                    chunks[#chunks + 1] = { rest, hl = hl_group(state.fg, state.bg) }
+                    chunks[#chunks + 1] = { rest, hl = hl_group(state.fg, state.bg, state.bold, state.reverse) }
                 end
                 break
             end
