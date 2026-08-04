@@ -678,6 +678,10 @@ require("lazy").setup({
                         "--column",
                         "--smart-case",
                         "--hidden",
+                        -- Suivre les liens symboliques : les configs de ~/.config pointent
+                        -- vers le dépôt dotfiles. Sans --follow, rg les ignore et <leader>fg
+                        -- ne voit rien (mesuré dans ~/.config/nvim : 16 fichiers sans, 33 avec).
+                        "--follow",
                         "--glob=!.git/",
                     },
                     mappings = {
@@ -712,10 +716,23 @@ require("lazy").setup({
                 pickers = {
                     find_files = {
                         sort_mru = true,
+                        -- Suivre les liens symboliques (dotfiles) et montrer les fichiers cachés
+                        follow = true,
+                        hidden = true,
                         layout_config = {
                             prompt_position = "top",
                             preview_cutoff = 120,
                         },
+                    },
+                    live_grep = {
+                        -- vimgrep_arguments contient déjà --follow ; ceci ne concerne
+                        -- que la liste des fichiers parcourus par live_grep
+                        follow = true,
+                        hidden = true,
+                    },
+                    grep_string = {
+                        follow = true,
+                        hidden = true,
                     },
                     git_files = {
                         layout_config = {
@@ -875,6 +892,15 @@ require("lazy").setup({
             local events = require("neo-tree.events")
 
             require("neo-tree").setup({
+                -- Affiche la cible des liens symboliques.
+                -- Le composant existe déjà dans le renderer par défaut de neo-tree,
+                -- il est simplement désactivé d'origine.
+                default_component_configs = {
+                    symlink_target = {
+                        enabled = true,
+                    },
+                },
+
                 window = {
                     position = "left",
                     width = 40,
@@ -1150,6 +1176,43 @@ require("lazy").setup({
                   }
 
             })
+
+            -- Raccourcit la cible affichée pour un lien symbolique.
+            -- neo-tree rend UNE ligne par fichier : impossible d'y mettre un retour à la
+            -- ligne, on abrège donc le chemin plutôt que de l'afficher en entier.
+            --   avant : ➛ /home/for/Documents/programming/github-noforest/dotfiles/modules/nvim/.config/nvim/lua/plugins/lazy.lua
+            --   après : ➛ dotfiles:…/plugins/lazy.lua
+            --
+            -- L'assignation se fait sur le module lui-même : setup() écrase la clé
+            -- `components` de la config source par ce module (setup/init.lua:537),
+            -- donc la passer dans la config utilisateur ne fonctionne pas.
+            local fs_components = require("neo-tree.sources.filesystem.components")
+            fs_components.symlink_target = function(config, node, _)
+                if not node.is_link then
+                    return {}
+                end
+                local target = node.link_to or ""
+                local dot = vim.env.DOTFILES_DIR
+                    or (vim.env.HOME .. "/Documents/programming/github-noforest/dotfiles")
+                local label
+                if target:sub(1, #dot) == dot then
+                    local parts = vim.split(target:sub(#dot + 2), "/", { plain = true })
+                    label = "dotfiles:"
+                        .. (#parts > 2
+                            and ("…/" .. parts[#parts - 1] .. "/" .. parts[#parts])
+                            or table.concat(parts, "/"))
+                else
+                    label = target:gsub("^" .. vim.pesc(vim.env.HOME), "~")
+                    local parts = vim.split(label, "/", { plain = true })
+                    if #parts > 4 then
+                        label = parts[1] .. "/…/" .. parts[#parts - 1] .. "/" .. parts[#parts]
+                    end
+                end
+                return {
+                    text = " ➛ " .. label,
+                    highlight = config.highlight or "NeoTreeSymbolicLinkTarget",
+                }
+            end
         end,
     },
 
@@ -2259,6 +2322,19 @@ require("lazy").setup({
                             },
                         },
                     },
+                    -- Suivre les liens symboliques.
+                    -- Les configs de ~/.config sont des liens vers le dépôt dotfiles ;
+                    -- sans ceci, fd et rg les ignorent et la moitié des fichiers est
+                    -- invisible (mesuré dans ~/.config/nvim : 289 fichiers sans, 575 avec).
+                    files = {
+                        follow = true,
+                        hidden = true,
+                    },
+
+                    grep = {
+                        follow = true,
+                        hidden = true,
+                    },
                 },
 
                 win = {
@@ -2536,9 +2612,6 @@ require("lazy").setup({
                                 cmd = "echo 'Not enough commits yet. Need at least 2 commits to show diff.'",
                                 height = 3,
                                 padding = 1,
-                                -- Le message fait 61 caractères : sans width il se replierait
-                                -- dans la flottante de 50 colonnes (opts.width du dashboard).
-                                width = 65,
                             }
                         end
 
@@ -2556,28 +2629,31 @@ require("lazy").setup({
                         local height = 7
                         local visible = height - 1
 
+                        -- Texte statique plutôt qu'une section "terminal".
+                        -- L'ancienne version ajoutait « #os.time() » à la commande pour forcer
+                        -- le rafraîchissement. Effet de bord : la clé de cache changeait à chaque
+                        -- appel, donc git était relancé à CHAQUE dashboard:update() — donc à
+                        -- chaque <leader>e — et son rendu asynchrone se voyait clignoter.
+                        -- Ici git tourne une fois, en synchrone, quand la section est construite :
+                        -- le texte est prêt avant l'affichage. La touche « r » rafraîchit toujours.
+                        local out = vim.fn.system({
+                            "git", "-C", git_root, "--no-pager", "diff", "--stat",
+                            "--stat-width=50", "--color=always", "HEAD~1",
+                        })
+                        local dlines = vim.split(out, "\n", { plain = true })
+                        while #dlines > 0 and dlines[#dlines] == "" do
+                            table.remove(dlines)
+                        end
+                        if #dlines > visible then
+                            dlines = vim.list_slice(dlines, 1, visible)
+                        end
+
                         return {
                             pane = 1,
-                            section = "terminal",
-                            icon = " ",
+                            icon = " ",
                             title = title,
-                            -- cmd = "git -C " .. git_root .. " --no-pager diff --stat --stat-width=50 --color=always HEAD~1 #" .. os.time(),
-                            -- cmd = "git -C " .. git_root .. " --no-pager diff --stat --stat-width=50 HEAD~1 | head -n 7#" .. os.time()
-                            cmd =
-                            "git -C "
-                            .. git_root
-                            .. " --no-pager diff --stat --stat-width=50 --color=always HEAD~1"
-                            .. " | head -n "
-                            .. visible
-                            .. " #"
-                            .. os.time(),
-                            height = height,
+                            text = require("ansi_art").parse(table.concat(dlines, "\n")),
                             padding = 1,
-                            -- Même raison que pour le logo : sans width, la flottante fait
-                            -- opts.width (50). --stat-width=50 borne la sortie de git à 50
-                            -- colonnes, auxquelles s'ajoutent l'indentation et l'icône — les
-                            -- lignes les plus longues débordaient donc de justesse. 60 suffit.
-                            width = 60,
                         }
                     end,
 
@@ -2585,28 +2661,26 @@ require("lazy").setup({
                     { section = "startup" },
                     should_show_image() and {
                         {
-                            section = "terminal",
-                            -- cmd = "cat /home/for/.cache/nvim/chafa/samurai_logo_doom.txt; sleep .1",
-                            -- cmd = "cat /home/for/.cache/nvim/chafa/samurai_logo_doom.txt",
-                            cmd = "cat " .. vim.fn.stdpath("config") .. "/samurai_logo_blue_doom_5040.txt",
-                            ------------------------------------------------------------------------------------------------------
-                            -- cmd = "chafa /home/for/Pictures/logo/samurai_logo_blue_bis.png --symbols all --size 50; sleep 10",
-                            -- cmd = "chafa /home/for/Pictures/samurai_logo_blue_bis.png --symbols sextant --size 50; sleep .1",
-                            -- cmd = "chafa /home/for/Pictures/samurai_logo_gray.png --symbols all --size 55; sleep .1",
-                            ------------------------------------------------------------------------------------------------------
+                            -- Texte coloré statique, plus une section "terminal".
+                            --
+                            -- POURQUOI : une section terminal est détruite et recréée à chaque
+                            -- dashboard:update(), donc à chaque WinResized — donc à chaque
+                            -- <leader>e. Elle vit dans une fenêtre flottante posée par-dessus le
+                            -- dashboard, redimensionnée à chaque fois : d'où le clignotement et
+                            -- l'art qui se déforme. Aucun réglage de largeur ne corrige ça, le
+                            -- problème est la recréation elle-même.
+                            --
+                            -- lua/ansi_art.lua traduit les couleurs ANSI de chafa en morceaux de
+                            -- texte avec groupes de surbrillance. Le résultat fait partie du
+                            -- buffer du dashboard : jamais relancé, jamais reflowé, il suit la
+                            -- mise en page sans bouger.
+                            --
+                            -- Pour régénérer l'art :
+                            --   chafa --symbols all --size 50 image.png > samurai_logo_blue_doom_5040.txt
+                            text = require("ansi_art").read(
+                                vim.fn.stdpath("config") .. "/samurai_logo_blue_doom_5040.txt"
+                            ) or { { "" } },
                             pane = 2,
-                            -- indent = 8,
-                            height = 35,
-
-                            -- IMPORTANT: l'art fait 57 colonnes de large.
-                            -- Sans `width`, snacks utilise `self.opts.width - indent`, soit la
-                            -- largeur du dashboard, fixée à 50 plus bas. La fenêtre flottante qui
-                            -- affiche le terminal est alors 7 colonnes trop étroite et l'art s'y
-                            -- replie, d'où l'affichage déformé. 60 laisse une marge.
-                            -- (Le dashboard se reconstruit à chaque WinResized — donc à chaque
-                            -- ouverture de l'explorer — ce qui rend le défaut visible à ce
-                            -- moment-là, mais la cause est bien la largeur, pas le redimensionnement.)
-                            width = 60,
                         }
                     },
                 },
