@@ -1,0 +1,5 @@
+:DB postgresql://noah@localhost/db_test
+
+
+c'est l'équivalent de mon:
+psql -U noah -d db_test 

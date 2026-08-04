@@ -1,0 +1,27 @@
+diff --git a/lua/catppuccin/groups/integrations/bufferline.lua b/lua/catppuccin/groups/integrations/bufferline.lua
+index 3ca9bf0..41bcb35 100644
+--- a/lua/catppuccin/groups/integrations/bufferline.lua
++++ b/lua/catppuccin/groups/integrations/bufferline.lua
+@@ -37,8 +37,8 @@ function M.get(user_config)
+ 			tab_separator_selected = { fg = separator_fg, bg = active_bg },
+ 
+ 			tab_close = { fg = C.red, bg = inactive_bg },
+-			indicator_visible = { fg = C.peach, bg = inactive_bg, style = styles },
+-			indicator_selected = { fg = C.peach, bg = active_bg, style = styles },
++			indicator_visible = { fg = C.surface1, bg = inactive_bg, style = styles },
++			indicator_selected = { fg = C.text, bg = active_bg, style = styles },
+ 			-- separators
+ 			separator = { fg = separator_fg, bg = inactive_bg },
+ 			separator_visible = { fg = separator_fg, bg = inactive_bg },
+diff --git a/lua/catppuccin/utils/lualine.lua b/lua/catppuccin/utils/lualine.lua
+index 8f0b1f0..93106aa 100644
+--- a/lua/catppuccin/utils/lualine.lua
++++ b/lua/catppuccin/utils/lualine.lua
+@@ -4,6 +4,7 @@ return function(flavour)
+ 	local catppuccin = {}
+ 
+ 	local transparent_bg = O.transparent_background and "NONE" or C.mantle
++	-- local transparent_bg = O.transparent_background and "NONE" or C.crust
+ 
+ 	catppuccin.normal = {
+ 		a = { bg = C.blue, fg = C.mantle, gui = "bold" },

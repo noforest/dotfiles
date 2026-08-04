@@ -1,0 +1,129 @@
+diff --git a/lua/snacks/explorer/actions.lua b/lua/snacks/explorer/actions.lua
+index 1b349df..b5a679f 100644
+--- a/lua/snacks/explorer/actions.lua
++++ b/lua/snacks/explorer/actions.lua
+@@ -76,6 +76,22 @@ function M.actions.explorer_focus(picker)
+   picker:find()
+ end
+ 
++function M.actions.explorer_up_and_cd(picker)
++  local path = vim.fs.dirname(picker:cwd())
++  picker:set_cwd(path)
++  vim.cmd("cd " .. vim.fn.fnameescape(path))
++  vim.notify("Changed directory to: " .. path, vim.log.levels.INFO)
++  picker:find()
++end
++
++function M.actions.explorer_cd(picker)
++  local path = picker:dir()
++  picker:set_cwd(path)
++  vim.cmd("cd " .. vim.fn.fnameescape(path))
++  vim.notify("Changed directory to: " .. path, vim.log.levels.INFO)
++  picker:find()
++end
++
+ function M.actions.explorer_open(_, item)
+   if item then
+     local _, err = vim.ui.open(item.file)
+diff --git a/lua/snacks/picker/actions.lua b/lua/snacks/picker/actions.lua
+index 6e6050e..402c03a 100644
+--- a/lua/snacks/picker/actions.lua
++++ b/lua/snacks/picker/actions.lua
+@@ -517,6 +517,34 @@ function M.select_all(picker)
+   picker.list:select_all()
+ end
+ 
++
++function M.select(picker)
++  picker.list:select()
++end
++
++
++
++-- function M:unselect_all()
++--   for _, item in pairs(self.selected) do
++--     self:unselect(item)
++--   end
++-- end
++
++
++--- Deselects all selected items in the list
++function M.unselect_all(picker)
++  if picker.list and picker.list.set_selected then
++    -- Clear all selected items
++    picker.list:set_selected({})
++    picker.list:set_target()
++    -- Actualiser / recalculer si nécessaire la liste
++    if picker.find then
++      picker:find()
++    end
++  end
++end
++
++
+ function M.cmd(picker, item)
+   picker:close()
+   if item and item.cmd then
+diff --git a/lua/snacks/picker/preview.lua b/lua/snacks/picker/preview.lua
+index 3b924cc..0d79696 100644
+--- a/lua/snacks/picker/preview.lua
++++ b/lua/snacks/picker/preview.lua
+@@ -37,13 +37,45 @@ function M.directory(ctx)
+   end
+ end
+ 
++-- ---@param ctx snacks.picker.preview.ctx
++-- function M.image(ctx)
++--   local buf = ctx.preview:scratch()
++--   ctx.preview:set_title(ctx.item.title or vim.fn.fnamemodify(ctx.item.file, ":t"))
++--   Snacks.image.buf.attach(buf, { src = Snacks.picker.util.path(ctx.item) })
++-- end
++
++
+ ---@param ctx snacks.picker.preview.ctx
+ function M.image(ctx)
+-  local buf = ctx.preview:scratch()
+-  ctx.preview:set_title(ctx.item.title or vim.fn.fnamemodify(ctx.item.file, ":t"))
+-  Snacks.image.buf.attach(buf, { src = Snacks.picker.util.path(ctx.item) })
++  local path = Snacks.picker.util.path(ctx.item)
++  if not path then
++    ctx.preview:notify("no image path", "error")
++    return
++  end
++
++  local ext = path:match("^.+%.([^.]+)$")
++  local allowed = { png=true, jpg=true, jpeg=true, gif=true, bmp=true, webp=true, svg=true }
++  if not (ext and allowed[ext:lower()]) then
++    ctx.preview:notify("Unsupported image format", "warn")
++    return
++  end
++
++  ctx.preview:set_title(ctx.item.title or vim.fn.fnamemodify(path, ":t"))
++  local width = ctx.preview.win:dim().width
++  local height = ctx.preview.win:dim().height
++
++
++  M.cmd({
++    "chafa",
++    "--animate=off",
++    "--clear",
++    "--size", width .. "x" .. height,
++    -- "--symbols", "block",
++    path
++  }, ctx, { ft="log", pty=true })
+ end
+ 
++
+ ---@param ctx snacks.picker.preview.ctx
+ function M.none(ctx)
+   ctx.preview:reset()
+@@ -174,7 +206,8 @@ function M.cmd(cmd, ctx, opts)
+   vim.bo[buf].buftype = "nofile"
+   local pty = opts.pty ~= false and not opts.ft
+   local killed = false
+-  local chan = pty and vim.api.nvim_open_term(buf, {}) or nil
++  -- local chan = pty and vim.api.nvim_open_term(buf, {}) or nil
++  local chan = opts.pty and vim.api.nvim_open_term(buf, {}) or nil
+   local output = {} ---@type string[]
+   local line ---@type string?
+   local l = 0
