@@ -56,6 +56,16 @@ module_units() {
     _walk "$root"
 }
 
+# État d'exécution appartenant à un démon : à ne JAMAIS transformer en lien.
+# xfconfd réécrit ses XML de façon atomique et les surveille par inotify ; les lier
+# vers le dépôt l'a fait boucler, ce qui a saturé le bus D-Bus de la session et
+# bloqué thunar et flameshot. Ce n'est pas de la configuration, c'est de l'état.
+NEVER_LINK='/\.config/xfce4/xfconf/|/\.config/dconf/|/\.config/pulse/|/\.local/state/|\.lock$|/savedState\.|/recently-used'
+
+cmd_check_never_link() {  # cmd_check_never_link <chemin-relatif> → 0 si interdit
+    printf '%s\n' "/$1" | grep -qE "$NEVER_LINK"
+}
+
 # ── link / unlink ───────────────────────────────────────────────────────────
 cmd_link() {
     local profile="${1:-$DEFAULT_PROFILE}" stamp created=0 backed=0 already=0
@@ -65,6 +75,10 @@ cmd_link() {
     while read -r mod; do
         while read -r rel; do
             [ -n "$rel" ] || continue
+            if cmd_check_never_link "$rel"; then
+                err "REFUSÉ (état d'un démon, pas de la config) : $rel"
+                continue
+            fi
             src="$MODULES/$mod/$rel"; dst="$HOME/$rel"
             if [ -L "$dst" ] && [ "$(readlink -f "$dst")" = "$(readlink -f "$src")" ]; then
                 already=$((already+1)); continue
@@ -113,6 +127,7 @@ cmd_adopt() {
     case "$abs" in "$HOME"/*) ;; *) die "hors de \$HOME : $abs" ;; esac
     [ -L "$path" ] && die "déjà un lien symbolique : $path"
     local rel="${abs#"$HOME"/}" dst="$MODULES/$mod/$rel"
+    cmd_check_never_link "$rel" && die "état d'exécution appartenant à un démon, à ne pas versionner : $rel"
     [ -e "$dst" ] && die "déjà présent dans le module $mod : $rel"
     mkdir -p "$(dirname "$dst")"
     mv "$abs" "$dst" || die "déplacement impossible"
@@ -310,6 +325,32 @@ cmd_fonts() {
     bash "$REPO/scripts/fonts-manual.sh"
 }
 
+# ── nvim ────────────────────────────────────────────────────────────────────
+# Une seule modification ne peut pas être portée en configuration : voir l'en-tête
+# du patch. Tout le reste des personnalisations vit dans lazy.lua.
+cmd_nvim_patch() {
+    local mode="${1:-apply}" dir="$MODULES/nvim/.config/nvim/patches" lazy="$HOME/.local/share/nvim/lazy"
+    head_ "nvim-patch ($mode)"
+    [ -d "$dir" ] || { warn "aucun patch"; return 0; }
+    local p name plug rc=0
+    for p in "$dir"/*.patch; do
+        [ -e "$p" ] || { warn "aucun patch"; return 0; }
+        name=$(basename "$p" .patch); plug="$lazy/$name"
+        [ -d "$plug/.git" ] || { warn "$name : plugin non installé (lance nvim puis :Lazy sync)"; continue; }
+        if [ "$mode" = "--save" ]; then
+            warn "$name : régénération désactivée — ce patch est écrit à la main (il porte une explication en en-tête)"
+        elif git -C "$plug" apply --check --reverse "$p" 2>/dev/null; then
+            ok "$name déjà appliqué"
+        elif git -C "$plug" apply --3way "$p" 2>/dev/null; then
+            ok "$name appliqué"
+        else
+            err "$name : le patch ne s'applique plus — l'amont a changé, à reprendre à la main"
+            rc=1
+        fi
+    done
+    return $rc
+}
+
 # ── audit d'usage ───────────────────────────────────────────────────────────
 cmd_audit() {
     bash "$REPO/scripts/audit-usage.sh" "${1:-all}"
@@ -324,6 +365,7 @@ cmd_bootstrap() {
     "$0" system-apply
     "$0" fonts
     "$0" build-suckless
+    "$0" nvim-patch
     info ""
     ok "bootstrap terminé"
     info "  ${D}Étapes manuelles restantes : voir la section « Après le bootstrap » du README.${N}"
@@ -344,6 +386,7 @@ ${B}dot${N} — gestion des dotfiles dwm / Arch
   ${G}dot install${N} [profil]     Installe les paquets du profil
   ${G}dot system-apply${N}         Copie system/ vers /etc et /usr/local/bin (sudo)
   ${G}dot system-pull${N}          Récupère /etc et /usr/local/bin dans le repo
+  ${G}dot nvim-patch${N}           Applique le patch snacks non portable en config
   ${G}dot build-suckless${N}       Compile et installe dwm, st, dmenu, slock, dwmblocks
   ${G}dot fonts${N}                Installe les polices non empaquetées
   ${G}dot audit${N} [quoi]         Ce qui sert vraiment : packages, scripts, ou all
@@ -369,6 +412,7 @@ case "$cmd" in
     system-pull)    cmd_system_pull "$@" ;;
     build-suckless) cmd_build_suckless "$@" ;;
     fonts)          cmd_fonts "$@" ;;
+    nvim-patch)     cmd_nvim_patch "$@" ;;
     audit)          cmd_audit "$@" ;;
     state)          cmd_state "$@" ;;
     bootstrap)      cmd_bootstrap "$@" ;;

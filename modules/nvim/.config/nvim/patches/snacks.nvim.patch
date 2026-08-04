@@ -1,0 +1,28 @@
+Rend le terminal de rendu conditionnel à `opts.pty` explicite.
+
+En amont, `M.cmd` ouvre un terminal dès que `ft` est absent (cas des aperçus git
+quand `builtin` est faux, preview.lua:303). Le rendu passe alors par un terminal
+qui se redessine à chaque rafraîchissement du picker — d'où un clignotement.
+
+Cette ligne ne peut PAS être portée en configuration : `pty` reste calculé comme
+en amont et sert encore au dimensionnement et au lancement du process ; seule la
+création du canal de rendu change. Passer par les options modifierait les quatre
+autres usages de `pty`.
+
+Le reste des personnalisations snacks (actions du picker, aperçu chafa) vit dans
+lazy.lua et n'a plus besoin de patch.
+
+diff --git a/lua/snacks/picker/preview.lua b/lua/snacks/picker/preview.lua
+index 3b924cc..0d79696 100644
+--- a/lua/snacks/picker/preview.lua
++++ b/lua/snacks/picker/preview.lua
+@@ -174,7 +174,8 @@ function M.cmd(cmd, ctx, opts)
+   vim.bo[buf].buftype = "nofile"
+   local pty = opts.pty ~= false and not opts.ft
+   local killed = false
+-  local chan = pty and vim.api.nvim_open_term(buf, {}) or nil
++  -- local chan = pty and vim.api.nvim_open_term(buf, {}) or nil
++  local chan = opts.pty and vim.api.nvim_open_term(buf, {}) or nil
+   local output = {} ---@type string[]
+   local line ---@type string?
+   local l = 0

@@ -96,10 +96,14 @@ alias ......="cd ../../../../.."
 
 alias lg="lazygit"
 
-# Dotfiles : dépôt classique + CLI `dot` (voir DOTFILES_DIR/README.md)
+# Ancien dépôt bare, conservé intact comme archive.
+# Toujours consultable : `dotfiles log`, `dotfiles show HEAD:.zshrc`…
+alias dotfiles='git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME'
+
+# Nouveau dépôt et sa CLI (voir $DOTFILES_DIR/README.md)
 export DOTFILES_DIR="$HOME/Documents/programming/github-noforest/dotfiles"
 alias dot="$DOTFILES_DIR/dot"
-alias dotfiles="git -C $DOTFILES_DIR"
+alias dotgit="git -C $DOTFILES_DIR"
 
 
 

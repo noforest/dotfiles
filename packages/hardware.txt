@@ -2,6 +2,7 @@
 # Audio (PipeWire)
 pipewire-alsa
 pipewire-pulse
+pipewire-jack
 wireplumber
 alsa-utils
 sof-firmware
