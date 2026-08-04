@@ -1,5 +1,10 @@
 require("keymaps")
 require("options")
+
+-- NOTE: avant le démarrage de lazy
+vim.g.ansi_art_shadow = true        -- fond du thème assombri de 35 %
+vim.g.ansi_art_shadow = 1         -- plus marquées (0 à 1)
+vim.g.ansi_art_shadow = "#14161b"   -- couleur imposée
 require("plugins.lazy")
 require("plugins.keymaps")
 require("plugins.options")
