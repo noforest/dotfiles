@@ -27,11 +27,16 @@ cd ~/Documents/programming/github-noforest/dotfiles
 
 ### Profils
 
-| Profil | Pour quoi | Modules |
-|---|---|---|
-| `minimal` | Serveur, VM, machine de passage | shell, git, nvim |
-| `laptop` | **L'environnement dwm complet** — le profil de référence | + terminal, x11-dwm, desktop, laptop |
-| `full` | laptop + développement et le reste (XFCE, Hyprland, sécurité, virtualisation) | + dev |
+| Profil | Pour quoi | Paquets | Modules en plus |
+|---|---|---|---|
+| `minimal` | Serveur, VM, machine de passage. Terminal et éditeur, pas de session graphique. | 61 | shell, git, nvim |
+| `desktop` | **PC fixe sous dwm.** Comme `laptop` sans batterie, luminosité, pavé tactile, gestes ni veille sur capot. | 209 | + terminal, x11-dwm, desktop |
+| `laptop` | **Portable sous dwm** — le profil de cette machine. | 224 | + laptop |
+| `full` | Tout : développement, XFCE, Hyprland, sécurité, virtualisation. | 385 | + dev |
+
+`full` n'est pas fait pour être installé sur une machine neuve — c'est le filet qui
+garantit que rien de ce qui existe ici n'est perdu. Pour un vrai PC, prends `desktop`
+ou `laptop`. Voir [docs/menage.md](docs/menage.md) pour dégraisser avant de répliquer.
 
 ---
 
@@ -68,6 +73,7 @@ dans l'index.
 | `dot nvim-patch [--save]` | Applique — ou régénère — les patchs des plugins lazy. |
 | `dot build-suckless` | Compile et installe les cinq projets suckless. |
 | `dot fonts` | Récupère les deux polices hors dépôts. |
+| `dot audit [packages\|scripts]` | Ce qui sert vraiment sur cette machine (historique + traces disque). |
 | `dot state` | Régénère `system/state.md`. |
 | `dot bootstrap [profil]` | Enchaîne tout, machine neuve → environnement complet. |
 

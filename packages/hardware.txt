@@ -1,0 +1,19 @@
+# Matériel commun à toute machine de bureau ou portable : son, réseau, USB.
+# Audio (PipeWire)
+pipewire-alsa
+pipewire-pulse
+wireplumber
+alsa-utils
+sof-firmware
+# Réseau
+networkmanager
+network-manager-applet
+# Périphériques
+usbutils
+usb_modeswitch
+evtest
+dmidecode
+# Bluetooth
+bluez
+bluez-utils
+blueman

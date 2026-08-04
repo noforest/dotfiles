@@ -1,28 +1,21 @@
-# Matériel, énergie, périphériques — spécifique à une machine portable
+# Spécifique à un PORTABLE : batterie, luminosité, pavé tactile, veille.
+# Sur un fixe, rien ici n'est utile.
 acpi
 acpid
+acpilight
 brightnessctl
 power-profiles-daemon
+xss-lock
+xautolock
+xidlehook
 fprintd
-dmidecode
-ethtool
-evtest
-usbutils
-usb_modeswitch
 s-tui
-# Bluetooth
-bluez
-bluez-utils
-# Audio (PipeWire)
-pipewire-alsa
-pipewire-jack
-pipewire-pulse
-wireplumber
-alsa-utils
-sof-firmware
-# Réseau
-network-manager-applet
-# Périphériques Logitech / SteelSeries
+ethtool
+# Gestes du pavé tactile
+libinput-gestures
+gestures
+touchegg
+# Périphériques sans fil Logitech / SteelSeries
 solaar
-# Sauvegarde (utilisé par backup-to-gdrive.sh)
+# Sauvegarde (backup-to-gdrive.sh + timer systemd)
 rclone

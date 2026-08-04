@@ -336,6 +336,11 @@ cmd_fonts() {
     bash "$REPO/scripts/fonts-manual.sh"
 }
 
+# ── audit d'usage ───────────────────────────────────────────────────────────
+cmd_audit() {
+    bash "$REPO/scripts/audit-usage.sh" "${1:-all}"
+}
+
 # ── bootstrap ───────────────────────────────────────────────────────────────
 cmd_bootstrap() {
     local profile="${1:-$DEFAULT_PROFILE}"
@@ -369,6 +374,7 @@ ${B}dot${N} — gestion des dotfiles dwm / Arch
   ${G}dot nvim-patch${N} [--save]  Applique (ou régénère) les patchs des plugins lazy
   ${G}dot build-suckless${N}       Compile et installe dwm, st, dmenu, slock, dwmblocks
   ${G}dot fonts${N}                Installe les polices non empaquetées
+  ${G}dot audit${N} [quoi]       Ce qui sert vraiment : packages, scripts, ou all
   ${G}dot state${N}                Régénère system/state.md
   ${G}dot bootstrap${N} [profil]   Enchaîne tout : machine neuve → environnement complet
 
@@ -392,6 +398,7 @@ case "$cmd" in
     nvim-patch)     cmd_nvim_patch "$@" ;;
     build-suckless) cmd_build_suckless "$@" ;;
     fonts)          cmd_fonts "$@" ;;
+    audit)          cmd_audit "$@" ;;
     state)          cmd_state "$@" ;;
     bootstrap)      cmd_bootstrap "$@" ;;
     help|-h|--help) usage ;;
