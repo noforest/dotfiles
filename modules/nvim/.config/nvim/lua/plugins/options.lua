@@ -242,8 +242,11 @@ vim.api.nvim_create_autocmd({'DirChanged'}, {
 -- })
 
 
-vim.keymap.set('i', '<C-J>', 'copilot#Accept("\\<CR>")', {
-    expr = true,
-    replace_keycodes = false
-})
-vim.g.copilot_no_tab_map = true
+-- Désactivé en même temps que le plugin github/copilot.vim (voir lazy.lua).
+-- Sans le plugin, copilot#Accept() n'existe pas : ce raccourci produirait une
+-- erreur à chaque <C-J> en mode insertion.
+-- vim.keymap.set('i', '<C-J>', 'copilot#Accept("\\<CR>")', {
+--     expr = true,
+--     replace_keycodes = false
+-- })
+-- vim.g.copilot_no_tab_map = true

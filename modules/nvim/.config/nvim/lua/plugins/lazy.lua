@@ -819,12 +819,15 @@ require("lazy").setup({
     --     end,
     -- },
 
-    {
-        "github/copilot.vim",
-        config = function()
-            vim.cmd("Copilot disable")
-        end,
-    },
+    -- Désactivé : plus utilisé, et c'est lui qui réclamait le trousseau de clés
+    -- (son jeton d'authentification y est stocké) à chaque ouverture de nvim.
+    -- Pour le réactiver : décommenter, puis :Lazy sync
+    -- {
+    --     "github/copilot.vim",
+    --     config = function()
+    --         vim.cmd("Copilot disable")
+    --     end,
+    -- },
 
     {
         "nvim-neo-tree/neo-tree.nvim",
