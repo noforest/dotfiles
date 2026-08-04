@@ -149,7 +149,7 @@ Vérifié un par un — ces paquets **paraissent** inutilisés mais ne le sont p
 `dot audit scripts` sépare trois cas : appelé par un fichier de config, lancé à la
 main, ou orphelin.
 
-### Orphelins jamais lancés — suppression sûre (7)
+### Orphelins jamais lancés — ✅ déjà retirés du dépôt (7)
 
 `black_screen` · `former_screen_dual_focus_on_big_one` ·
 `former_screen_dual_focus_on_big_one_force` · `former_screen_duplicate_force` ·
@@ -158,6 +158,13 @@ main, ou orphelin.
 Aucune référence nulle part, **zéro lancement** sur 88 578 commandes. Le préfixe
 `former_` dit déjà qu'ils sont périmés : ils ont été remplacés par `screen_mode` et
 `screen_menu` (respectivement 7 et 1 références dans tes configs).
+
+Ils ne sont plus dans le dépôt, donc plus déployés sur une nouvelle machine.
+Ils restent présents dans `/usr/local/bin` sur ce PC — à supprimer quand tu veux :
+
+```sh
+sudo rm /usr/local/bin/{black_screen,former_screen_*}
+```
 
 ### Orphelins avec un usage résiduel — à toi de voir (5)
 

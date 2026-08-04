@@ -70,7 +70,6 @@ dans l'index.
 | `dot install [profil]` | `pacman -S --needed` puis `paru -S` selon le profil. |
 | `dot system-apply` | Copie `system/root/` vers la racine (sudo). |
 | `dot system-pull` | Récupère dans le dépôt ce qui a changé sur le système. |
-| `dot nvim-patch [--save]` | Applique — ou régénère — les patchs des plugins lazy. |
 | `dot build-suckless` | Compile et installe les cinq projets suckless. |
 | `dot fonts` | Récupère les deux polices hors dépôts. |
 | `dot audit [packages\|scripts]` | Ce qui sert vraiment sur cette machine (historique + traces disque). |
@@ -104,8 +103,7 @@ cd ~/Documents/programming/github-noforest/dotfiles
 `--recursive` est nécessaire : le plugin nvim `codediff` est un submodule.
 Si tu as oublié : `git submodule update --init --recursive`.
 
-`bootstrap` enchaîne `install` → `link` → `system-apply` → `fonts` → `build-suckless` →
-`nvim-patch`.
+`bootstrap` enchaîne `install` → `link` → `system-apply` → `fonts` → `build-suckless`.
 
 ### 3. Après le bootstrap
 
@@ -130,8 +128,8 @@ systemctl --user enable --now pipewire pipewire-pulse wireplumber \
 sudo udevadm control --reload && sudo udevadm trigger
 sudo systemctl daemon-reload
 
-# Plugins nvim (puis réappliquer les patchs)
-nvim --headless "+Lazy! sync" +qa && ./dot nvim-patch
+# Plugins nvim
+nvim --headless "+Lazy! sync" +qa
 ```
 
 ### 4. Réglages propres à la machine
@@ -157,12 +155,20 @@ Deux fichiers à adapter — c'est tout ce qui reste de machine-spécifique :
 un lien vers le dépôt casserait le boot. D'où `system-apply` / `system-pull`, et `dot status`
 qui signale les divergences.
 
-**Les plugins nvim modifiés sont stockés en patchs.** Trois plugins ont des modifications
-personnelles (nouvelles actions `explorer_cd`, `unselect_all`, couleurs du bufferline) :
-170 lignes au total. Versionner les 24 Mo de code upstream pour ça rendait chaque mise à jour
-de plugin illisible. `lazy-lock.json` fige les commits upstream exacts, donc les patchs
-s'appliquent toujours. Après un `Lazy update` : `dot nvim-patch`, et si un patch ne passe plus,
-résoudre à la main puis `dot nvim-patch --save`.
+**Les plugins nvim ne sont pas patchés.** Les personnalisations vivent dans `lazy.lua`,
+via les API prévues par chaque plugin :
+
+- `snacks` — les actions `explorer_cd`, `explorer_up_and_cd`, `select` et `unselect_all`
+  passent par `picker.opts.actions`, que snacks consulte **avant** ses propres actions ;
+  l'aperçu d'image par chafa surcharge `snacks.picker.preview.image` depuis la config.
+- `zincoxide` — la notification du répertoire est un autocmd `DirChanged` (motif `tabpage`,
+  qui correspond au `tcd` de `behaviour = "tabs"`).
+- `catppuccin` — plus rien : la modification portait sur l'intégration `bufferline`, un
+  plugin qui n'est **pas** installé (c'est `barbar` qui est utilisé), et sur une ligne
+  commentée. Elle n'avait aucun effet.
+
+Un dépôt de dotfiles ne devrait pas contenir de patchs sur du code tiers : ils périment
+silencieusement à la première mise à jour amont. Ici, `:Lazy update` ne peut plus rien casser.
 
 **`codediff` est un dépôt séparé.** C'est un vrai projet (C + Lua, CMake, tests, 289 fichiers),
 pas un fichier de configuration. Il est référencé en submodule avec une URL *relative*

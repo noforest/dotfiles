@@ -232,31 +232,6 @@ cmd_install() {
     fi
 }
 
-# ── nvim ────────────────────────────────────────────────────────────────────
-cmd_nvim_patch() {
-    local mode="${1:-apply}" dir="$MODULES/nvim/.config/nvim/patches" lazy="$HOME/.local/share/nvim/lazy"
-    head_ "nvim-patch ($mode)"
-    [ -d "$dir" ] || die "aucun dossier de patchs : $dir"
-    local p name plug rc=0
-    for p in "$dir"/*.patch; do
-        [ -e "$p" ] || { warn "aucun patch"; return 0; }
-        name=$(basename "$p" .patch); plug="$lazy/$name"
-        [ -d "$plug/.git" ] || { warn "$name : plugin non installé (lance nvim puis :Lazy sync)"; continue; }
-        if [ "$mode" = "--save" ]; then
-            git -C "$plug" diff > "$p" && ok "$name régénéré ($(wc -l < "$p") lignes)"
-        else
-            if git -C "$plug" diff --quiet; then
-                if git -C "$plug" apply --3way "$p" 2>/dev/null; then ok "$name appliqué"
-                else err "$name : échec — résous à la main puis 'dot nvim-patch --save'"; rc=1; fi
-            else
-                if git -C "$plug" apply --check --reverse "$p" 2>/dev/null; then ok "$name déjà appliqué"
-                else warn "$name : modifications locales différentes du patch — 'dot nvim-patch --save' pour les enregistrer"; fi
-            fi
-        fi
-    done
-    return $rc
-}
-
 # ── suckless ────────────────────────────────────────────────────────────────
 cmd_build_suckless() {
     head_ "build-suckless (sudo)"
@@ -285,7 +260,6 @@ cmd_sync() {
             mv "$REPO/packages/aur.txt.new" "$REPO/packages/aur.txt"; ok "packages/aur.txt mis à jour"
         else rm -f "$REPO/packages/aur.txt.new"; fi
     fi
-    "$0" nvim-patch --save
     "$0" state
     head_ "git"
     git -C "$REPO" add -A
@@ -350,7 +324,6 @@ cmd_bootstrap() {
     "$0" system-apply
     "$0" fonts
     "$0" build-suckless
-    "$0" nvim-patch
     info ""
     ok "bootstrap terminé"
     info "  ${D}Étapes manuelles restantes : voir la section « Après le bootstrap » du README.${N}"
@@ -366,15 +339,14 @@ ${B}dot${N} — gestion des dotfiles dwm / Arch
   ${G}dot list${N} [profil]        Liste les chemins gérés par le profil
   ${G}dot adopt${N} <chemin> <mod> Fait entrer un fichier de \$HOME dans un module
   ${G}dot status${N} [profil]      Dérive des liens, de system/, des paquets, des secrets
-  ${G}dot sync${N}                 Régénère listes + patchs + état, puis git add -A
+  ${G}dot sync${N}                 Régénère listes + état système, puis git add -A
 
   ${G}dot install${N} [profil]     Installe les paquets du profil
   ${G}dot system-apply${N}         Copie system/ vers /etc et /usr/local/bin (sudo)
   ${G}dot system-pull${N}          Récupère /etc et /usr/local/bin dans le repo
-  ${G}dot nvim-patch${N} [--save]  Applique (ou régénère) les patchs des plugins lazy
   ${G}dot build-suckless${N}       Compile et installe dwm, st, dmenu, slock, dwmblocks
   ${G}dot fonts${N}                Installe les polices non empaquetées
-  ${G}dot audit${N} [quoi]       Ce qui sert vraiment : packages, scripts, ou all
+  ${G}dot audit${N} [quoi]         Ce qui sert vraiment : packages, scripts, ou all
   ${G}dot state${N}                Régénère system/state.md
   ${G}dot bootstrap${N} [profil]   Enchaîne tout : machine neuve → environnement complet
 
@@ -395,7 +367,6 @@ case "$cmd" in
     install)        cmd_install "$@" ;;
     system-apply)   cmd_system_apply "$@" ;;
     system-pull)    cmd_system_pull "$@" ;;
-    nvim-patch)     cmd_nvim_patch "$@" ;;
     build-suckless) cmd_build_suckless "$@" ;;
     fonts)          cmd_fonts "$@" ;;
     audit)          cmd_audit "$@" ;;

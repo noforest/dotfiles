@@ -2038,6 +2038,23 @@ require("lazy").setup({
             behaviour = "tabs",
         },
         cmd = { "Z", "Zg", "Zt", "Zw" },
+
+        -- Notification du répertoire courant après un saut zoxide.
+        -- Autocmd natif au lieu d'un patch du plugin : rien ne peut se périmer.
+        -- Le motif suit `behaviour` ci-dessus : "tabs" utilise `tcd`, qui déclenche
+        -- DirChanged avec le motif "tabpage". Si tu passes behaviour à "global" ou
+        -- "window", remplace le motif par "global" ou "window".
+        -- Ce ciblage évite aussi les doublons avec explorer_cd de snacks, qui fait
+        -- un `cd` global et notifie déjà de son côté.
+        init = function()
+            vim.api.nvim_create_autocmd("DirChanged", {
+                pattern = "tabpage",
+                callback = function()
+                    vim.notify("Current directory: " .. vim.fn.getcwd(),
+                        vim.log.levels.INFO, { title = "Directory changed" })
+                end,
+            })
+        end,
     },
 
     -- { 'akinsho/toggleterm.nvim', version = "*", config = true },
@@ -2374,6 +2391,42 @@ require("lazy").setup({
                         },
                     },
                 },
+                -- Actions personnalisées.
+                -- Déclarées ici plutôt qu'en patchant snacks : picker.opts.actions est
+                -- consulté AVANT les actions internes du plugin (snacks/picker/core/actions.lua),
+                -- donc une mise à jour de snacks ne peut pas les écraser.
+                actions = {
+                    explorer_cd = function(picker)
+                        local path = picker:dir()
+                        picker:set_cwd(path)
+                        vim.cmd("cd " .. vim.fn.fnameescape(path))
+                        vim.notify("Changed directory to: " .. path, vim.log.levels.INFO)
+                        picker:find()
+                    end,
+
+                    explorer_up_and_cd = function(picker)
+                        local path = vim.fs.dirname(picker:cwd())
+                        picker:set_cwd(path)
+                        vim.cmd("cd " .. vim.fn.fnameescape(path))
+                        vim.notify("Changed directory to: " .. path, vim.log.levels.INFO)
+                        picker:find()
+                    end,
+
+                    select = function(picker)
+                        picker.list:select()
+                    end,
+
+                    -- Désélectionne tout
+                    unselect_all = function(picker)
+                        if picker.list and picker.list.set_selected then
+                            picker.list:set_selected({})
+                            picker.list:set_target()
+                            if picker.find then
+                                picker:find()
+                            end
+                        end
+                    end,
+                },
             },
 
 
@@ -2602,6 +2655,39 @@ require("lazy").setup({
                     -- important : permet de relancer le dashboard pour que git diff soit à jour notamment
                     if Snacks.dashboard then
                         Snacks.dashboard.update()
+                    end
+
+                    -- Aperçu d'image par chafa, au lieu du protocole graphique de snacks.
+                    -- Surcharge du module depuis la config plutôt qu'un patch du plugin :
+                    -- une mise à jour de snacks ne peut plus l'effacer.
+                    -- NOTE: on passe { pty = true } SANS ft. La logique amont est
+                    --       `pty = opts.pty ~= false and not opts.ft` : ajouter ft
+                    --       désactiverait le terminal et chafa s'afficherait en échappements bruts.
+                    local preview = require("snacks.picker.preview")
+                    preview.image = function(ctx)
+                        local path = Snacks.picker.util.path(ctx.item)
+                        if not path then
+                            ctx.preview:notify("no image path", "error")
+                            return
+                        end
+
+                        local ext = path:match("^.+%.([^.]+)$")
+                        local allowed = { png = true, jpg = true, jpeg = true, gif = true,
+                                          bmp = true, webp = true, svg = true }
+                        if not (ext and allowed[ext:lower()]) then
+                            ctx.preview:notify("Unsupported image format", "warn")
+                            return
+                        end
+
+                        ctx.preview:set_title(ctx.item.title or vim.fn.fnamemodify(path, ":t"))
+                        local dim = ctx.preview.win:dim()
+                        preview.cmd({
+                            "chafa",
+                            "--animate=off",
+                            "--clear",
+                            "--size", dim.width .. "x" .. dim.height,
+                            path,
+                        }, ctx, { pty = true })
                     end
                     -- Setup some globals for debugging (lazy-loaded)
                     _G.dd = function(...)
