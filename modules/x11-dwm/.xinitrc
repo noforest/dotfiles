@@ -24,6 +24,12 @@ cp /run/user/$(id -u)/lyxauth ~/.Xauthority     # NOTE: because authority file i
                                                 #       /run/user/1000/lyxauth (created by ly), 
                                                 #       we synchronize with ~/.Xauthority
                                                 #       (used by multiple scripts)
+# Donne DISPLAY et XAUTHORITY au gestionnaire systemd utilisateur.
+# ly + .xinitrc ne démarrent pas la session via systemd : sans cet import, les
+# services activés à la demande (xdg-desktop-portal-gtk, xfconfd…) échouent sur
+# « cannot open display » et thunar ou flameshot restent bloqués.
+systemctl --user import-environment DISPLAY XAUTHORITY 2>/dev/null
+
 picom -b &
 dunst &
 playerctld daemon &
