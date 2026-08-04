@@ -1,0 +1,43 @@
+# Session graphique X11 + dwm
+xorg-server
+xorg-server-common
+xorg-xauth
+xorg-xrandr
+xorg-xset
+xorg-xsetroot
+xorg-xmodmap
+xorg-xrdb
+xorg-xprop
+xorg-xdpyinfo
+xorg-xinput
+xorg-xkbcomp
+xorg-setxkbmap
+xorg-xhost
+xorg-xkill
+xorg-xwininfo
+xorg-xev
+xorg-mkfontscale
+xorg-fonts-encodings
+xorg-iceauth
+# Pilotes vidéo
+xf86-video-amdgpu
+xf86-video-vesa
+# Gestionnaire de connexion
+ly
+# Composants de la session (lancés par .xinitrc)
+picom
+dunst
+feh
+numlockx
+xss-lock
+xdotool
+wmctrl
+# Capture d'écran
+maim
+scrot
+swappy
+# Terminal et affichage
+alacritty
+arandr
+lxappearance
+papirus-icon-theme

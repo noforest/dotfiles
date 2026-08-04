@@ -1,0 +1,43 @@
+# Shell et outils en ligne de commande — le coeur de l'expérience terminal
+zsh
+zsh-syntax-highlighting
+bash-completion
+tmux
+# Remplacements modernes (voir les alias dans .zshrc)
+bat
+eza
+fd
+ripgrep
+fzf
+zoxide
+vivid
+dust
+duf
+most
+nano
+rainfrog
+zellij
+tldr
+# Git
+git
+github-cli
+lazygit
+diff-so-fancy
+# Éditeurs
+neovim
+vim-runtime
+vim-spell-fr
+# Moniteurs et navigateurs de fichiers
+htop
+btop
+ranger
+nnn
+television
+# Divers
+keychain
+pass
+wget
+yt-dlp
+mediainfo
+chafa
+ueberzugpp

@@ -1,0 +1,27 @@
+# Socle système — indispensable sur toute machine
+base
+base-devel
+linux
+linux-firmware
+grub
+efibootmgr
+os-prober
+networkmanager
+openresolv
+pacman-contrib
+reflector
+rsync
+man-pages
+tree
+plocate
+net-tools
+# Archives
+7zip
+zip
+unzip
+unrar
+cpio
+# Systèmes de fichiers
+dosfstools
+exfatprogs
+mtools

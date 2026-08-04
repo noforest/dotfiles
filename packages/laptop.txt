@@ -1,0 +1,28 @@
+# Matériel, énergie, périphériques — spécifique à une machine portable
+acpi
+acpid
+brightnessctl
+power-profiles-daemon
+fprintd
+dmidecode
+ethtool
+evtest
+usbutils
+usb_modeswitch
+s-tui
+# Bluetooth
+bluez
+bluez-utils
+# Audio (PipeWire)
+pipewire-alsa
+pipewire-jack
+pipewire-pulse
+wireplumber
+alsa-utils
+sof-firmware
+# Réseau
+network-manager-applet
+# Périphériques Logitech / SteelSeries
+solaar
+# Sauvegarde (utilisé par backup-to-gdrive.sh)
+rclone

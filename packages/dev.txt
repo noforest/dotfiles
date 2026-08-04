@@ -1,0 +1,65 @@
+# Développement
+clang
+gdb
+valgrind
+strace
+bear
+ctags
+yasm
+openmp
+glibc-debug
+z3
+# Conteneurs
+docker
+docker-compose
+docker-buildx
+devtools
+# JavaScript
+nodejs
+npm
+yarn
+# Python
+python-pip
+python-pipx
+python-black
+autopep8
+pyright
+pypy
+pyenv
+python-ipykernel
+python-matplotlib
+python-pandas
+python-networkx
+python-pygraphviz
+python-scikit-learn
+python-seaborn
+python-sympy
+python-tabulate
+# JVM / PHP / autres langages
+jdk-openjdk
+jdk21-openjdk
+maven
+gradle
+composer
+php-pgsql
+postgresql
+opam
+opencode
+r
+# Bibliothèques
+sdl2_image
+sdl2_ttf
+gtksourceview3
+gobject-introspection
+# Documentation et diagrammes
+plantuml
+mermaid-cli
+pdfgrep
+tesseract-data-eng
+tesseract-data-fra
+texlive-binextra
+texlive-fontsextra
+texlive-latexextra
+texlive-langfrench
+# Éditeur alternatif
+emacs

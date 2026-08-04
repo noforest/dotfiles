@@ -1,0 +1,41 @@
+# Applications graphiques du quotidien
+firefox
+# Gestionnaire de fichiers
+thunar
+thunar-archive-plugin
+thunar-media-tags-plugin
+thunar-volman
+tumbler
+gvfs
+gvfs-mtp
+xarchiver
+exo
+garcon
+perl-file-mimeinfo
+xdg-desktop-portal-gtk
+# Multimédia
+vlc
+vlc-plugins-all
+libdvdcss
+mpv
+parole
+cava
+# Documents et images
+okular
+zathura
+zathura-pdf-poppler
+ristretto
+# Productivité
+obsidian
+mousepad
+bitwarden
+discord
+qbittorrent
+filezilla
+# Son et Bluetooth (interfaces)
+pavucontrol
+blueman
+# Polices de base
+noto-fonts
+noto-fonts-cjk
+noto-fonts-emoji
