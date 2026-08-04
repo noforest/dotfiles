@@ -2652,7 +2652,7 @@ require("lazy").setup({
                         -- défini, snacks ignore `icon` et `title` (le bloc `text` remplace
                         -- la colonne centrale). Le titre doit donc être son propre élément.
                         return {
-                            { pane = 1, icon = " ", title = title },
+                            { pane = 1, icon = " ", title = title },
                             {
                                 pane = 1,
                                 text = require("ansi_art").parse(table.concat(dlines, "\n")),

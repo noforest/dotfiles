@@ -38,26 +38,47 @@ local function ensure_hook()
     })
 end
 
----Crée (ou réutilise) un groupe de surbrillance pour un couple avant-plan / arrière-plan.
+---Crée (ou réutilise) un groupe de surbrillance.
 ---@param fg string|nil  "#rrggbb"
 ---@param bg string|nil  "#rrggbb"
+---@param bold boolean|nil
 ---@return string|nil
-local function hl_group(fg, bg)
-    if not fg and not bg then
+local function hl_group(fg, bg, bold)
+    if not fg and not bg and not bold then
         return nil
     end
-    local key = (fg or "-") .. "/" .. (bg or "-")
+    local key = (fg or "-") .. "/" .. (bg or "-") .. (bold and "/b" or "")
     if hl_cache[key] then
         return hl_cache[key]
     end
     ensure_hook()
     hl_count = hl_count + 1
     local name = ("SnacksAnsiArt%d"):format(hl_count)
-    local def = { fg = fg, bg = bg }
+    local def = { fg = fg, bg = bg, bold = bold or nil }
     hl_defs[name] = def
     vim.api.nvim_set_hl(0, name, def)
     hl_cache[key] = name
     return name
+end
+
+---Couleur d'un des 16 codes ANSI de base, prise dans la palette du colorscheme.
+---catppuccin (comme la plupart) renseigne vim.g.terminal_color_0..15, ce qui garde
+---le rendu cohérent avec le thème plutôt que d'imposer des rouges et verts fixes.
+---@param idx integer 0..15
+---@return string|nil
+local function palette(idx)
+    local v = vim.g["terminal_color_" .. idx]
+    if type(v) == "string" and v:match("^#%x%x%x%x%x%x$") then
+        return v
+    end
+    -- repli : couleurs ANSI classiques, si le thème ne définit pas sa palette
+    local fallback = {
+        [0] = "#45475a", [1] = "#f38ba8", [2] = "#a6e3a1", [3] = "#f9e2af",
+        [4] = "#89b4fa", [5] = "#f5c2e7", [6] = "#94e2d5", [7] = "#bac2de",
+        [8] = "#585b70", [9] = "#f38ba8", [10] = "#a6e3a1", [11] = "#f9e2af",
+        [12] = "#89b4fa", [13] = "#f5c2e7", [14] = "#94e2d5", [15] = "#a6adc8",
+    }
+    return fallback[idx]
 end
 
 ---Applique une séquence SGR à l'état courant.
@@ -75,7 +96,11 @@ local function apply_sgr(params, state)
     while i <= #codes do
         local c = codes[i]
         if c == 0 then
-            state.fg, state.bg = nil, nil
+            state.fg, state.bg, state.bold = nil, nil, nil
+        elseif c == 1 then
+            state.bold = true
+        elseif c == 22 then
+            state.bold = nil
         elseif c == 39 then
             state.fg = nil
         elseif c == 49 then
@@ -85,7 +110,19 @@ local function apply_sgr(params, state)
             if c == 38 then state.fg = col else state.bg = col end
             i = i + 4
         elseif (c == 38 or c == 48) and codes[i + 1] == 5 then
-            i = i + 2             -- palette 256 : ignorée, chafa émet du 24 bits ici
+            local col = palette(codes[i + 2] or 0)       -- palette 256 : seuls les 16 premiers
+            if c == 38 then state.fg = col else state.bg = col end
+            i = i + 2
+        -- Couleurs ANSI de base. git --color=always n'émet QUE celles-ci
+        -- (31 rouge, 32 vert) : sans ce cas, le git diff restait monochrome.
+        elseif c >= 30 and c <= 37 then
+            state.fg = palette(c - 30)
+        elseif c >= 90 and c <= 97 then
+            state.fg = palette(c - 90 + 8)
+        elseif c >= 40 and c <= 47 then
+            state.bg = palette(c - 40)
+        elseif c >= 100 and c <= 107 then
+            state.bg = palette(c - 100 + 8)
         end
         i = i + 1
     end
