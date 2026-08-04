@@ -2532,7 +2532,12 @@ require("lazy").setup({
                 enabled = true,
                 -- pane_gap = 8, -- empty columns between vertical panes
                 pane_gap = 16, -- empty columns between vertical panes
-                width = 50,
+                -- 51 et non 50 : le header ASCII fait 51 colonnes de large. Avec width = 50
+                -- il débordait du panneau 1 et poussait le panneau 2 d'une colonne, mais
+                -- uniquement sur ses propres lignes — l'art se retrouvait décalé en haut et
+                -- pas en bas. Invisible du temps où l'art était une fenêtre flottante,
+                -- positionnée indépendamment du contenu du panneau 1.
+                width = 51,
                 -- width = 60,
                 -- row = nil,     -- dashboard position. nil for center
                 -- col = nil,     -- dashboard position. nil for center
