@@ -1,0 +1,13 @@
+voici les fonts les plus importantes que j'utilise
+
+Je les ai tous mis dans ~/.local/share/fonts
+--> Literation Mono Nerd Font (tiré du site officiel nerd font)
+--> Julia Mono (tiré de https://juliamono.netlify.app/ )
+--> UnifontExMono (tiré de https://juliamono.netlify.app/ )
+bonus si ça marche toujours pas
+--> icons-in-terminal (https://github.com/sebastiencs/icons-in-terminal)
+
+
+--> bonus si jamais bugs pour avoir plus d'icones/emoji/glyphes
+installer NotoColorEmoji.ttf
+installer noto-cjk (écriture coréene, japonaise, chinoise)
