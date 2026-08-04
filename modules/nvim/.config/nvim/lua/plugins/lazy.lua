@@ -2536,6 +2536,9 @@ require("lazy").setup({
                                 cmd = "echo 'Not enough commits yet. Need at least 2 commits to show diff.'",
                                 height = 3,
                                 padding = 1,
+                                -- Le message fait 61 caractères : sans width il se replierait
+                                -- dans la flottante de 50 colonnes (opts.width du dashboard).
+                                width = 65,
                             }
                         end
 
@@ -2570,6 +2573,11 @@ require("lazy").setup({
                             .. os.time(),
                             height = height,
                             padding = 1,
+                            -- Même raison que pour le logo : sans width, la flottante fait
+                            -- opts.width (50). --stat-width=50 borne la sortie de git à 50
+                            -- colonnes, auxquelles s'ajoutent l'indentation et l'icône — les
+                            -- lignes les plus longues débordaient donc de justesse. 60 suffit.
+                            width = 60,
                         }
                     end,
 
@@ -2589,6 +2597,16 @@ require("lazy").setup({
                             pane = 2,
                             -- indent = 8,
                             height = 35,
+
+                            -- IMPORTANT: l'art fait 57 colonnes de large.
+                            -- Sans `width`, snacks utilise `self.opts.width - indent`, soit la
+                            -- largeur du dashboard, fixée à 50 plus bas. La fenêtre flottante qui
+                            -- affiche le terminal est alors 7 colonnes trop étroite et l'art s'y
+                            -- replie, d'où l'affichage déformé. 60 laisse une marge.
+                            -- (Le dashboard se reconstruit à chaque WinResized — donc à chaque
+                            -- ouverture de l'explorer — ce qui rend le défaut visible à ce
+                            -- moment-là, mais la cause est bien la largeur, pas le redimensionnement.)
+                            width = 60,
                         }
                     },
                 },
@@ -2660,38 +2678,38 @@ require("lazy").setup({
                         Snacks.dashboard.update()
                     end
 
-                    -- Aperçu d'image par chafa, au lieu du protocole graphique de snacks.
-                    -- Surcharge du module depuis la config plutôt qu'un patch du plugin :
-                    -- une mise à jour de snacks ne peut plus l'effacer.
-                    -- NOTE: on passe { pty = true } SANS ft. La logique amont est
-                    --       `pty = opts.pty ~= false and not opts.ft` : ajouter ft
-                    --       désactiverait le terminal et chafa s'afficherait en échappements bruts.
-                    local preview = require("snacks.picker.preview")
-                    preview.image = function(ctx)
-                        local path = Snacks.picker.util.path(ctx.item)
-                        if not path then
-                            ctx.preview:notify("no image path", "error")
-                            return
-                        end
-
-                        local ext = path:match("^.+%.([^.]+)$")
-                        local allowed = { png = true, jpg = true, jpeg = true, gif = true,
-                                          bmp = true, webp = true, svg = true }
-                        if not (ext and allowed[ext:lower()]) then
-                            ctx.preview:notify("Unsupported image format", "warn")
-                            return
-                        end
-
-                        ctx.preview:set_title(ctx.item.title or vim.fn.fnamemodify(path, ":t"))
-                        local dim = ctx.preview.win:dim()
-                        preview.cmd({
-                            "chafa",
-                            "--animate=off",
-                            "--clear",
-                            "--size", dim.width .. "x" .. dim.height,
-                            path,
-                        }, ctx, { pty = true })
-                    end
+                    -- -- Aperçu d'image par chafa, au lieu du protocole graphique de snacks.
+                    -- -- Surcharge du module depuis la config plutôt qu'un patch du plugin :
+                    -- -- une mise à jour de snacks ne peut plus l'effacer.
+                    -- -- NOTE: on passe { pty = true } SANS ft. La logique amont est
+                    -- --       `pty = opts.pty ~= false and not opts.ft` : ajouter ft
+                    -- --       désactiverait le terminal et chafa s'afficherait en échappements bruts.
+                    -- local preview = require("snacks.picker.preview")
+                    -- preview.image = function(ctx)
+                    --     local path = Snacks.picker.util.path(ctx.item)
+                    --     if not path then
+                    --         ctx.preview:notify("no image path", "error")
+                    --         return
+                    --     end
+                    --
+                    --     local ext = path:match("^.+%.([^.]+)$")
+                    --     local allowed = { png = true, jpg = true, jpeg = true, gif = true,
+                    --                       bmp = true, webp = true, svg = true }
+                    --     if not (ext and allowed[ext:lower()]) then
+                    --         ctx.preview:notify("Unsupported image format", "warn")
+                    --         return
+                    --     end
+                    --
+                    --     ctx.preview:set_title(ctx.item.title or vim.fn.fnamemodify(path, ":t"))
+                    --     local dim = ctx.preview.win:dim()
+                    --     preview.cmd({
+                    --         "chafa",
+                    --         "--animate=off",
+                    --         "--clear",
+                    --         "--size", dim.width .. "x" .. dim.height,
+                    --         path,
+                    --     }, ctx, { pty = true })
+                    -- end
                     -- Setup some globals for debugging (lazy-loaded)
                     _G.dd = function(...)
                         Snacks.debug.inspect(...)
