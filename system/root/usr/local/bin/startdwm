@@ -1,0 +1,4 @@
+#!/bin/sh
+# Lanceur de session dwm appelé par /usr/share/xsessions/dwm.desktop.
+# Passe par $HOME au lieu d'un chemin en dur : fonctionne pour n'importe quel utilisateur.
+exec "$HOME/.xinitrc"

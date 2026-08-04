@@ -1,0 +1,37 @@
+#!/bin/bash
+#
+#
+# case $BUTTON in
+# 	1) CHOICE=$(echo -e "Shutdown\nReboot\nLock & Sleep\nKill dwm" | dmenu -i -p "Select an action:");;
+# esac
+#
+# icon=" "
+#
+# case "$CHOICE" in
+#     "Shutdown") poweroff ;;
+#     "Reboot") reboot ;;
+#     "Lock&Sleep") systemctl suspend ;;
+#     "Kill dwm") pkill dwm ;;
+#     *) ;;
+# esac
+#
+# echo " $icon"
+
+
+# Ce script ne réagit qu'au clic gauche (1)
+case "$BUTTON" in
+    1)
+        CHOICE=$(echo -e "Kill dwm\nShutdown\nReboot\nLock & Sleep" | dmenu -i -p "Select an action:")
+        case "$CHOICE" in
+            "Kill dwm") pkill dwm ;;
+            "Shutdown") poweroff ;;
+            "Reboot") reboot ;;
+            "Lock & Sleep") systemctl suspend ;;
+            *) ;;
+        esac
+        ;;
+esac
+
+# Affiche une icône pour le module de la status bar (toujours visible)
+icon=" "
+echo " $icon"

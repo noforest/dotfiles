@@ -1,0 +1,19 @@
+#!/bin/sh
+
+# case $BUTTON in
+#     1) 
+#         calendar=$(cal -m| sed "s/\b$(date +'%e' | sed 's/ //g')\b/<b><span color='red'>&<\/span><\/b>/")
+#         notify-send "This Month" "$calendar"
+#         ;;
+# esac
+
+case $BUTTON in
+    1) 
+        calendar=$(cal -m | sed "s/\b$(date +'%e' | sed 's/ //g')\b/<b><span color='red'>&<\/span><\/b>/" | awk '{ lines[NR] = $0 } END { for (i = 1; i <= NR; i++) if (lines[i] ~ /[^[:space:]]/) last = i; for (i = 1; i <= last; i++) print lines[i] }')
+        notify-send "This Month" "<tt>$calendar</tt>"
+        ;;
+esac
+
+clock2=$(date "+%a, %H:%M")
+echo "$clock2"
+

@@ -1,0 +1,12 @@
+[Unit]
+Description=Set keyboard repeat rate after resume
+After=suspend.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/xset r rate 250 50
+Environment=DISPLAY=:0
+User=for
+
+[Install]
+WantedBy=suspend.target

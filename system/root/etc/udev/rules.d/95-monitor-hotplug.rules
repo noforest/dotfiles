@@ -1,0 +1,2 @@
+#ACTION=="change", SUBSYSTEM=="drm", RUN+="/usr/local/bin/monitor-hotplug"
+ACTION=="change", SUBSYSTEM=="drm", KERNEL=="card*", ENV{HOTPLUG}=="1", RUN+="/usr/local/bin/monitor-hotplug"

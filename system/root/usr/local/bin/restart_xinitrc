@@ -1,0 +1,14 @@
+#!/bin/bash
+
+exec > /dev/null 2>&1
+
+xset r rate 250 50 &
+setxkbmap -option caps:escape &
+
+xinput --set-prop "ELAN2204:00 04F3:3109 Touchpad" "libinput Scrolling Pixel Distance" 30 &
+xinput --set-prop "pointer:Logitech K400 Plus" "libinput Natural Scrolling Enabled" 1 &
+
+pgrep picom >/dev/null || picom -b &
+pgrep dunst >/dev/null || dunst &
+
+libinput-gestures-setup restart &

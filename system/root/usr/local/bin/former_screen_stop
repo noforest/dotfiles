@@ -1,0 +1,25 @@
+#!/bin/bash
+# ============================================================================
+# Désactive les modes manuels (duplicate/multi) et revient au mode focus auto
+# ============================================================================
+
+
+LOCK_DIR="/run/user/$(id -u)/screen_mode_lock"
+
+
+# Supprime tous les verrous manuels
+rm -f "$LOCK_DIR/duplicate_manual" "$LOCK_DIR/multi_manual" "$LOCK_DIR/focus_manual"
+
+# Détecte quel est le mode par défaut actif dans dwmblocks
+if [ -f "$LOCK_DIR/focus_default" ]; then
+    # echo "Retour au mode focus (dwmblocks)"
+    /bin/bash "$(dirname "$0")/screen_dual_focus_on_big_one"
+elif [ -f "$LOCK_DIR/multi_default" ]; then
+    # echo "Retour au mode multi (dwmblocks)"
+    /bin/bash "$(dirname "$0")/screen_multi"
+else
+    # Par défaut, on revient en focus si aucun mode n'est détecté
+    # echo "Aucun mode par défaut détecté, activation du mode focus"
+    /bin/bash "$(dirname "$0")/screen_dual_focus_on_big_one"
+fi
+

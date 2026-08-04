@@ -1,0 +1,37 @@
+#!/bin/bash
+
+HDMI="HDMI-A-0"
+LAPTOP="eDP"
+LOCK_DIR="/run/user/$(id -u)/screen_mode_lock"
+STATE_DIR="/run/user/$(id -u)/state_dualscreen_focus_on_big_one"
+STATE_FILE="$STATE_DIR/display_state"
+mkdir -p "$STATE_DIR" "$LOCK_DIR"
+
+
+rm -f "$LOCK_DIR/multi_manual"
+rm -f "$LOCK_DIR/duplicate_manual"
+# Active le mode manuel focus
+touch "$LOCK_DIR/focus_manual"
+
+is_hdmi_connected() {
+    xrandr | grep "^$HDMI connected" >/dev/null
+}
+
+# Réinitialise complètement
+xrandr --output "$HDMI" --off --output "$LAPTOP" --off
+# sleep 1
+
+# Réactive selon la présence du HDMI
+if is_hdmi_connected; then
+xrandr --output "$HDMI" --auto --primary
+echo "HDMI" > "$STATE_FILE"
+else
+xrandr --output "$LAPTOP" --auto --primary
+echo "LAPTOP" > "$STATE_FILE"
+fi
+
+if [ -n "$WALLPAPER" ] && command -v feh >/dev/null 2>&1; then
+# sleep 0.5
+feh --bg-fill "$WALLPAPER"
+fi
+

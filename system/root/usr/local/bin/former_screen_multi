@@ -1,0 +1,130 @@
+#!/bin/bash
+# exec > /dev/null 2>&1
+#
+# STATE_DIR="/run/user/$(id -u)/state_multiscreen"
+# STATE_FILE="$STATE_DIR/display_state"
+#
+# mkdir -p "$STATE_DIR"
+#
+# PRIMARY="HDMI-A-0"  # écran externe principal
+#
+# get_connected_outputs() {
+#     xrandr | awk '/ connected/{print $1}'
+# }
+#
+# get_all_outputs() {
+#     xrandr | awk '/ connected|disconnected/{print $1}'
+# }
+#
+# prev_state=""
+# if [ -f "$STATE_FILE" ]; then
+#     prev_state=$(cat "$STATE_FILE")
+# fi
+#
+#
+# # if [ -n "$prev_state" ]; then
+# #     # Enlever le dernier pipe si présent
+# #     prev_state="${prev_state%|}"
+# #
+# #     # Convertir la chaîne en lignes, trier, puis recombiner avec '|'
+# #     prev_state=$(echo "$prev_state" | tr '|' '\n' | sort | tr '\n' '|' )
+# # fi
+#
+# mapfile -t outs < <(get_connected_outputs | sort)
+# current_state=$(printf "%s|" "${outs[@]}")
+# # echo $current_state
+#
+# if [ "$current_state" != "$prev_state" ]; then
+#     if [ "$prev_state" == "" ]; then
+#         sleep 1
+#     fi
+#     echo "$current_state" > "$STATE_FILE"
+#
+#     # Activation avec extension et positionnement
+#     for o in "${outs[@]}"; do
+#         if [ "$o" = "$PRIMARY" ]; then
+#             # écran principal activé en mode auto
+#             xrandr --output "$o" --auto --primary
+#         else
+#             # écrans secondaires positionnés à droite de l'écran principal, en mode auto
+#             xrandr --output "$o" --auto --right-of "$PRIMARY"
+#         fi
+#     done
+#
+#     # Désactive les sorties déconnectées
+#     mapfile -t all_outs < <(get_all_outputs)
+#     for o in "${all_outs[@]}"; do
+#         if ! printf '%s\n' "${outs[@]}" | grep -qx "$o"; then
+#             xrandr --output "$o" --off
+#         fi
+#     done
+#
+#     feh --bg-fill "$WALLPAPER"
+#
+#     # notify-send "Multiscreen" "Changement d'écran détecté, lancement de restart_xinitrc"
+#     # restart_xinitrc
+# fi
+
+
+# ============================================================================
+
+exec > /dev/null 2>&1
+
+PRIMARY="HDMI-A-0"
+STATE_DIR="/run/user/$(id -u)/state_multiscreen"
+STATE_FILE="$STATE_DIR/display_state"
+LOCK_DIR="/run/user/$(id -u)/screen_mode_lock"
+mkdir -p "$STATE_DIR" "$LOCK_DIR"
+
+# Si un mode manuel est actif (duplicate ou focus_manual), ne rien faire
+if [ -f "$LOCK_DIR/duplicate_manual" ] || [ -f "$LOCK_DIR/focus_manual" ]; then
+    exit 0
+fi
+
+# Indique que multi est le mode actif
+touch "$LOCK_DIR/multi_default"
+rm -f "$LOCK_DIR/focus_default"
+
+get_connected_outputs() {
+    xrandr | awk '/ connected/{print $1}'
+}
+
+get_all_outputs() {
+    xrandr | awk '/ connected|disconnected/{print $1}'
+}
+
+prev_state=""
+if [ -f "$STATE_FILE" ]; then
+    prev_state=$(cat "$STATE_FILE")
+fi
+
+mapfile -t outs < <(get_connected_outputs | sort)
+current_state=$(printf "%s|" "${outs[@]}")
+
+if [ "$current_state" != "$prev_state" ]; then
+    if [ "$prev_state" == "" ]; then
+        sleep 1
+    fi
+    echo "$current_state" > "$STATE_FILE"
+
+    # Active l'écran principal
+    for o in "${outs[@]}"; do
+        if [ "$o" = "$PRIMARY" ]; then
+            xrandr --output "$o" --auto --primary
+        else
+            xrandr --output "$o" --auto --right-of "$PRIMARY"
+        fi
+    done
+
+    # Désactive les sorties déconnectées
+    mapfile -t all_outs < <(get_all_outputs)
+    for o in "${all_outs[@]}"; do
+        if ! printf '%s\n' "${outs[@]}" | grep -qx "$o"; then
+            xrandr --output "$o" --off
+        fi
+    done
+
+    if [ -n "$WALLPAPER" ] && command -v feh >/dev/null 2>&1; then
+        feh --bg-fill "$WALLPAPER"
+    fi
+fi

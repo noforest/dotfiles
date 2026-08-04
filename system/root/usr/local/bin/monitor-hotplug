@@ -1,0 +1,18 @@
+#!/bin/sh
+
+# sleep 1
+
+HDMI="HDMI-A-0"
+LAPTOP="eDP"
+
+. /usr/local/bin/desktop-env.sh   # définit DESKTOP_USER, USER_HOME, DISPLAY, XAUTHORITY
+
+if xrandr --query | grep -q "^$HDMI connected"; then
+    xrandr \
+        --output "$LAPTOP" --off \
+        --output "$HDMI" --auto --primary
+else
+    xrandr \
+        --output "$HDMI" --off \
+        --output "$LAPTOP" --auto --primary
+fi

@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# Vérifie si l'ordinateur est sur secteur ou sur batterie
+battery_info=$(acpi -b)
+battery_percent=$(echo $battery_info | grep -oP '\d+(?=%)')
+charging_status=$(echo $battery_info | grep -oP 'Charging|Discharging|Full')
+
+if [ "$charging_status" == "Charging" ]; then
+    # L'ordinateur est branché
+    xset s off
+    xset -dpms
+    xset s noblank
+else
+    # L'ordinateur est sur batterie
+    xset s on
+    xset +dpms
+    xset s blank
+fi

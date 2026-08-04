@@ -1,0 +1,27 @@
+#!/bin/sh
+
+case "$1" in
+    --help|-h)
+        echo "Usage: pdf <filename>"
+        echo "Wrapper around okular: opens multiple PDFs in a single instance using tabs."
+        exit 0
+        ;;
+    -*)
+        echo 'There is no options for the command "pdf"'
+        echo "cf pdf --help"
+        exit 1
+        ;;
+    "")
+        echo "Usage: pdf <filename>"
+        echo "Wrapper around okular: opens multiple PDFs in a single instance using tabs."
+        exit 1
+        ;;
+esac
+
+
+instance=$(qdbus | grep 'org.kde.okular-' | awk '{print $1}')
+if [ -z "$instance" ]; then
+    okular "$1" >/dev/null 2>&1 &
+else
+    qdbus "$instance" /okularshell org.kde.okular.openDocument "file://$(realpath "$1")" >/dev/null 2>&1
+fi

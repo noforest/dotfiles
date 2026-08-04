@@ -1,0 +1,55 @@
+#!/bin/sh
+
+count_file="/tmp/battery_count.txt"
+
+# Charger les compteurs à partir du fichier
+if [ -f "$count_file" ]; then
+  source "$count_file"
+else
+  count_10=0
+  count_5=0
+fi
+
+battery_info=$(acpi -b)
+
+info=$(echo "$battery_info" | grep -v "rate information unavailable" | head -n 1)
+battery_percent=$(echo "$info" | grep -oP '\d+(?=%)')
+charging_status=$(echo "$info" | grep -oE 'Charging|Discharging|Not charging|Full')
+
+
+
+if [[ "$charging_status" == "Charging" ]] || [[ "$charging_status" == "Full" ]] || [[ "$charging_status" == "Not charging" ]]; then
+  icon="⚡"
+  count_10=0
+  count_5=0
+
+else
+
+  if [[ "$battery_percent" -eq 10 ]] && [[ $count_10 -eq 0 ]]; then
+    notify-send -u low "Batterie faible" "Charge restante: 10%"
+    count_10=1
+  fi
+
+  if [[ "$battery_percent" -eq 5 ]] && [[ $count_5 -eq 0 ]]; then
+    notify-send -u critical "Batterie très faible" "Charge restante: 5%"
+    count_5=1 
+  fi
+
+  if [ "$battery_percent" -ge 91 ]; then
+    icon=" "
+  elif [ "$battery_percent" -ge 63 ]; then
+    icon=" "
+  elif [ "$battery_percent" -ge 37 ]; then
+    icon=" "
+  elif [ "$battery_percent" -ge 11 ]; then
+    icon=" "
+  else
+    icon=" "
+  fi
+fi
+
+# Afficher l'icône de batterie suivie du pourcentage
+echo " $icon $battery_percent% "
+
+echo "count_10=$count_10" > "$count_file"
+echo "count_5=$count_5" >> "$count_file"

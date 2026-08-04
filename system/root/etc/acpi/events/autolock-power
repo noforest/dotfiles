@@ -1,0 +1,2 @@
+event=ac_adapter.*
+action=/bin/su for -c /usr/local/bin/xidlehook-start.sh

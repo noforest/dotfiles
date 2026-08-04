@@ -1,0 +1,5 @@
+#!/bin/bash
+
+. /usr/local/bin/desktop-env.sh
+export WALLPAPER="${WALLPAPER:-$USER_HOME/Pictures/Wallpapers/banshee_of_inisherin.png}"
+feh --bg-fill "$WALLPAPER" &

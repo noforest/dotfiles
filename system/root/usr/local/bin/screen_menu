@@ -1,0 +1,21 @@
+#!/bin/sh
+
+choice=$(printf "mirror-fit\nmonitor\nextend\nlaptop\nmirror" | dmenu -i -p "Screen mode")
+
+case "$choice" in
+    mirror-fit)
+        screen_mode mirror-fit
+        ;;
+    monitor)
+        screen_mode monitor
+        ;;
+    extend)
+        screen_mode extend
+        ;;
+    laptop)
+        screen_mode laptop
+        ;;
+    mirror)
+        screen_mode mirror
+        ;;
+esac

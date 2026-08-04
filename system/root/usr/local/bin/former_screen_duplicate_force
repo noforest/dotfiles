@@ -1,0 +1,25 @@
+#!/bin/bash
+
+LOCK_DIR="/run/user/$(id -u)/screen_mode_lock"
+mkdir -p "$LOCK_DIR"
+
+
+rm -f "$LOCK_DIR/multi_manual"
+rm -f "$LOCK_DIR/focus_manual"
+# Active le mode manuel duplicate
+touch "$LOCK_DIR/duplicate_manual"
+
+connected=$(xrandr | grep " connected" | awk '{print $1}')
+primary=$(echo "$connected" | head -n 1)
+
+xrandr --output "$primary" --auto --primary
+
+for monitor in $connected; do
+    if [ "$monitor" != "$primary" ]; then
+        xrandr --output "$monitor" --auto --same-as "$primary"
+    fi
+done
+
+if [ -n "$WALLPAPER" ] && command -v feh >/dev/null 2>&1; then
+    feh --bg-fill "$WALLPAPER"
+fi

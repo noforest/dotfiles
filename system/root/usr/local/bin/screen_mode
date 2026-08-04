@@ -1,0 +1,75 @@
+#!/bin/sh
+
+# HDMI="HDMI-A-0"
+# LAPTOP="eDP"
+#
+# case "$1" in
+#     monitor)
+#         xrandr --output "$HDMI" --auto --primary --output "$LAPTOP" --off
+#         ;;
+#     laptop)
+#         xrandr --output "$LAPTOP" --auto --primary --output "$HDMI" --off
+#         ;;
+#     mirror)
+#         xrandr --output "$LAPTOP" --mode 1920x1080 \
+#             --output "$HDMI" --mode 1920x1080 --same-as "$LAPTOP"
+#         ;;
+#     extend)
+#         xrandr --output "$LAPTOP" --auto --primary \
+#             --output "$HDMI" --auto --right-of "$LAPTOP"
+#
+#         feh --bg-fill "$WALLPAPER" > /dev/null 2>&1
+#         ;;
+# esac
+
+
+
+
+HDMI="HDMI-A-0"
+LAPTOP="eDP"
+
+# Liste les résolutions (ex: 1920x1080) supportées par une sortie donnée
+get_modes() {
+    xrandr --query | awk -v out="$1" '
+        $0 ~ "^"out" (connected|disconnected)" {flag=1; next}
+        flag && /^[A-Za-z0-9_-]+ (connected|disconnected)/ {flag=0}
+        flag && /^[[:space:]]/ {print $1}
+    '
+}
+
+# Trouve la plus grande résolution commune entre laptop et écran externe
+common_mode() {
+    comm -12 \
+        <(get_modes "$LAPTOP" | sort -u) \
+        <(get_modes "$HDMI" | sort -u) \
+        | awk -Fx '{print $1*$2, $0}' \
+        | sort -rn \
+        | head -1 \
+        | awk '{print $2}'
+}
+
+case "$1" in
+    monitor)
+        xrandr --output "$HDMI" --auto --primary --output "$LAPTOP" --off
+        ;;
+    laptop)
+        xrandr --output "$LAPTOP" --auto --primary --output "$HDMI" --off
+        ;;
+    mirror)
+        xrandr --output "$LAPTOP" --auto --output "$HDMI" --auto --same-as "$LAPTOP"
+        ;;
+    mirror-fit)
+        MODE=$(common_mode)
+        if [ -z "$MODE" ]; then
+            notify-send "screen_mode" "Aucune résolution commune trouvée entre $LAPTOP et $HDMI" 2>/dev/null
+            exit 1
+        fi
+        xrandr --output "$LAPTOP" --mode "$MODE" --primary \
+               --output "$HDMI" --mode "$MODE" --same-as "$LAPTOP"
+        ;;
+    extend)
+        xrandr --output "$LAPTOP" --auto --primary \
+            --output "$HDMI" --auto --right-of "$LAPTOP"
+        feh --bg-fill "$WALLPAPER" > /dev/null 2>&1
+        ;;
+esac

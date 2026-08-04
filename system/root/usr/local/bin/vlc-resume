@@ -1,0 +1,71 @@
+#!/usr/bin/env python3
+# ~/.local/bin/vlc-resume
+import sys, os, json, subprocess, re, time
+
+DB = os.path.expanduser("~/.local/share/vlc-resume.json")
+
+def load():
+    try:
+        with open(DB) as f: return json.load(f)
+    except: return {}
+
+def save(db):
+    with open(DB, "w") as f: json.dump(db, f, indent=2)
+
+def get_pos(pid):
+    """Lit la position via dbus/MPRIS"""
+    try:
+        out = subprocess.check_output([
+            "dbus-send", "--print-reply", "--dest=org.mpris.MediaPlayer2.vlc",
+            "/org/mpris/MediaPlayer2",
+            "org.freedesktop.DBus.Properties.Get",
+            "string:org.mpris.MediaPlayer2.Player", "string:Position"
+        ], stderr=subprocess.DEVNULL).decode()
+        match = re.search(r'int64\s+(\d+)', out)
+        if match: return int(match.group(1)) // 1_000_000  # µs → secondes
+    except: pass
+    return None
+
+def main():
+    args = sys.argv[1:]
+    if not args:
+        os.execvp("vlc", ["vlc"])
+        return
+
+    # Trouve le fichier (dernier arg non-option)
+    filepath = None
+    for a in reversed(args):
+        if not a.startswith("-") and os.path.exists(a):
+            filepath = os.path.abspath(a)
+            break
+
+    db = load()
+    start_pos = db.get(filepath, 0) if filepath else 0
+
+    cmd = ["vlc"]
+    if start_pos > 30:  # ignore si < 30s
+        cmd += ["--start-time", str(start_pos)]
+    cmd += args
+
+    proc = subprocess.Popen(cmd)
+
+    # Polling toutes les 5s pour sauvegarder la position
+    try:
+        while proc.poll() is None:
+            time.sleep(5)
+            pos = get_pos(proc.pid)
+            if pos and pos > 10 and filepath:
+                db[filepath] = pos
+                save(db)
+    except KeyboardInterrupt:
+        pass
+
+    proc.wait()
+    # À la fermeture, si proche de la fin → supprime l'entrée
+    if filepath and filepath in db:
+        pos = db[filepath]
+        # (optionnel) reset si > 95% — nécessiterait la durée totale
+        save(db)
+
+if __name__ == "__main__":
+    main()

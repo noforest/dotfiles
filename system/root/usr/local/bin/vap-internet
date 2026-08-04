@@ -1,0 +1,79 @@
+#!/bin/sh
+
+# Show wifi 📶 and percent strength or 📡 if none.
+# Show 🌐 if connected to ethernet or ❎ if none.
+# Show 🔒 if a vpn connection is active
+
+case $BUTTON in
+	1) st -e nmtui ;;
+esac
+
+
+
+# Nom de l'interface Wi-Fi
+interface="wlp2s0"
+
+# Nom de l'interface Ethernet (à adapter si nécessaire)
+# interface_eth="enp3s0f3u2u1"
+
+# Fonction pour obtenir le pourcentage de signal Wi-Fi
+get_wifi_signal_percentage() {
+    local interface=$1
+    local signal_strength
+
+
+    
+    signal_strength="$(awk '/^\s*w/ {print int($3 * 100 / 70)}' /proc/net/wireless)"
+    
+    if [ -n "$signal_strength" ]; then
+            echo "$signal_strength"
+    else
+	    echo "0"  # Aucun signal détect
+    fi
+
+}
+
+# Vérifier l'état du Wi-Fi
+if [ -e "/sys/class/net/$interface/operstate" ]; then
+    operstate=$(cat /sys/class/net/$interface/operstate)
+
+    if [ "$operstate" = "up" ]; then
+        wifi_percentage=$(get_wifi_signal_percentage "$interface")
+        
+        # Définir les icônes en fonction du pourcentage de signal
+        if [ "$wifi_percentage" -ge 80 ]; then
+            wifi_icon="󰢾  " # Wi-Fi plein
+            # wifi_icon="󰤨  " # Wi-Fi plein
+        elif [ "$wifi_percentage" -ge 40 ]; then
+            wifi_icon="󰢽  "    # Wi-Fi moitié
+            # wifi_icon="󰤢  "    # Wi-Fi moitié
+        else
+            wifi_icon="󰢼  "  # Wi-Fi vide (pour un signal faible)
+            # wifi_icon="󰤟  "  # Wi-Fi vide (pour un signal faible)
+        fi
+        wifi_status="$wifi_icon${wifi_percentage}% "
+    else
+        wifi_status=" "
+        # wifi_status="󰤮 "
+    fi
+else
+    wifi_status="Interface Wi-Fi non trouvée"
+fi
+
+# Vérifier l'état de la connexion Ethernet
+# if [ -e "/sys/class/net/$interface_eth/operstate" ]; then
+#     operstate_eth=$(cat /sys/class/net/$interface_eth/operstate)
+#
+#     if [ "$operstate_eth" = "up" ]; then
+#         ethernet_status="󰈀 "  # Ethernet connecté
+#     else
+#         ethernet_status=" "  # Ethernet déconnecté
+#     fi
+# else
+#     ethernet_status=" "  # Interface Ethernet non trouvée ou non connectée
+# fi
+
+# Afficher l'icône Wi-Fi
+echo " $wifi_status$ethernet_status"
+# printf "%s%s\u200A\n" " $wifi_status" "$ethernet_status"
+

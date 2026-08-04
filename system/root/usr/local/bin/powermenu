@@ -1,0 +1,11 @@
+#!/bin/bash
+
+CHOICE=$(echo -e "Kill dwm\nShutdown\nReboot\nLock & Sleep" | dmenu -i -p "Select an action:")
+
+case "$CHOICE" in
+    "Kill dwm") pkill dwm ;;
+    "Shutdown") poweroff ;;
+    "Reboot") reboot ;;
+    "Lock & Sleep") systemctl suspend ;;
+    *) ;;
+esac

@@ -1,0 +1,20 @@
+#!/bin/bash
+
+echo "Stopwatch started"
+echo "Press SPACE to pause"
+
+finished=false
+start=$(date +%s)
+
+while [ "$finished" = false ]; do
+    now=$(date +%s)
+    diff=$((now - start))
+    printf "\rTime elapsed : %02d:%02d" $((diff/60)) $((diff%60))
+
+    if read -t 0.1 -d ' ' key; then
+        echo -e "\nPaused... Press any key to resume"
+        read -n1
+        start=$(( $(date +%s) - diff ))
+        key=""
+    fi
+done
