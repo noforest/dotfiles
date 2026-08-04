@@ -2686,6 +2686,14 @@ require("lazy").setup({
                             --
                             -- Pour régénérer l'art :
                             --   chafa --symbols all --size 50 image.png > samurai_logo_blue_doom_5040.txt
+                            --
+                            -- OMBRES sur les contours (désactivées par défaut) :
+                            --   vim.g.ansi_art_shadow = true        -- fond du thème assombri de 35 %
+                            --   vim.g.ansi_art_shadow = 0.5         -- plus marquées (0 à 1)
+                            --   vim.g.ansi_art_shadow = "#14161b"   -- couleur imposée
+                            -- À placer avant le chargement de lazy, ou à l'essai :
+                            --   :lua vim.g.ansi_art_shadow = true; require("ansi_art").refresh()
+                            -- puis rouvrir le dashboard (:lua Snacks.dashboard()).
                             text = require("ansi_art").read(
                                 vim.fn.stdpath("config") .. "/samurai_logo_blue_doom_5040.txt"
                             ) or { { "" } },

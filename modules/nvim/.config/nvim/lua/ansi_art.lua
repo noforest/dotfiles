@@ -27,13 +27,57 @@ local function normal_colors()
            n.bg and ("#%06x"):format(n.bg) or "#1e1e2e"
 end
 
+---Assombrit une couleur d'un pourcentage.
+---@param hex string "#rrggbb"
+---@param amount number 0 à 1
+---@return string
+local function darken(hex, amount)
+    local r, g, b = hex:match("^#(%x%x)(%x%x)(%x%x)$")
+    if not r then
+        return hex
+    end
+    local f = 1 - amount
+    return ("#%02x%02x%02x"):format(
+        math.floor(tonumber(r, 16) * f),
+        math.floor(tonumber(g, 16) * f),
+        math.floor(tonumber(b, 16) * f))
+end
+
+---OMBRES — `vim.g.ansi_art_shadow`
+---
+---Les cellules en vidéo inversée sans arrière-plan explicite peignent leur glyphe
+---avec le fond du buffer, donc invisible. En l'assombrissant légèrement on obtient
+---un effet d'ombre portée sur les contours du dessin.
+---
+---  vim.g.ansi_art_shadow = nil ou false  -- pas d'ombre (défaut)
+---  vim.g.ansi_art_shadow = true          -- ombre auto : fond du thème assombri de 35 %
+---  vim.g.ansi_art_shadow = 0.5           -- ombre plus marquée (0 à 1)
+---  vim.g.ansi_art_shadow = "#14161b"     -- couleur imposée
+---
+---Prise en compte immédiate : `:lua vim.g.ansi_art_shadow = true` puis
+---`:lua require("ansi_art").refresh()`.
+---@param nbg string fond courant de Normal
+---@return string
+local function shadow_color(nbg)
+    local s = vim.g.ansi_art_shadow
+    if not s then
+        return nbg
+    end
+    if type(s) == "string" then
+        return s
+    end
+    return darken(nbg, type(s) == "number" and s or 0.35)
+end
+
 ---Remplace les marqueurs par les couleurs courantes de Normal.
 ---@param def table définition pouvant contenir "NORMAL_FG" / "NORMAL_BG"
 ---@return vim.api.keyset.highlight
 local function resolve(def)
     local nfg, nbg = normal_colors()
     local out = { bold = def.bold }
-    out.fg = def.fg == "NORMAL_FG" and nfg or (def.fg == "NORMAL_BG" and nbg or def.fg)
+    -- NORMAL_BG en avant-plan = glyphe d'une cellule inversée : c'est lui qui porte
+    -- l'ombre éventuelle. En arrière-plan il reste le fond réel.
+    out.fg = def.fg == "NORMAL_FG" and nfg or (def.fg == "NORMAL_BG" and shadow_color(nbg) or def.fg)
     out.bg = def.bg == "NORMAL_FG" and nfg or (def.bg == "NORMAL_BG" and nbg or def.bg)
     return out
 end
@@ -215,6 +259,13 @@ function M.read(path)
     local raw = fd:read("*a")
     fd:close()
     return M.parse(raw)
+end
+
+---Réapplique tous les groupes avec les réglages courants.
+---À appeler après avoir changé `vim.g.ansi_art_shadow` pour voir l'effet
+---sans redémarrer nvim (le dashboard doit ensuite être rouvert).
+function M.refresh()
+    reapply()
 end
 
 ---Largeur visible maximale (utile pour centrer ou dimensionner).
