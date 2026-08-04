@@ -1,0 +1,65 @@
+# ─────────────────────────────────────────────────────────────
+# Artefacts de compilation
+# ─────────────────────────────────────────────────────────────
+*.o
+*.so
+*.so.*
+*.a
+*.out
+*.rej
+*.orig
+
+# Binaires suckless (chemins explicites : sinon on ignorerait les dossiers)
+suckless/dwm/dwm
+suckless/st/st
+suckless/dmenu/dmenu
+suckless/dmenu/stest
+suckless/slock/slock
+suckless/dwmblocks/dwmblocks
+
+# Sauvegardes laissées par `dot link`
+*.bak-*
+
+# ─────────────────────────────────────────────────────────────
+# Sauvegardes et temporaires
+# ─────────────────────────────────────────────────────────────
+*~
+*.swp
+*.swo
+*.tmp
+.DS_Store
+
+# ─────────────────────────────────────────────────────────────
+# SECRETS — ne jamais versionner
+# `dot status` refuse de committer si l'un de ces motifs entre dans l'index
+# ─────────────────────────────────────────────────────────────
+**/.ssh/
+**/.gnupg/
+**/.certs/
+**/rclone.conf
+**/.npmrc
+**/.netrc
+**/atuin/config.toml
+**/gh/hosts.yml
+**/.config/gh/
+**/.config/Bitwarden/
+**/.mosint.yaml
+**/.config/cat_installer/
+**/.config/eduroam-script/
+**/.config/FortiClient/
+**/solaar/config.yaml
+**/vlcrc
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+
+# ─────────────────────────────────────────────────────────────
+# Caches et états applicatifs (pas de la configuration)
+# ─────────────────────────────────────────────────────────────
+**/.cache/
+**/node_modules/
+**/__pycache__/
+**/savedState.conf
+**/*.history
+**/lazy/

@@ -1,0 +1,17 @@
+# Modèle pour ~/.zshrc.local — réglages propres à une machine, jamais versionnés.
+# Copier vers ~/.zshrc.local et adapter. Sourcé automatiquement en fin de .zshrc.
+
+# ── Complétions de projets locaux ───────────────────────────────────────────
+# Toujours protéger par un test : sans lui, le shell affiche une erreur
+# au démarrage dès que le projet n'est pas là.
+# [[ -r ~/Documents/enseirb/s8/pfa/ein8-proj2-pfa-27709/completion.zsh ]] && \
+#     source ~/Documents/enseirb/s8/pfa/ein8-proj2-pfa-27709/completion.zsh
+
+# ── Variables de projets ────────────────────────────────────────────────────
+# export GSL_PATH="$HOME/Documents/enseirb/s6/projets/gsl-2.8/install"
+
+# ── Répertoires qui déclenchent `td` automatiquement au `cd` ────────────────
+# TD_AUTO_DIRS=(
+#     "$HOME/Documents/enseirb/s6/projets/pr105-coursidor-26243"
+#     "$HOME/Documents/enseirb/s6/projets/pr106-actor-26243"
+# )

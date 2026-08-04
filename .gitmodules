@@ -1,0 +1,3 @@
+[submodule "modules/nvim/.config/nvim/plugins/codediff_milestone_noah"]
+	path = modules/nvim/.config/nvim/plugins/codediff_milestone_noah
+	url = /home/for/Documents/programming/github-noforest/codediff.nvim

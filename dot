@@ -1,0 +1,399 @@
+#!/usr/bin/env bash
+# dot — gestion des dotfiles (dwm / Arch Linux)
+# Voir README.md pour la procédure complète.
+set -uo pipefail
+
+REPO="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+MODULES="$REPO/modules"
+PROFILES="$REPO/profiles"
+DEFAULT_PROFILE=laptop
+
+# ── Affichage ───────────────────────────────────────────────────────────────
+if [ -t 1 ]; then
+    R=$'\e[31m'; G=$'\e[32m'; Y=$'\e[33m'; B=$'\e[34m'; D=$'\e[2m'; N=$'\e[0m'
+else
+    R=; G=; Y=; B=; D=; N=
+fi
+info() { printf '%s\n' "$*"; }
+ok()   { printf '  %s✓%s %s\n' "$G" "$N" "$*"; }
+warn() { printf '  %s!%s %s\n' "$Y" "$N" "$*"; }
+err()  { printf '  %s✗%s %s\n' "$R" "$N" "$*" >&2; }
+head_() { printf '\n%s── %s %s%s\n' "$B" "$*" "$(printf '─%.0s' $(seq 1 $((60 - ${#1})))) " "$N"; }
+die()  { err "$*"; exit 1; }
+
+# ── Profils et modules ──────────────────────────────────────────────────────
+profile_modules() {
+    local p="${1:-$DEFAULT_PROFILE}" f="$PROFILES/${1:-$DEFAULT_PROFILE}.conf"
+    [ -f "$f" ] || die "profil inconnu : $p (dispo : $(ls "$PROFILES" | sed 's/\.conf//' | tr '\n' ' '))"
+    # Les lignes `clé: valeur` sont des réglages ; le reste est un nom de module.
+    grep -vE '^\s*(#|$)' "$f" | grep -v ':' | tr -d ' \t'
+}
+
+is_submodule() {  # is_submodule <chemin-absolu>
+    [ -f "$REPO/.gitmodules" ] || return 1
+    local rel="${1#"$REPO"/}"
+    git -C "$REPO" config -f .gitmodules --get-regexp '^submodule\..*\.path$' 2>/dev/null \
+        | awk '{print $2}' | grep -qx "$rel"
+}
+
+# Liste les « unités de lien » d'un module : chemins relatifs à $HOME.
+# Un submodule est lié en tant que dossier ; tout le reste fichier par fichier.
+module_units() {
+    local mod="$1" root="$MODULES/$1"
+    [ -d "$root" ] || return 0
+    _walk() {
+        local dir="$1"
+        local e
+        for e in "$dir"/* "$dir"/.[!.]*; do
+            [ -e "$e" ] || continue
+            if [ -d "$e" ] && ! [ -L "$e" ]; then
+                if is_submodule "$e"; then printf '%s\n' "${e#"$root"/}"; else _walk "$e"; fi
+            else
+                printf '%s\n' "${e#"$root"/}"
+            fi
+        done
+    }
+    _walk "$root"
+}
+
+# ── link / unlink ───────────────────────────────────────────────────────────
+cmd_link() {
+    local profile="${1:-$DEFAULT_PROFILE}" stamp created=0 backed=0 already=0
+    stamp=$(date +%Y%m%d-%H%M%S)
+    head_ "link ($profile)"
+    local mod rel src dst
+    while read -r mod; do
+        while read -r rel; do
+            [ -n "$rel" ] || continue
+            src="$MODULES/$mod/$rel"; dst="$HOME/$rel"
+            if [ -L "$dst" ] && [ "$(readlink -f "$dst")" = "$(readlink -f "$src")" ]; then
+                already=$((already+1)); continue
+            fi
+            mkdir -p "$(dirname "$dst")"
+            if [ -e "$dst" ] || [ -L "$dst" ]; then
+                mv "$dst" "$dst.bak-$stamp" || { err "sauvegarde impossible : $rel"; continue; }
+                warn "$rel ${D}→ sauvegardé en $(basename "$dst").bak-$stamp${N}"
+                backed=$((backed+1))
+            fi
+            ln -s "$src" "$dst" && created=$((created+1))
+        done < <(module_units "$mod")
+    done < <(profile_modules "$profile")
+    info ""
+    ok "$created lien(s) créé(s), $already déjà en place, $backed sauvegarde(s)"
+    [ "$backed" -gt 0 ] && info "  ${D}Les sauvegardes portent le suffixe .bak-$stamp — supprime-les quand tu as vérifié.${N}"
+    return 0
+}
+
+cmd_unlink() {
+    local profile="${1:-$DEFAULT_PROFILE}" n=0 mod rel dst
+    head_ "unlink ($profile)"
+    while read -r mod; do
+        while read -r rel; do
+            [ -n "$rel" ] || continue
+            dst="$HOME/$rel"
+            if [ -L "$dst" ] && [ "$(readlink -f "$dst")" = "$(readlink -f "$MODULES/$mod/$rel")" ]; then
+                rm "$dst" && n=$((n+1))
+            fi
+        done < <(module_units "$mod")
+    done < <(profile_modules "$profile")
+    ok "$n lien(s) retiré(s) — les .bak-* sont conservés"
+}
+
+cmd_list() {
+    local profile="${1:-$DEFAULT_PROFILE}" mod
+    while read -r mod; do module_units "$mod"; done < <(profile_modules "$profile")
+}
+
+# ── adopt : la commande du quotidien ────────────────────────────────────────
+cmd_adopt() {
+    local path="${1:-}" mod="${2:-}"
+    [ -n "$path" ] && [ -n "$mod" ] || die "usage : dot adopt <chemin> <module>"
+    [ -d "$MODULES/$mod" ] || die "module inconnu : $mod (dispo : $(ls "$MODULES" | tr '\n' ' '))"
+    local abs; abs="$(readlink -f "$path")" || die "chemin introuvable : $path"
+    case "$abs" in "$HOME"/*) ;; *) die "hors de \$HOME : $abs" ;; esac
+    [ -L "$path" ] && die "déjà un lien symbolique : $path"
+    local rel="${abs#"$HOME"/}" dst="$MODULES/$mod/$rel"
+    [ -e "$dst" ] && die "déjà présent dans le module $mod : $rel"
+    mkdir -p "$(dirname "$dst")"
+    mv "$abs" "$dst" || die "déplacement impossible"
+    ln -s "$dst" "$abs"
+    ok "adopté dans $mod : $rel"
+    info "  ${D}→ n'oublie pas de committer${N}"
+}
+
+# ── status ──────────────────────────────────────────────────────────────────
+SECRET_PATTERNS='(^|/)(\.ssh|\.gnupg|\.certs)/|rclone\.conf$|(^|/)\.npmrc$|(^|/)\.netrc$|atuin/config\.toml$|gh/hosts\.yml$|solaar/config\.yaml$|vlcrc$|\.pem$|\.key$|id_rsa|id_ed25519'
+
+cmd_status() {
+    local profile="${1:-$DEFAULT_PROFILE}" rc=0
+
+    head_ "liens ($profile)"
+    local mod rel dst missing=0 broken=0 foreign=0 linked=0
+    while read -r mod; do
+        while read -r rel; do
+            [ -n "$rel" ] || continue
+            dst="$HOME/$rel"
+            if [ -L "$dst" ]; then
+                if [ ! -e "$dst" ]; then err "lien cassé : $rel"; broken=$((broken+1)); rc=1
+                elif [ "$(readlink -f "$dst")" = "$(readlink -f "$MODULES/$mod/$rel")" ]; then linked=$((linked+1))
+                else warn "lien vers ailleurs : $rel → $(readlink "$dst")"; foreign=$((foreign+1)); fi
+            elif [ -e "$dst" ]; then
+                warn "fichier réel non lié : $rel"; foreign=$((foreign+1))
+            else
+                warn "absent de \$HOME : $rel"; missing=$((missing+1))
+            fi
+        done < <(module_units "$mod")
+    done < <(profile_modules "$profile")
+    ok "$linked lié(s) · $missing absent(s) · $foreign non lié(s) · $broken cassé(s)"
+
+    head_ "system/ vs la racine"
+    local f target diverged=0 absent=0 same=0
+    while read -r f; do
+        target="$(sys_target "$f")"
+        if [ ! -e "$target" ]; then warn "absent du système : $target"; absent=$((absent+1))
+        elif ! cmp -s "$f" "$target"; then err "diverge : $target"; diverged=$((diverged+1)); rc=1
+        else same=$((same+1)); fi
+    done < <(sys_files)
+    ok "$same identique(s) · $diverged divergent(s) · $absent absent(s) du système"
+    [ "$diverged" -gt 0 ] && info "  ${D}→ 'dot system-pull' pour récupérer, 'dot system-apply' pour écraser${N}"
+
+    head_ "paquets"
+    if command -v pacman >/dev/null; then
+        local catalogued installed uncat
+        catalogued=$(cat "$REPO"/packages/*.txt 2>/dev/null | grep -vE '^\s*(#|$)' | sort -u)
+        installed=$(pacman -Qqen 2>/dev/null | sort -u; pacman -Qqem 2>/dev/null | sort -u)
+        uncat=$(comm -13 <(printf '%s\n' "$catalogued") <(printf '%s\n' "$installed" | sort -u))
+        if [ -n "$uncat" ]; then
+            warn "$(printf '%s\n' "$uncat" | wc -l) paquet(s) installé(s) mais absent(s) des listes :"
+            printf '%s\n' "$uncat" | head -15 | sed "s/^/      ${D}/;s/\$/${N}/"
+            [ "$(printf '%s\n' "$uncat" | wc -l)" -gt 15 ] && info "      ${D}…${N}"
+            info "  ${D}→ 'dot sync' met les listes à jour${N}"
+        else ok "toutes les listes sont à jour"; fi
+    fi
+
+    head_ "secrets"
+    local leaked
+    leaked=$(git -C "$REPO" ls-files 2>/dev/null | grep -E "$SECRET_PATTERNS")
+    if [ -n "$leaked" ]; then
+        err "FICHIERS SENSIBLES SUIVIS PAR GIT :"
+        printf '%s\n' "$leaked" | sed 's/^/      /'
+        info "  ${D}→ git rm --cached <fichier> puis vérifie .gitignore${N}"
+        rc=1
+    else ok "aucun fichier sensible suivi"; fi
+
+    return $rc
+}
+
+# ── système ─────────────────────────────────────────────────────────────────
+# system/root/ reproduit l'arborescence réelle : system/root/etc/x → /etc/x
+sys_files()  { find "$REPO/system/root" -type f 2>/dev/null; }
+sys_target() { printf '%s\n' "${1#"$REPO"/system/root}"; }
+sys_mode()   { case "$1" in */bin/*|*/sbin/*) echo 755 ;; *) echo 644 ;; esac; }
+
+cmd_system_apply() {
+    head_ "system-apply (sudo)"
+    command -v sudo >/dev/null || die "sudo requis"
+    local f target
+    while read -r f; do
+        target="$(sys_target "$f")"
+        sudo install -Dm"$(sys_mode "$target")" "$f" "$target" && ok "$target"
+    done < <(sys_files)
+    info "\n  ${D}Rechargement conseillé : sudo udevadm control --reload && sudo systemctl daemon-reload${N}"
+}
+
+cmd_system_pull() {
+    head_ "system-pull"
+    local f target n=0
+    while read -r f; do
+        target="$(sys_target "$f")"
+        if [ -r "$target" ] && ! cmp -s "$f" "$target"; then
+            cp "$target" "$f"; chmod u+w "$f"; ok "$target"; n=$((n+1))
+        fi
+    done < <(sys_files)
+    [ "$n" -eq 0 ] && ok "rien à récupérer"
+    return 0
+}
+
+# ── paquets ─────────────────────────────────────────────────────────────────
+cmd_install() {
+    local profile="${1:-$DEFAULT_PROFILE}"
+    head_ "install ($profile)"
+    command -v pacman >/dev/null || die "pacman introuvable — Arch uniquement"
+    local groups native aur helper
+    groups=$(grep -E '^\s*packages:' "$PROFILES/$profile.conf" | sed 's/.*packages:\s*//')
+    [ -n "$groups" ] || die "le profil $profile ne déclare aucun groupe de paquets"
+    native=$(for g in $groups; do cat "$REPO/packages/$g.txt" 2>/dev/null; done | grep -vE '^\s*(#|$)' | sort -u)
+    [ -n "$native" ] && { info "  Paquets officiels : $(printf '%s\n' "$native" | wc -l)"; sudo pacman -S --needed --noconfirm $native || warn "certains paquets ont échoué"; }
+    if grep -qE '^\s*aur:\s*yes' "$PROFILES/$profile.conf"; then
+        helper=$(command -v paru || command -v yay) || { warn "ni paru ni yay — AUR ignoré (voir packages/manual.md)"; return 0; }
+        aur=$(grep -vE '^\s*(#|$)' "$REPO/packages/aur.txt" | sort -u)
+        info "  Paquets AUR : $(printf '%s\n' "$aur" | wc -l)"
+        "$helper" -S --needed --noconfirm $aur || warn "certains paquets AUR ont échoué"
+    fi
+}
+
+# ── nvim ────────────────────────────────────────────────────────────────────
+cmd_nvim_patch() {
+    local mode="${1:-apply}" dir="$MODULES/nvim/.config/nvim/patches" lazy="$HOME/.local/share/nvim/lazy"
+    head_ "nvim-patch ($mode)"
+    [ -d "$dir" ] || die "aucun dossier de patchs : $dir"
+    local p name plug rc=0
+    for p in "$dir"/*.patch; do
+        [ -e "$p" ] || { warn "aucun patch"; return 0; }
+        name=$(basename "$p" .patch); plug="$lazy/$name"
+        [ -d "$plug/.git" ] || { warn "$name : plugin non installé (lance nvim puis :Lazy sync)"; continue; }
+        if [ "$mode" = "--save" ]; then
+            git -C "$plug" diff > "$p" && ok "$name régénéré ($(wc -l < "$p") lignes)"
+        else
+            if git -C "$plug" diff --quiet; then
+                if git -C "$plug" apply --3way "$p" 2>/dev/null; then ok "$name appliqué"
+                else err "$name : échec — résous à la main puis 'dot nvim-patch --save'"; rc=1; fi
+            else
+                if git -C "$plug" apply --check --reverse "$p" 2>/dev/null; then ok "$name déjà appliqué"
+                else warn "$name : modifications locales différentes du patch — 'dot nvim-patch --save' pour les enregistrer"; fi
+            fi
+        fi
+    done
+    return $rc
+}
+
+# ── suckless ────────────────────────────────────────────────────────────────
+cmd_build_suckless() {
+    head_ "build-suckless (sudo)"
+    local p rc=0
+    for p in dwm st dmenu slock dwmblocks; do
+        [ -d "$REPO/suckless/$p" ] || continue
+        info "  ${B}$p${N}"
+        if (cd "$REPO/suckless/$p" && make clean >/dev/null 2>&1; sudo make install >/dev/null 2>&1); then
+            ok "$p installé"
+        else
+            err "$p : échec de compilation — relance à la main : cd suckless/$p && make"
+            rc=1
+        fi
+    done
+    [ -e /usr/local/bin/slock ] && sudo chmod u+s /usr/local/bin/slock && ok "setuid posé sur slock"
+    return $rc
+}
+
+# ── sync ────────────────────────────────────────────────────────────────────
+cmd_sync() {
+    head_ "sync"
+    "$0" system-pull
+    if command -v pacman >/dev/null; then
+        pacman -Qqem | sort > "$REPO/packages/aur.txt.new"
+        if ! cmp -s "$REPO/packages/aur.txt.new" "$REPO/packages/aur.txt"; then
+            mv "$REPO/packages/aur.txt.new" "$REPO/packages/aur.txt"; ok "packages/aur.txt mis à jour"
+        else rm -f "$REPO/packages/aur.txt.new"; fi
+    fi
+    "$0" nvim-patch --save
+    "$0" state
+    head_ "git"
+    git -C "$REPO" add -A
+    git -C "$REPO" status --short | head -30
+    info "\n  ${D}Prêt à committer : git commit -m \"...\"${N}"
+}
+
+# ── snapshot système ────────────────────────────────────────────────────────
+cmd_state() {
+    local out="$REPO/system/state.md"
+    {
+        echo "# État système"
+        echo
+        echo "Généré par \`dot state\` le $(date '+%Y-%m-%d %H:%M') sur \`$(hostnamectl hostname 2>/dev/null || cat /etc/hostname)\`."
+        echo "Document de **référence** pour la réinstallation — il n'est pas rejoué automatiquement."
+        echo
+        echo '## Services systemd (système)'
+        echo '```'; systemctl list-unit-files --state=enabled --no-pager 2>/dev/null | head -40; echo '```'
+        echo
+        echo '## Services systemd (utilisateur)'
+        echo '```'; systemctl --user list-unit-files --state=enabled --no-pager 2>/dev/null; echo '```'
+        echo
+        echo '## Utilisateur'
+        echo '```'
+        echo "groupes : $(id -nG)"
+        echo "shell   : $SHELL"
+        echo '```'
+        echo
+        echo '## Locale, heure, machine'
+        echo '```'
+        localectl status 2>/dev/null
+        echo "timezone : $(timedatectl show -p Timezone --value 2>/dev/null)"
+        echo '```'
+        echo
+        echo '## Bootloader et noyau'
+        echo '```'
+        echo "noyau : $(uname -r)"
+        [ -d /boot/grub ] && echo "bootloader : grub"
+        [ -d /boot/loader ] && echo "bootloader : systemd-boot"
+        echo '```'
+    } > "$out"
+    ok "system/state.md régénéré"
+}
+
+# ── polices ─────────────────────────────────────────────────────────────────
+cmd_fonts() {
+    head_ "fonts"
+    bash "$REPO/scripts/fonts-manual.sh"
+}
+
+# ── bootstrap ───────────────────────────────────────────────────────────────
+cmd_bootstrap() {
+    local profile="${1:-$DEFAULT_PROFILE}"
+    head_ "bootstrap ($profile)"
+    "$0" install "$profile"
+    "$0" link "$profile"
+    "$0" system-apply
+    "$0" fonts
+    "$0" build-suckless
+    "$0" nvim-patch
+    info ""
+    ok "bootstrap terminé"
+    info "  ${D}Étapes manuelles restantes : voir la section « Après le bootstrap » du README.${N}"
+}
+
+# ── aide ────────────────────────────────────────────────────────────────────
+usage() {
+    cat <<EOF
+${B}dot${N} — gestion des dotfiles dwm / Arch
+
+  ${G}dot link${N} [profil]        Crée les liens symboliques (sauvegarde l'existant)
+  ${G}dot unlink${N} [profil]      Retire les liens posés
+  ${G}dot list${N} [profil]        Liste les chemins gérés par le profil
+  ${G}dot adopt${N} <chemin> <mod> Fait entrer un fichier de \$HOME dans un module
+  ${G}dot status${N} [profil]      Dérive des liens, de system/, des paquets, des secrets
+  ${G}dot sync${N}                 Régénère listes + patchs + état, puis git add -A
+
+  ${G}dot install${N} [profil]     Installe les paquets du profil
+  ${G}dot system-apply${N}         Copie system/ vers /etc et /usr/local/bin (sudo)
+  ${G}dot system-pull${N}          Récupère /etc et /usr/local/bin dans le repo
+  ${G}dot nvim-patch${N} [--save]  Applique (ou régénère) les patchs des plugins lazy
+  ${G}dot build-suckless${N}       Compile et installe dwm, st, dmenu, slock, dwmblocks
+  ${G}dot fonts${N}                Installe les polices non empaquetées
+  ${G}dot state${N}                Régénère system/state.md
+  ${G}dot bootstrap${N} [profil]   Enchaîne tout : machine neuve → environnement complet
+
+Profils : $(ls "$PROFILES" 2>/dev/null | sed 's/\.conf//' | tr '\n' ' ')(défaut : $DEFAULT_PROFILE)
+Modules : $(ls "$MODULES" 2>/dev/null | tr '\n' ' ')
+EOF
+}
+
+# ── dispatch ────────────────────────────────────────────────────────────────
+cmd="${1:-help}"; shift 2>/dev/null || true
+case "$cmd" in
+    link)           cmd_link "$@" ;;
+    unlink)         cmd_unlink "$@" ;;
+    list)           cmd_list "$@" ;;
+    adopt)          cmd_adopt "$@" ;;
+    status)         cmd_status "$@" ;;
+    sync)           cmd_sync "$@" ;;
+    install)        cmd_install "$@" ;;
+    system-apply)   cmd_system_apply "$@" ;;
+    system-pull)    cmd_system_pull "$@" ;;
+    nvim-patch)     cmd_nvim_patch "$@" ;;
+    build-suckless) cmd_build_suckless "$@" ;;
+    fonts)          cmd_fonts "$@" ;;
+    state)          cmd_state "$@" ;;
+    bootstrap)      cmd_bootstrap "$@" ;;
+    help|-h|--help) usage ;;
+    *)              err "commande inconnue : $cmd"; usage; exit 1 ;;
+esac
