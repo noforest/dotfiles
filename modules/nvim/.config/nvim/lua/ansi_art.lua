@@ -16,6 +16,13 @@ local hl_defs = {}    ---@type table<string, vim.api.keyset.highlight>  nom -> d
 local hl_count = 0
 local hooked = false
 
+---Plafond de sécurité. nvim s'arrête à 20000 groupes de surbrillance et de
+---syntaxe confondus (E849), après quoi plus AUCUN groupe ne peut être créé —
+---y compris ceux de treesitter et des LSP. On s'arrête bien avant, quitte à
+---rendre la fin d'un dessin monochrome, plutôt que de casser l'éditeur.
+local HL_BUDGET = 12000
+local warned = false
+
 ---Couleurs de `Normal`, lues au moment de l'APPLICATION.
 ---Indispensable : la config est chargée par lazy AVANT que le colorscheme ne soit
 ---appliqué, et le Normal par défaut de nvim a pour fond #14161b. Figer cette valeur
@@ -121,6 +128,15 @@ local function hl_group(fg, bg, bold, reverse)
     if hl_cache[key] then
         return hl_cache[key]
     end
+    if hl_count >= HL_BUDGET then
+        if not warned then
+            warned = true
+            vim.notify(
+                ("ansi_art : %d groupes de surbrillance atteints, le reste de l'art sera monochrome."):format(HL_BUDGET),
+                vim.log.levels.WARN)
+        end
+        return nil
+    end
     ensure_hook()
     hl_count = hl_count + 1
     local name = ("SnacksAnsiArt%d"):format(hl_count)
@@ -151,9 +167,23 @@ local function palette(idx)
     return fallback[idx]
 end
 
+---Arrondit une composante RVB à un pas donné.
+---
+---POURQUOI : chaque couple (avant-plan, arrière-plan) rencontré devient un
+---groupe de surbrillance. En truecolor, un GIF de 40 images en produit près de
+---19000 à lui seul — nvim en refuse au-delà de 20000, treesitter et les LSP
+---compris (E849). Arrondir au multiple de 8 le plus proche (erreur maximale de
+---4 sur 255, invisible) fait retomber le compte autour de 4800.
+---@param v integer
+---@param step integer
+---@return integer
+local function snap(v, step)
+    return math.min(255, math.floor((v + step / 2) / step) * step)
+end
+
 ---Applique une séquence SGR à l'état courant.
 ---@param params string  le corps de la séquence, sans "\27[" ni "m"
----@param state table    { fg = ..., bg = ... }
+---@param state table    { fg = ..., bg = ..., q = pas de quantification|nil }
 local function apply_sgr(params, state)
     local codes = {}
     for n in params:gmatch("[0-9]+") do
@@ -184,7 +214,11 @@ local function apply_sgr(params, state)
         elseif c == 49 then
             state.bg = nil
         elseif (c == 38 or c == 48) and codes[i + 1] == 2 then
-            local col = ("#%02x%02x%02x"):format(codes[i + 2] or 0, codes[i + 3] or 0, codes[i + 4] or 0)
+            local r, g, b = codes[i + 2] or 0, codes[i + 3] or 0, codes[i + 4] or 0
+            if state.q then
+                r, g, b = snap(r, state.q), snap(g, state.q), snap(b, state.q)
+            end
+            local col = ("#%02x%02x%02x"):format(r, g, b)
             if c == 38 then state.fg = col else state.bg = col end
             i = i + 4
         elseif (c == 38 or c == 48) and codes[i + 1] == 5 then
@@ -206,16 +240,20 @@ local function apply_sgr(params, state)
     end
 end
 
----Traduit une chaîne contenant des couleurs ANSI en `snacks.dashboard.Text`.
----Sert autant pour un fichier d'art que pour la sortie colorée d'une commande
----(`git diff --color=always`, par exemple).
+---Traduit une chaîne ANSI en une liste de LIGNES de morceaux colorés.
+---Découpage nécessaire pour l'animation : chaque ligne devient un extmark posé
+---par-dessus le buffer (voir lua/ansi_anim.lua). `M.parse` n'est plus qu'un
+---aplatissement de ce résultat.
 ---@param raw string
----@return table[] chunks
-function M.parse(raw)
-    local chunks = {}
-    local state = { fg = nil, bg = nil }
+---@param opts? { quantize?: integer }  arrondit les couleurs 24 bits à ce pas
+---                                     (voir `snap` : indispensable pour un GIF)
+---@return table[][] lines  une liste de morceaux par ligne
+function M.parse_lines(raw, opts)
+    local lines = {}
+    local state = { fg = nil, bg = nil, q = opts and opts.quantize }
 
     for line in (raw:gsub("\r", "") .. "\n"):gmatch("([^\n]*)\n") do
+        local chunks = {}
         local pos = 1
         while pos <= #line do
             -- Toutes les séquences CSI, pas seulement les SGR : celles qui ne se
@@ -238,6 +276,21 @@ function M.parse(raw)
                 break
             end
         end
+        lines[#lines + 1] = chunks
+    end
+    return lines
+end
+
+---Traduit une chaîne contenant des couleurs ANSI en `snacks.dashboard.Text`.
+---Sert autant pour un fichier d'art que pour la sortie colorée d'une commande
+---(`git diff --color=always`, par exemple).
+---@param raw string
+---@param opts? { quantize?: integer }
+---@return table[] chunks
+function M.parse(raw, opts)
+    local chunks = {}
+    for _, line in ipairs(M.parse_lines(raw, opts)) do
+        vim.list_extend(chunks, line)
         chunks[#chunks + 1] = { "\n" }
     end
 

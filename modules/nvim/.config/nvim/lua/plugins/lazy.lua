@@ -2668,38 +2668,78 @@ require("lazy").setup({
 
 
                     { section = "startup" },
+                    -- ------------------------------------------------------------------
+                    -- ART FIXE (PNG) — conservé, remplacé par le GIF animé ci-dessous.
+                    -- Pour y revenir : décommenter ce bloc et commenter le suivant.
+                    --
+                    -- Texte coloré statique, plus une section "terminal".
+                    --
+                    -- POURQUOI : une section terminal est détruite et recréée à chaque
+                    -- dashboard:update(), donc à chaque WinResized — donc à chaque
+                    -- <leader>e. Elle vit dans une fenêtre flottante posée par-dessus le
+                    -- dashboard, redimensionnée à chaque fois : d'où le clignotement et
+                    -- l'art qui se déforme. Aucun réglage de largeur ne corrige ça, le
+                    -- problème est la recréation elle-même.
+                    --
+                    -- lua/ansi_art.lua traduit les couleurs ANSI de chafa en morceaux de
+                    -- texte avec groupes de surbrillance. Le résultat fait partie du
+                    -- buffer du dashboard : jamais relancé, jamais reflowé, il suit la
+                    -- mise en page sans bouger.
+                    --
+                    -- Pour régénérer l'art :
+                    --   chafa --symbols all --size 50 image.png > samurai_logo_blue_doom_5040.txt
+                    --
                     should_show_image() and {
                         {
-                            -- Texte coloré statique, plus une section "terminal".
-                            --
-                            -- POURQUOI : une section terminal est détruite et recréée à chaque
-                            -- dashboard:update(), donc à chaque WinResized — donc à chaque
-                            -- <leader>e. Elle vit dans une fenêtre flottante posée par-dessus le
-                            -- dashboard, redimensionnée à chaque fois : d'où le clignotement et
-                            -- l'art qui se déforme. Aucun réglage de largeur ne corrige ça, le
-                            -- problème est la recréation elle-même.
-                            --
-                            -- lua/ansi_art.lua traduit les couleurs ANSI de chafa en morceaux de
-                            -- texte avec groupes de surbrillance. Le résultat fait partie du
-                            -- buffer du dashboard : jamais relancé, jamais reflowé, il suit la
-                            -- mise en page sans bouger.
-                            --
-                            -- Pour régénérer l'art :
-                            --   chafa --symbols all --size 50 image.png > samurai_logo_blue_doom_5040.txt
-                            --
-                            -- OMBRES sur les contours (désactivées par défaut) :
-                            --   vim.g.ansi_art_shadow = true        -- fond du thème assombri de 35 %
-                            --   vim.g.ansi_art_shadow = 0.5         -- plus marquées (0 à 1)
-                            --   vim.g.ansi_art_shadow = "#14161b"   -- couleur imposée
-                            -- À placer avant le chargement de lazy, ou à l'essai :
-                            --   :lua vim.g.ansi_art_shadow = true; require("ansi_art").refresh()
-                            -- puis rouvrir le dashboard (:lua Snacks.dashboard()).
                             text = require("ansi_art").read(
                                 vim.fn.stdpath("config") .. "/samurai_logo_blue_doom_5040.txt"
                             ) or { { "" } },
                             pane = 2,
                         }
                     },
+                    -- ------------------------------------------------------------------
+
+                    -- ART ANIMÉ (GIF) — mêmes contraintes que le PNG ci-dessus : la
+                    -- première image est du texte statique dans le buffer du dashboard
+                    -- (c'est elle qui fixe la mise en page, jamais relancée ni reflowée),
+                    -- les suivantes sont peintes par-dessus en extmarks. Toujours aucune
+                    -- section "terminal", donc toujours aucun clignotement au <leader>e.
+                    -- Le détail est dans lua/ansi_anim.lua.
+                    --
+                    -- Pour régénérer l'animation :
+                    --   chafa --size 50 --font-ratio 10/24 samurai_float.gif > samurai_float_frames.txt
+                    -- Le --font-ratio est obligatoire : redirigée dans un fichier, la
+                    -- sortie de chafa ne peut plus mesurer le terminal et suppose des
+                    -- cellules 1/2. Celles d'Alacritty en Roboto Mono 12.5 font 10 × 24 px,
+                    -- d'où un dessin étiré de 20 % en hauteur si on ne le précise pas.
+                    --
+                    -- Le curseur du terminal est masqué tant que l'animation tourne, comme
+                    -- le fait chafa lui-même : sinon il se fait peindre au milieu du dessin
+                    -- et semble sauter au hasard. Pour le garder : hide_cursor = false.
+                    --
+                    -- OMBRES sur les contours (désactivées par défaut) — commun aux deux :
+                    --   vim.g.ansi_art_shadow = true        -- fond du thème assombri de 35 %
+                    --   vim.g.ansi_art_shadow = 0.5         -- plus marquées (0 à 1)
+                    --   vim.g.ansi_art_shadow = "#14161b"   -- couleur imposée
+                    -- À placer avant le chargement de lazy, ou à l'essai :
+                    --   :lua vim.g.ansi_art_shadow = true; require("ansi_art").refresh()
+                    -- puis rouvrir le dashboard (:lua Snacks.dashboard()).
+                    -- should_show_image() and function()
+                    --     local anim = require("ansi_anim").load(
+                    --         vim.fn.stdpath("config") .. "/samurai_float_frames.txt",
+                    --         { delay = 80 }   -- le GIF est cadencé à 8 cs par image
+                    --     )
+                    --     if not anim then
+                    --         return {}
+                    --     end
+                    --     return {
+                    --         pane = 2,
+                    --         text = anim:text(),
+                    --         render = function(dashboard, pos)
+                    --             anim:attach(dashboard.buf, pos)
+                    --         end,
+                    --     }
+                    -- end,
                 },
             },
         },
