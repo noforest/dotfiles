@@ -7,7 +7,7 @@ CONF_DIR="${BACKUP_GDRIVE_CONF_DIR:-$HOME/.config/backup-to-gdrive}"
 FILTERS="$CONF_DIR/filters"
 
 SRC1="$HOME/Documents"                            # première source
-SRC2="$HOME/Pictures"                             # deuxième source
+SRC2=""                                           # deuxième source, facultative
 BASE_REMOTE="gdrive:_BackupsLinux"                # racine sur Drive
 
 # Surcharges locales facultatives : SRC1, SRC2, BASE_REMOTE
@@ -64,13 +64,16 @@ rclone sync \
     "$SRC1" \
     "$DEST/Documents"
 
-# Images Twitter
-rclone sync \
-    --verbose \
-    --progress \
-    --transfers 4 \
-    --checkers 8 \
-    --copy-links \
-    --fast-list \
-    "$SRC2" \
-    "$DEST/$(basename "$SRC2")"
+# Deuxième source : synchronisée telle quelle, sans filtres, quand elle est
+# définie dans le fichier de config. Absente, il n'y a simplement rien à faire.
+if [ -n "$SRC2" ]; then
+    rclone sync \
+        --verbose \
+        --progress \
+        --transfers 4 \
+        --checkers 8 \
+        --copy-links \
+        --fast-list \
+        "$SRC2" \
+        "$DEST/$(basename "$SRC2")"
+fi

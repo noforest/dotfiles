@@ -4,5 +4,8 @@
 # du script ne conviennent pas. Fichier sourcé par bash.
 
 # SRC1="$HOME/Documents"
-# SRC2="$HOME/Pictures"
 # BASE_REMOTE="gdrive:_BackupsLinux"
+
+# Deuxième source, facultative : synchronisée sans filtres vers un dossier
+# distant du même nom. Non définie, le script ne sauvegarde que SRC1.
+# SRC2="$HOME/Pictures/un-dossier"
