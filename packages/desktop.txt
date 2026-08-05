@@ -1,6 +1,6 @@
-# Applications graphiques du quotidien
+# Everyday graphical applications
 firefox
-# Gestionnaire de fichiers
+# File manager
 thunar
 thunar-archive-plugin
 thunar-media-tags-plugin
@@ -13,29 +13,29 @@ exo
 garcon
 perl-file-mimeinfo
 xdg-desktop-portal-gtk
-# Multimédia
+# Multimedia
 vlc
 vlc-plugins-all
 libdvdcss
 mpv
 parole
 cava
-# Documents et images
+# Documents and images
 okular
 zathura
 zathura-pdf-poppler
 ristretto
-# Productivité
+# Productivity
 obsidian
 mousepad
 bitwarden
 discord
 qbittorrent
 filezilla
-# Son et Bluetooth (interfaces)
+# Sound and Bluetooth (front ends)
 pavucontrol
 blueman
-# Polices de base
+# Base fonts
 noto-fonts
 noto-fonts-cjk
 noto-fonts-emoji

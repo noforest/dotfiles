@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
-# Compare fichier par fichier l'ancien dépôt bare (~/.dotfiles, intact) au nouveau.
+# Compare the old bare repo (~/.dotfiles, left untouched) to this one, file by file.
 #
-#   ./scripts/diff-ancien-depot.sh            → résumé : quoi a changé
-#   ./scripts/diff-ancien-depot.sh -v         → le diff complet
-#   ./scripts/diff-ancien-depot.sh .zshrc     → le diff d'un fichier précis
+#   ./scripts/diff-old-repo.sh            summary of what changed
+#   ./scripts/diff-old-repo.sh -v         the full diff
+#   ./scripts/diff-old-repo.sh .zshrc     the diff of one file
 set -uo pipefail
 
 REPO="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
 OLD_GIT="$HOME/.dotfiles"
 OLD() { (cd "$HOME" && git --git-dir="$OLD_GIT" --work-tree="$HOME" "$@"); }
 
-[ -d "$OLD_GIT" ] || { echo "ancien dépôt introuvable : $OLD_GIT" >&2; exit 1; }
+[ -d "$OLD_GIT" ] || { echo "old repo not found: $OLD_GIT" >&2; exit 1; }
 
 if [ -t 1 ]; then G=$'\e[32m'; Y=$'\e[33m'; R=$'\e[31m'; D=$'\e[2m'; N=$'\e[0m'
 else G=; Y=; R=; D=; N=; fi
 
-# Où le nouveau dépôt range-t-il un chemin relatif à $HOME ?
+# Where does the new repo keep a path relative to $HOME?
 locate_new() {
     local rel="$1" m
     for m in "$REPO"/modules/*/; do
@@ -37,7 +37,7 @@ declare -a CHANGED ABSENT
 while read -r rel; do
     [ -n "$rel" ] || continue
     [ -n "$only" ] && [ "$rel" != "$only" ] && continue
-    # bruit qu'on a volontairement écarté du nouveau dépôt
+    # noise that was deliberately left out of the new repo
     case "$rel" in
         .local/share/nvim/lazy/*|.config/nvim/plugins/codediff_milestone_noah/*) continue ;;
         Suckless/*) continue ;;
@@ -49,7 +49,7 @@ while read -r rel; do
         else
             changed=$((changed+1)); CHANGED+=("$rel")
             if [ "$verbose" = 1 ] || [ -n "$only" ]; then
-                printf '\n%s═══ %s %s═══%s\n' "$Y" "$rel" "$Y" "$N"
+                printf '\n%s=== %s %s===%s\n' "$Y" "$rel" "$Y" "$N"
                 OLD show "HEAD:$rel" 2>/dev/null | diff -u - "$new" \
                     | sed '1,2d' | sed "s/^-/${R}-/;s/^+/${G}+/;s/\$/${N}/"
             fi
@@ -61,17 +61,17 @@ done < <(OLD ls-files)
 
 [ -n "$only" ] && exit 0
 
-printf '\n%s╔══ Comparaison ancien dépôt → nouveau ══════════════════════════╗%s\n' "$Y" "$N"
-printf '\n  %s%s fichiers identiques%s\n' "$G" "$same" "$N"
+printf '\n%s=== Old repo compared to the new one ===========================%s\n' "$Y" "$N"
+printf '\n  %s%s identical files%s\n' "$G" "$same" "$N"
 
-printf '\n  %s%s fichiers modifiés%s :\n' "$Y" "$changed" "$N"
+printf '\n  %s%s modified files%s:\n' "$Y" "$changed" "$N"
 printf '      %s\n' "${CHANGED[@]}"
-printf '      %s→ détail : ./scripts/diff-ancien-depot.sh <fichier>%s\n' "$D" "$N"
+printf '      %s-> detail: ./scripts/diff-old-repo.sh <file>%s\n' "$D" "$N"
 
-printf '\n  %s%s fichiers non repris%s (bruit écarté volontairement) :\n' "$D" "$absent" "$N"
+printf '\n  %s%s files not carried over%s (noise, left out on purpose):\n' "$D" "$absent" "$N"
 printf '      %s\n' "${ABSENT[@]:0:12}"
-[ "$absent" -gt 12 ] && printf '      %s… et %s autres%s\n' "$D" "$((absent-12))" "$N"
+[ "$absent" -gt 12 ] && printf '      %s... and %s more%s\n' "$D" "$((absent-12))" "$N"
 
-printf '\n  %sL'"'"'ancien dépôt n'"'"'a pas été touché : %s commits, toujours poussé sur GitHub.%s\n' \
+printf '\n  %sThe old repo was never touched: %s commits, still pushed to GitHub.%s\n' \
        "$D" "$(OLD rev-list --count HEAD)" "$N"
-printf '  %sPour y revenir entièrement : dotfiles checkout HEAD -- <fichier>%s\n\n' "$D" "$N"
+printf '  %sTo go back to any of it: dotfiles checkout HEAD -- <file>%s\n\n' "$D" "$N"

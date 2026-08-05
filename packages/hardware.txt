@@ -1,4 +1,4 @@
-# Matériel commun à toute machine de bureau ou portable : son, réseau, USB.
+# Hardware common to any desktop or laptop machine: sound, network, USB.
 # Audio (PipeWire)
 pipewire-alsa
 pipewire-pulse
@@ -6,10 +6,10 @@ pipewire-jack
 wireplumber
 alsa-utils
 sof-firmware
-# Réseau
+# Network
 networkmanager
 network-manager-applet
-# Périphériques
+# Peripherals
 usbutils
 usb_modeswitch
 evtest

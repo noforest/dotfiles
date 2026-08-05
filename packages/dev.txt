@@ -1,4 +1,4 @@
-# Développement
+# Development
 clang
 gdb
 valgrind
@@ -9,7 +9,7 @@ yasm
 openmp
 glibc-debug
 z3
-# Conteneurs
+# Containers
 docker
 docker-compose
 docker-buildx
@@ -35,7 +35,7 @@ python-scikit-learn
 python-seaborn
 python-sympy
 python-tabulate
-# JVM / PHP / autres langages
+# JVM, PHP and other languages
 jdk-openjdk
 jdk21-openjdk
 maven
@@ -46,12 +46,12 @@ postgresql
 opam
 opencode
 r
-# Bibliothèques
+# Libraries
 sdl2_image
 sdl2_ttf
 gtksourceview3
 gobject-introspection
-# Documentation et diagrammes
+# Documentation and diagrams
 plantuml
 mermaid-cli
 pdfgrep
@@ -61,5 +61,5 @@ texlive-binextra
 texlive-fontsextra
 texlive-latexextra
 texlive-langfrench
-# Éditeur alternatif
+# Alternative editor
 emacs

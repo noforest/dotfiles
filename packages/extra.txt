@@ -1,7 +1,7 @@
-# Tout ce qui n'est pas nécessaire à l'expérience de base.
-# Ce groupe n'est inclus que par le profil `full`.
+# Everything that the base experience does not need.
+# Only the `full` profile pulls this group in.
 
-# Session Wayland alternative (Hyprland) — conservée mais inutilisée sous dwm
+# Alternative Wayland session (Hyprland), kept but unused under dwm
 hyprland
 hyprlock
 hyprpicker
@@ -18,7 +18,7 @@ ydotool
 awww
 python-pywal
 
-# Bureau XFCE (composants et greffons de panneau)
+# XFCE desktop (components and panel plugins)
 xfce4-appfinder
 xfce4-battery-plugin
 xfce4-clipman-plugin
@@ -62,7 +62,7 @@ lightdm
 lightdm-gtk-greeter
 lightdm-gtk-greeter-settings
 
-# Sécurité / réseau
+# Security and network
 nikto
 nmap
 gobuster
@@ -76,21 +76,21 @@ proton-vpn-gtk-app
 torbrowser-launcher
 qutebrowser
 
-# Virtualisation et conteneurs applicatifs
+# Virtualisation and application containers
 virtualbox
 virtualbox-guest-iso
 flatpak
 
-# Impression
+# Printing
 cups
 cups-pdf
 
-# Jeux et loisirs
+# Games and leisure
 dolphin-emu
 gnugo
 cmatrix
 
-# Outils divers
+# Miscellaneous tools
 handbrake
 fontforge
 gparted

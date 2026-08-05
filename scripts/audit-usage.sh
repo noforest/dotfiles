@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
-# Qu'est-ce qui sert vraiment sur cette machine ?
+# What does this machine really use?
 #
-# Deux signaux, parce qu'aucun ne suffit seul :
-#   - historique atuin : fiable pour tout ce qui se tape dans un terminal
-#   - mtime de ~/.config, ~/.cache, ~/.local/share : seul indice pour les applis
-#     graphiques, lancées via dmenu et donc absentes de l'historique du shell
+# Two signals, because neither one is enough on its own:
+#   - atuin history: reliable for anything typed in a terminal
+#   - mtime of ~/.config, ~/.cache, ~/.local/share: the only clue for graphical
+#     apps, which are started from dmenu and never reach the shell history
 #
-# LIMITE IMPORTANTE : « aucune trace » ne veut pas dire « inutile ». Les services
-# (ly, pipewire, grub) et les bibliothèques ne se lancent jamais à la main.
-# Ce script trie ; c'est toi qui décides.
+# IMPORTANT LIMIT: "no trace" does not mean "useless". Services (ly, pipewire,
+# grub) and libraries are never launched by hand. This script sorts, you decide.
 set -uo pipefail
 
 REPO="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
@@ -19,7 +18,7 @@ MODE="${1:-packages}"
 if [ -t 1 ]; then G=$'\e[32m'; Y=$'\e[33m'; R=$'\e[31m'; D=$'\e[2m'; B=$'\e[34m'; N=$'\e[0m'
 else G=; Y=; R=; D=; B=; N=; fi
 
-# Paquets qui ne s'invoquent jamais à la main mais sans lesquels rien ne marche.
+# Packages nobody ever invokes by hand, and without which nothing works.
 INFRA='^(base|base-devel|linux|linux-firmware|grub|efibootmgr|os-prober|ly|lightdm.*|
 xorg-server.*|xorg-xauth|xorg-iceauth|xorg-mkfontscale|xorg-font.*|xorg-bdftopcf|
 xorg-setxkbmap|xorg-xkbcomp|xorg-xsetroot|xorg-xhost|xorg-xrdb|xorg-xmodmap|
@@ -34,8 +33,9 @@ texlive-.*|tesseract-data-.*|vim-runtime|vim-spell-fr|xss-lock|numlockx|
 jdk.*-openjdk|virtualbox-guest-iso|inotify-tools|keychain)$'
 INFRA=$(printf '%s' "$INFRA" | tr -d '\n')
 
-# Les alias masquent l'usage réel : `alias du="dust -r"` fait que `dust` n'apparaît
-# jamais tel quel dans l'historique. On construit binaire → alias qui le lancent.
+# Aliases hide real usage. With `alias du="dust -r"`, the name `dust` never
+# appears as such in the history. So we build a map of binary to the aliases
+# that launch it.
 declare -A ALIAS_OF
 _load_aliases() {
     local zshrc="$REPO/modules/shell/.zshrc" line name target bin
@@ -49,10 +49,10 @@ _load_aliases() {
 }
 _load_aliases
 
-usage_of() {  # usage_of <nom-de-binaire...> → "nb_lancements|dernier_ts"
+usage_of() {  # usage_of <binary-name...> -> "run_count|last_timestamp"
     local where="" b a
     for b in "$@"; do
-        # le binaire, plus tout alias qui pointe dessus
+        # the binary itself, plus every alias pointing at it
         for a in "$b" ${ALIAS_OF[$b]:-}; do
             a=${a//\'/\'\'}
             where="$where OR command LIKE '$a %' OR command = '$a' OR command LIKE '% $a %'"
@@ -66,14 +66,14 @@ usage_of() {  # usage_of <nom-de-binaire...> → "nb_lancements|dernier_ts"
 days_since() { [ "$1" = "0" ] && { echo 99999; return; }; echo $(( (NOW - $1) / 86400 )); }
 
 audit_packages() {
-    printf '%s╔══ PAQUETS ══════════════════════════════════════════════════════════╗%s\n' "$B" "$N"
+    printf '%s=== PACKAGES =========================================================%s\n' "$B" "$N"
     local pkg bins runs ts d newest m best
     local -a never stale live
     for pkg in $(pacman -Qqe); do
         [[ "$pkg" =~ $INFRA ]] && continue
         mapfile -t bins < <(pacman -Ql "$pkg" 2>/dev/null \
             | awk '$2 ~ /^\/usr\/bin\/[^\/]+$/ {n=split($2,a,"/"); print a[n]}' | sort -u)
-        [ "${#bins[@]}" -eq 0 ] && continue          # bibliothèque pure : on ne juge pas
+        [ "${#bins[@]}" -eq 0 ] && continue          # pure library, no judgement
         IFS='|' read -r runs ts < <(usage_of "${bins[@]}")
         d=$(days_since "${ts:0:10}")
         newest=0
@@ -84,20 +84,20 @@ audit_packages() {
         done
         [ "$newest" != "0" ] && { local dd=$(days_since "$newest"); [ "$dd" -lt "$d" ] && d=$dd; }
         if   [ "$runs" -eq 0 ] && [ "$d" -ge 99999 ]; then never+=("$pkg")
-        elif [ "$d" -gt 180 ]; then stale+=("$(printf '%s (%s×, %sj)' "$pkg" "$runs" "$d")")
+        elif [ "$d" -gt 180 ]; then stale+=("$(printf '%s (%sx, %sd)' "$pkg" "$runs" "$d")")
         else live+=("$pkg"); fi
     done
-    printf '\n %sJAMAIS AUCUNE TRACE%s — %s paquets\n' "$R" "$N" "${#never[@]}"
+    printf '\n %sNO TRACE AT ALL%s, %s packages\n' "$R" "$N" "${#never[@]}"
     printf '   %s\n' "$(printf '%s ' "${never[@]}" | fold -s -w 68 | sed '2,$s/^/   /')"
-    printf '\n %sPLUS UTILISÉS DEPUIS > 6 MOIS%s — %s paquets\n' "$Y" "$N" "${#stale[@]}"
+    printf '\n %sUNUSED FOR MORE THAN 6 MONTHS%s, %s packages\n' "$Y" "$N" "${#stale[@]}"
     printf '   %s\n' "$(printf '%s, ' "${stale[@]}" | fold -s -w 68 | sed '2,$s/^/   /')"
-    printf '\n %sACTIFS%s — %s paquets\n' "$G" "$N" "${#live[@]}"
-    printf '\n %sInfrastructure exclue de l'"'"'analyse%s (services, polices, bibliothèques :\n' "$D" "$N"
-    printf ' %sne s'"'"'invoquent jamais à la main, donc « aucune trace » n'"'"'y signifie rien).%s\n' "$D" "$N"
+    printf '\n %sACTIVE%s, %s packages\n' "$G" "$N" "${#live[@]}"
+    printf '\n %sInfrastructure is left out of the analysis%s (services, fonts,\n' "$D" "$N"
+    printf ' %slibraries: never invoked by hand, so "no trace" means nothing there).%s\n' "$D" "$N"
 }
 
 audit_scripts() {
-    printf '\n%s╔══ SCRIPTS /usr/local/bin ═══════════════════════════════════════════╗%s\n' "$B" "$N"
+    printf '\n%s=== SCRIPTS IN /usr/local/bin ========================================%s\n' "$B" "$N"
     local s n refs runs ts d
     for s in "$REPO"/system/root/usr/local/bin/*; do
         n=$(basename "$s")
@@ -106,15 +106,15 @@ audit_scripts() {
                "$REPO/system/root/usr" 2>/dev/null | grep -cv "usr/local/bin/$n\$")
         IFS='|' read -r runs ts < <(usage_of "$n")
         d=$(days_since "${ts:0:10}")
-        if   [ "$refs" -gt 0 ]; then printf '  %s✓%s %-40s appelé par %s fichier(s)\n' "$G" "$N" "$n" "$refs"
-        elif [ "$runs" -eq 0 ]; then printf '  %s✗%s %-40s orphelin, jamais lancé\n' "$R" "$N" "$n"
-        elif [ "$d" -gt 180 ]; then printf '  %s?%s %-40s %s× — dernier il y a %s jours\n' "$Y" "$N" "$n" "$runs" "$d"
-        else printf '  %s✓%s %-40s %s× — lancé à la main\n' "$G" "$N" "$n" "$runs"; fi
+        if   [ "$refs" -gt 0 ]; then printf '  %s✓%s %-40s called by %s file(s)\n' "$G" "$N" "$n" "$refs"
+        elif [ "$runs" -eq 0 ]; then printf '  %s✗%s %-40s orphan, never run\n' "$R" "$N" "$n"
+        elif [ "$d" -gt 180 ]; then printf '  %s?%s %-40s %sx, last run %s days ago\n' "$Y" "$N" "$n" "$runs" "$d"
+        else printf '  %s✓%s %-40s %sx, run by hand\n' "$G" "$N" "$n" "$runs"; fi
     done
 }
 
-command -v sqlite3 >/dev/null || { echo "sqlite3 requis (pacman -S sqlite)"; exit 1; }
-[ -f "$DB" ] || echo "  ! base atuin absente : seul le mtime disque sera utilisé"
+command -v sqlite3 >/dev/null || { echo "sqlite3 required (pacman -S sqlite)"; exit 1; }
+[ -f "$DB" ] || echo "  ! no atuin database, only disk mtime will be used"
 
 case "$MODE" in
     packages) audit_packages ;;

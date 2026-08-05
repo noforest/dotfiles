@@ -1,16 +1,16 @@
-# Polices — remplacent les 290 Mo de ~/.local/share/fonts
-# LiterationMono est la police de dwm, dmenu et st (voir suckless/*/config.h)
+# Fonts, replacing the 290 MB of ~/.local/share/fonts
+# LiterationMono is the font of dwm, dmenu and st (see suckless/*/config.h)
 ttf-liberation-mono-nerd
-# RobotoMono est la police d'Alacritty (.config/alacritty/alacritty.toml)
+# RobotoMono is the font of Alacritty (.config/alacritty/alacritty.toml)
 ttf-roboto-mono-nerd
-# Autres familles utilisées ou en réserve dans les configs
+# Other families used or held in reserve by the configs
 ttf-firacode-nerd
 ttf-hack-nerd
 ttf-iosevka-nerd
 ttf-jetbrains-mono-nerd
 ttf-nerd-fonts-symbols-mono
 powerline-fonts
-# Polices écran X11 héritées
+# Legacy X11 screen fonts
 xorg-fonts-100dpi
 xorg-fonts-75dpi
 xorg-font-util

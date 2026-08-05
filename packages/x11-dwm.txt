@@ -1,4 +1,4 @@
-# Session graphique X11 + dwm
+# X11 graphical session and dwm
 xorg-server
 xorg-server-common
 xorg-xauth
@@ -19,12 +19,12 @@ xorg-xev
 xorg-mkfontscale
 xorg-fonts-encodings
 xorg-iceauth
-# Pilotes vidéo
+# Video drivers
 xf86-video-amdgpu
 xf86-video-vesa
-# Gestionnaire de connexion
+# Login manager
 ly
-# Composants de la session (lancés par .xinitrc)
+# Session components (started by .xinitrc)
 picom
 dunst
 feh
@@ -32,11 +32,11 @@ numlockx
 xss-lock
 xdotool
 wmctrl
-# Capture d'écran
+# Screenshots
 maim
 scrot
 swappy
-# Terminal et affichage
+# Terminal and display
 alacritty
 arandr
 lxappearance

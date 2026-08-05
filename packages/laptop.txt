@@ -1,5 +1,5 @@
-# Spécifique à un PORTABLE : batterie, luminosité, pavé tactile, veille.
-# Sur un fixe, rien ici n'est utile.
+# LAPTOP specific: battery, backlight, touchpad, suspend.
+# None of this is useful on a tower.
 acpi
 acpid
 acpilight
@@ -11,11 +11,11 @@ xidlehook
 fprintd
 s-tui
 ethtool
-# Gestes du pavé tactile
+# Touchpad gestures
 libinput-gestures
 gestures
 touchegg
-# Périphériques sans fil Logitech / SteelSeries
+# Logitech and SteelSeries wireless devices
 solaar
-# Sauvegarde (backup-to-gdrive.sh + timer systemd)
+# Backup (backup-to-gdrive.sh plus a systemd timer)
 rclone

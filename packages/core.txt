@@ -1,4 +1,4 @@
-# Socle système — indispensable sur toute machine
+# System base, required on every machine
 base
 base-devel
 linux
@@ -21,7 +21,7 @@ zip
 unzip
 unrar
 cpio
-# Systèmes de fichiers
+# Filesystems
 dosfstools
 exfatprogs
 mtools

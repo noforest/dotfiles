@@ -1,5 +1,6 @@
-# Identité et routage par compte : ~/.gitconfig-local, fichier réel de $HOME,
-# hors dépôt (ni lié ni suivi). Modèle : examples/gitconfig-local.
+# Identity and per account routing live in ~/.gitconfig-local, a real file in
+# $HOME, outside the repo (neither linked nor tracked).
+# Template: examples/gitconfig-local.
 [include]
   path = ~/.gitconfig-local
 

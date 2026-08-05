@@ -1,8 +1,8 @@
 # dotfiles
 
-Mon environnement **dwm sous Arch Linux** : configs, scripts, patchs suckless, listes de
-paquets. Objectif : réinstaller Arch sur une machine neuve et retrouver la même expérience,
-sans être obligé de tout installer.
+My **dwm on Arch Linux** environment: configs, scripts, suckless patches, package
+lists. The goal is to reinstall Arch on a bare machine and get the same experience
+back without having to install everything by hand.
 
 ```
 git clone --recursive git@github.com:noforest/dotfiles.git \
@@ -13,85 +13,86 @@ cd ~/Documents/programming/github-noforest/dotfiles
 
 ---
 
-## Organisation
+## Layout
 
-| Dossier | Contenu |
+| Directory | Contents |
 |---|---|
-| `dot` | La CLI. Tout passe par elle. |
-| `modules/` | Ce qui va dans `$HOME`, groupé par thème. `modules/shell/.zshrc` → `~/.zshrc`. |
-| `system/root/` | Ce qui va hors de `$HOME`. Reproduit la racine : `system/root/etc/x` → `/etc/x`. |
-| `suckless/` | Sources patchées de dwm, st, dmenu, slock, dwmblocks. **Aucun binaire.** |
-| `packages/` | Listes de paquets par groupe + `manual.md` pour ce qui n'est pas dans pacman. |
-| `profiles/` | Combinaisons de modules et de groupes de paquets. |
-| `examples/` | Modèles de fichiers locaux non versionnés. |
+| `dot` | The CLI. Everything goes through it. |
+| `modules/` | What goes into `$HOME`, grouped by theme. `modules/shell/.zshrc` maps to `~/.zshrc`. |
+| `system/root/` | What goes outside `$HOME`. Mirrors the root tree: `system/root/etc/x` maps to `/etc/x`. |
+| `suckless/` | Patched sources of dwm, st, dmenu, slock, dwmblocks. **No binaries.** |
+| `packages/` | Package lists per group, plus `manual.md` for what pacman does not carry. |
+| `profiles/` | Combinations of modules and package groups. |
+| `examples/` | Templates for local files that are never versioned. |
 
-### Profils
+### Profiles
 
-| Profil | Pour quoi | Paquets | Modules en plus |
+| Profile | For what | Packages | Extra modules |
 |---|---|---|---|
-| `minimal` | Serveur, VM, machine de passage. Terminal et éditeur, pas de session graphique. | 61 | shell, git, nvim |
-| `desktop` | **PC fixe sous dwm.** Comme `laptop` sans batterie, luminosité, pavé tactile, gestes ni veille sur capot. | 209 | + terminal, x11-dwm, desktop |
-| `laptop` | **Portable sous dwm** — le profil de cette machine. | 224 | + laptop |
-| `full` | Tout : développement, XFCE, Hyprland, sécurité, virtualisation. | 385 | + dev |
+| `minimal` | Server, VM, machine you pass through. Terminal and editor, no graphical session. | 61 | shell, git, nvim |
+| `desktop` | **Tower PC running dwm.** Like `laptop` without battery, backlight, touchpad, gestures or lid suspend. | 209 | + terminal, x11-dwm, desktop |
+| `laptop` | **Laptop running dwm**, the profile of this machine. | 224 | + laptop |
+| `full` | Everything: development, XFCE, Hyprland, security, virtualisation. | 385 | + dev |
 
-`full` n'est pas fait pour être installé sur une machine neuve — c'est le filet qui
-garantit que rien de ce qui existe ici n'est perdu. Pour un vrai PC, prends `desktop`
-ou `laptop`. Voir [docs/menage.md](docs/menage.md) pour dégraisser avant de répliquer.
+`full` is not meant to be installed on a fresh machine. It is the safety net that
+guarantees nothing present here gets lost. For a real machine, take `desktop` or
+`laptop`. See [docs/cleanup.md](docs/cleanup.md) for trimming things down before
+replicating.
 
 ---
 
-## Usage quotidien
+## Everyday use
 
 ```sh
-dot status              # qu'est-ce qui a bougé ?
-dot adopt ~/.config/mpv/mpv.conf desktop   # faire entrer un fichier dans le dépôt
-dot sync                # régénère listes + patchs + état, puis git add -A
+dot status              # what moved?
+dot adopt ~/.config/mpv/mpv.conf desktop   # bring a file into the repo
+dot sync                # regenerate lists, patches and state, then git add -A
 git commit -m "..."
 ```
 
-`dot adopt` est la commande à retenir : elle déplace le fichier dans le module et le remplace
-par un lien symbolique. Une fois adopté, éditer `~/.config/mpv/mpv.conf` modifie directement le
-dépôt — il n'y a plus rien à copier.
+`dot adopt` is the one command to remember. It moves the file into the module and
+replaces it with a symlink. Once adopted, editing `~/.config/mpv/mpv.conf` edits the
+repo directly. There is nothing left to copy.
 
-`dot status` signale les liens cassés, les fichiers non liés, les divergences entre `system/` et
-la racine, les paquets installés mais non catalogués, et **refuse tout fichier sensible** entré
-dans l'index.
+`dot status` reports broken links, unlinked files, divergences between `system/` and
+the root filesystem, packages installed but not catalogued, and it **rejects any
+sensitive file** that reaches the index.
 
-### Toutes les commandes
+### All the commands
 
-| Commande | Effet |
+| Command | Effect |
 |---|---|
-| `dot link [profil]` | Crée les liens. Sauvegarde l'existant en `.bak-<date>`. Idempotent. |
-| `dot unlink [profil]` | Retire les liens posés (garde les `.bak`). |
-| `dot list [profil]` | Liste les chemins gérés. |
-| `dot adopt <chemin> <module>` | Fait entrer un fichier de `$HOME` dans un module. |
-| `dot status [profil]` | Rapport de dérive complet. |
-| `dot sync` | Régénère tout ce qui est généré, puis `git add -A`. |
-| `dot install [profil]` | `pacman -S --needed` puis `paru -S` selon le profil. |
-| `dot system-apply` | Copie `system/root/` vers la racine (sudo). |
-| `dot system-pull` | Récupère dans le dépôt ce qui a changé sur le système. |
-| `dot build-suckless` | Compile et installe les cinq projets suckless. |
-| `dot fonts` | Récupère les deux polices hors dépôts. |
-| `dot audit [packages\|scripts]` | Ce qui sert vraiment sur cette machine (historique + traces disque). |
-| `dot state` | Régénère `system/state.md`. |
-| `dot bootstrap [profil]` | Enchaîne tout, machine neuve → environnement complet. |
+| `dot link [profile]` | Create the links. Backs up what was there as `.bak-<date>`. Idempotent. |
+| `dot unlink [profile]` | Remove the links it created, keeping the `.bak` files. |
+| `dot list [profile]` | List the managed paths. |
+| `dot adopt <path> <module>` | Bring a file from `$HOME` into a module. |
+| `dot status [profile]` | Full drift report. |
+| `dot sync` | Regenerate everything that is generated, then `git add -A`. |
+| `dot install [profile]` | `pacman -S --needed`, then `paru -S`, according to the profile. |
+| `dot system-apply` | Copy `system/root/` to the root filesystem (sudo). |
+| `dot system-pull` | Pull back into the repo whatever changed on the system. |
+| `dot build-suckless` | Build and install the five suckless projects. |
+| `dot fonts` | Fetch the two fonts that live outside the repositories. |
+| `dot audit [packages\|scripts]` | What this machine actually uses (shell history plus disk traces). |
+| `dot state` | Regenerate `system/state.md`. |
+| `dot bootstrap [profile]` | Chain everything, from bare machine to full environment. |
 
 ---
 
-## Réinstallation complète
+## Full reinstall
 
-À partir d'une installation Arch de base (utilisateur créé, réseau fonctionnel).
+Starting from a base Arch install, with a user created and the network working.
 
-### 1. Prérequis
+### 1. Prerequisites
 
 ```sh
 sudo pacman -S --needed git base-devel
 ```
 
-Puis l'assistant AUR et les outils hors pacman : voir **[packages/manual.md](packages/manual.md)**.
-Au minimum `paru` avant de continuer, sinon `dot install` sautera les 53 paquets AUR.
+Then the AUR helper and the tools outside pacman: see **[packages/manual.md](packages/manual.md)**.
+At minimum install `paru` before going further, otherwise `dot install` skips the 53 AUR packages.
 
-### 2. Cloner et amorcer
+### 2. Clone and bootstrap
 
 ```sh
 git clone --recursive git@github.com:noforest/dotfiles.git \
@@ -100,103 +101,106 @@ cd ~/Documents/programming/github-noforest/dotfiles
 ./dot bootstrap laptop
 ```
 
-`--recursive` est nécessaire : le plugin nvim `codediff` est un submodule.
-Si tu as oublié : `git submodule update --init --recursive`.
+`--recursive` matters, because the nvim `codediff` plugin is a submodule.
+If you forgot it: `git submodule update --init --recursive`.
 
-`bootstrap` enchaîne `install` → `link` → `system-apply` → `fonts` → `build-suckless`.
+`bootstrap` chains `install`, `link`, `system-apply`, `fonts` and `build-suckless`.
 
-### 3. Après le bootstrap
+### 3. After the bootstrap
 
-Ces étapes touchent des états système que le dépôt ne rejoue pas automatiquement.
-`system/state.md` donne l'état de référence de la machine d'origine.
+These steps touch system state that the repo does not replay automatically.
+`system/state.md` records the reference state of the original machine.
 
 ```sh
-# Shell par défaut
+# Default shell
 chsh -s /bin/zsh
 
-# Groupes (docker, virtualbox, etc. — comparer avec system/state.md)
+# Groups (docker, virtualbox and so on, compare with system/state.md)
 sudo usermod -aG docker,vboxusers "$USER"
 
-# Services système
+# System services
 sudo systemctl enable --now ly NetworkManager acpid docker cups auto-cpufreq
 
-# Services utilisateur
+# User services
 systemctl --user enable --now pipewire pipewire-pulse wireplumber \
                               ssh-agent.socket lock.service backup_gdrive.timer
 
-# Recharger ce que system-apply a posé
+# Reload what system-apply installed
 sudo udevadm control --reload && sudo udevadm trigger
 sudo systemctl daemon-reload
 
-# Plugins nvim
+# nvim plugins
 nvim --headless "+Lazy! sync" +qa
 ```
 
-### 4. Réglages propres à la machine
+### 4. Machine specific settings
 
-Trois fichiers à adapter — c'est tout ce qui reste de machine-spécifique :
+Three files to adapt. That is all that stays machine specific.
 
-- **`~/.gitconfig-local`** — identité git (nom, adresse) et routage par compte.
-  Modèle : [`examples/gitconfig-local`](examples/gitconfig-local). Hors dépôt : ni lié ni
-  versionné, il vit dans `$HOME`. `~/.gitconfig` l'inclut ; sans lui, git refuse de committer
-  faute d'auteur.
+- **`~/.gitconfig-local`**, the git identity (name, address) and per account routing.
+  Template: [`examples/gitconfig-local`](examples/gitconfig-local). It sits outside the
+  repo, neither linked nor versioned, and lives in `$HOME`. `~/.gitconfig` includes it.
+  Without it, git has no author and refuses to commit.
 
-- **`~/.zshrc.local`** — chemins de projets, variables d'école, `TD_AUTO_DIRS`.
-  Modèle : [`examples/zshrc.local`](examples/zshrc.local). Non versionné, sourcé en fin de
-  `.zshrc` s'il existe.
+- **`~/.zshrc.local`**, project paths, local variables, `TD_AUTO_DIRS`.
+  Template: [`examples/zshrc.local`](examples/zshrc.local). Not versioned, sourced at the
+  end of `.zshrc` if it exists.
 
-- **`modules/x11-dwm/.config/dwm/machine.d/<hostname>.sh`** — identifiants xinput.
-  Les noms de périphériques (`"ELAN2204:00 04F3:3109 Touchpad"`…) ne valent que pour un
-  portable donné. Sur une nouvelle machine : copier `archlinux.sh` sous le nouveau hostname et
-  remplacer les identifiants par ceux de `xinput list`. Si le fichier n'existe pas, rien n'est
-  chargé et la session démarre quand même.
-
----
-
-## Choix de conception
-
-**Liens symboliques pour `$HOME`, copie pour la racine.** `/etc/udev/rules.d` et
-`/etc/ly/config.ini` sont lus très tôt au démarrage, avant que `/home` ne soit forcément monté :
-un lien vers le dépôt casserait le boot. D'où `system-apply` / `system-pull`, et `dot status`
-qui signale les divergences.
-
-**Les plugins nvim ne sont pas patchés.** Les personnalisations vivent dans `lazy.lua`,
-via les API prévues par chaque plugin :
-
-- `snacks` — les actions `explorer_cd`, `explorer_up_and_cd`, `select` et `unselect_all`
-  passent par `picker.opts.actions`, que snacks consulte **avant** ses propres actions ;
-  l'aperçu d'image par chafa surcharge `snacks.picker.preview.image` depuis la config.
-- `zincoxide` — la notification du répertoire est un autocmd `DirChanged` (motif `tabpage`,
-  qui correspond au `tcd` de `behaviour = "tabs"`).
-- `catppuccin` — plus rien : la modification portait sur l'intégration `bufferline`, un
-  plugin qui n'est **pas** installé (c'est `barbar` qui est utilisé), et sur une ligne
-  commentée. Elle n'avait aucun effet.
-
-Un dépôt de dotfiles ne devrait pas contenir de patchs sur du code tiers : ils périment
-silencieusement à la première mise à jour amont. Ici, `:Lazy update` ne peut plus rien casser.
-
-**`codediff` est un dépôt séparé.** C'est un vrai projet (C + Lua, CMake, tests, 289 fichiers),
-pas un fichier de configuration. Il est référencé en submodule avec une URL *relative*
-(`../codediff.nvim.git`), qui se résout automatiquement vers le même compte GitHub que ce dépôt.
-
-**Aucun binaire.** Les exécutables suckless sont recompilés par `dot build-suckless`, les
-polices viennent de pacman (`packages/fonts.txt`) ou de `dot fonts`. Le dépôt fait ~10 Mo au
-lieu des 36 Mo de la version précédente.
-
-**Les scripts lancés par root sont agnostiques de l'utilisateur.** Ceux appelés par udev, acpid
-ou systemd sourcent `/usr/local/bin/desktop-env.sh`, qui détermine la session graphique active
-et en déduit `USER_HOME`, `DISPLAY` et `XAUTHORITY` — au lieu d'un `/home/for` en dur.
+- **`modules/x11-dwm/.config/dwm/machine.d/<hostname>.sh`**, xinput identifiers.
+  Device names such as `"ELAN2204:00 04F3:3109 Touchpad"` only hold for one given laptop.
+  On a new machine, copy `archlinux.sh` under the new hostname and replace the identifiers
+  with those from `xinput list`. If the file does not exist, nothing is loaded and the
+  session still starts.
 
 ---
 
-## Points d'attention
+## Design choices
 
-- **`~/.dotfiles`** (l'ancien dépôt *bare*) n'est ni supprimé ni modifié. Il reste comme archive,
-  localement et sur `git@github.com:noforest/.dotfiles.git`.
-- **`~/.local/bin/scripts/`** n'est pas versionné : il contenait des copies périmées des scripts
-  de `/usr/local/bin`, qui est la seule référence appelée par `.xinitrc`, dwmblocks et dwm.
-- **`~/.config/systemd/user/graphical-session.target.wants/xset.service`** est un lien cassé
-  hérité (la cible n'existe plus) ; le réglage est repris par `xset-r-rate.service` au niveau
-  système, présent dans `system/root/`.
-- **Secrets** : clés SSH/GPG, `rclone.conf`, `atuin/config.toml`, `.npmrc`, `gh/hosts.yml`,
-  `solaar/config.yaml` sont exclus par `.gitignore` et vérifiés à chaque `dot status`.
+**Symlinks for `$HOME`, copies for the root filesystem.** `/etc/udev/rules.d` and
+`/etc/ly/config.ini` are read very early at boot, before `/home` is necessarily mounted,
+so a link into the repo would break the boot. Hence `system-apply` and `system-pull`,
+plus the divergence report in `dot status`.
+
+**The nvim plugins are not patched.** Customisations live in `lazy.lua`, through the
+API each plugin provides:
+
+- `snacks`, where the `explorer_cd`, `explorer_up_and_cd`, `select` and `unselect_all`
+  actions go through `picker.opts.actions`, which snacks reads **before** its own
+  actions. Image preview through chafa overrides `snacks.picker.preview.image` from
+  the config.
+- `zincoxide`, where the directory notification is a `DirChanged` autocmd (pattern
+  `tabpage`, which matches the `tcd` of `behaviour = "tabs"`).
+- `catppuccin`, where nothing is left. The change touched the `bufferline` integration,
+  a plugin that is **not** installed (`barbar` is the one in use), and a commented line.
+  It had no effect at all.
+
+A dotfiles repo should not carry patches against third party code. They rot silently at
+the first upstream update. Here, `:Lazy update` can no longer break anything.
+
+**`codediff` is a separate repo.** It is a real project (C and Lua, CMake, tests, 289
+files), not a configuration file. It is referenced as a submodule with a *relative* URL
+(`../codediff.nvim.git`), which resolves automatically to the same GitHub account as this
+repo.
+
+**No binaries.** The suckless executables are rebuilt by `dot build-suckless`, and the
+fonts come from pacman (`packages/fonts.txt`) or from `dot fonts`. The repo weighs around
+10 MB instead of the 36 MB of the previous version.
+
+**Scripts run by root are user agnostic.** Those called by udev, acpid or systemd source
+`/usr/local/bin/desktop-env.sh`, which finds the active graphical session and derives
+`USER_HOME`, `DISPLAY` and `XAUTHORITY` from it, instead of hardcoding a home directory.
+
+---
+
+## Things to watch
+
+- **`~/.dotfiles`**, the old *bare* repo, is neither deleted nor modified. It stays as an
+  archive, locally and on `git@github.com:noforest/.dotfiles.git`.
+- **`~/.local/bin/scripts/`** is not versioned. It held stale copies of the scripts in
+  `/usr/local/bin`, which is the only reference called by `.xinitrc`, dwmblocks and dwm.
+- **`~/.config/systemd/user/graphical-session.target.wants/xset.service`** is an inherited
+  broken link, because its target no longer exists. The setting is taken over by
+  `xset-r-rate.service` at the system level, which lives in `system/root/`.
+- **Secrets**: SSH and GPG keys, `rclone.conf`, `atuin/config.toml`, `.npmrc`,
+  `gh/hosts.yml` and `solaar/config.yaml` are excluded by `.gitignore` and checked on
+  every `dot status`.

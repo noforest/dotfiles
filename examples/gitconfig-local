@@ -1,24 +1,24 @@
-# Modèle pour ~/.gitconfig-local — identité git, jamais versionnée.
-# Copier directement dans $HOME et adapter : ce fichier ne passe pas par un
-# module, il n'est donc ni lié ni suivi. Inclus depuis ~/.gitconfig ; sans lui,
-# git n'a pas d'auteur et refuse de committer.
+# Template for ~/.gitconfig-local, the git identity, never versioned.
+# Copy it straight into $HOME and adapt. This file goes through no module, so
+# it is neither linked nor tracked. ~/.gitconfig includes it. Without it git
+# has no author and refuses to commit.
 
 [user]
-  email = ""            # à compléter
-  name = ""             # à compléter
+  email = ""            # to fill in
+  name = ""             # to fill in
 
-# ── Un compte par arborescence ──────────────────────────────────────────────
-# Chaque bloc surcharge [user] sous le répertoire indiqué, et choisit la clé
-# SSH correspondante. Le chemin doit finir par « / » pour couvrir l'arbre.
-# Le fichier inclus n'est pas versionné non plus.
+# === One account per directory tree =========================================
+# Each block overrides [user] under the given directory and picks the matching
+# SSH key. The path must end with a "/" to cover the whole tree. The included
+# file is not versioned either.
 #
-# [includeIf "gitdir:~/Documents/programming/<compte>/"]
-#   path = ~/.gitconfig-<compte>
+# [includeIf "gitdir:~/Documents/programming/<account>/"]
+#   path = ~/.gitconfig-<account>
 #
-# et dans ~/.gitconfig-<compte> :
+# and inside ~/.gitconfig-<account>:
 #
 # [user]
-#     name = <compte>
-#     email = ""        # à compléter
+#     name = <account>
+#     email = ""        # to fill in
 # [core]
-#     sshCommand = "ssh -i ~/.ssh/<clé> -o IdentitiesOnly=yes"
+#     sshCommand = "ssh -i ~/.ssh/<key> -o IdentitiesOnly=yes"

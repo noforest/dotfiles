@@ -1,6 +1,6 @@
-# ─────────────────────────────────────────────────────────────
-# Artefacts de compilation
-# ─────────────────────────────────────────────────────────────
+# =============================================================
+# Build artefacts
+# =============================================================
 *.o
 *.so
 *.so.*
@@ -9,7 +9,7 @@
 *.rej
 *.orig
 
-# Binaires suckless (chemins explicites : sinon on ignorerait les dossiers)
+# suckless binaries (explicit paths, otherwise we would ignore the folders)
 suckless/dwm/dwm
 suckless/st/st
 suckless/dmenu/dmenu
@@ -17,22 +17,22 @@ suckless/dmenu/stest
 suckless/slock/slock
 suckless/dwmblocks/dwmblocks
 
-# Sauvegardes laissées par `dot link`
+# Backups left behind by `dot link`
 *.bak-*
 
-# ─────────────────────────────────────────────────────────────
-# Sauvegardes et temporaires
-# ─────────────────────────────────────────────────────────────
+# =============================================================
+# Backups and temporary files
+# =============================================================
 *~
 *.swp
 *.swo
 *.tmp
 .DS_Store
 
-# ─────────────────────────────────────────────────────────────
-# SECRETS — ne jamais versionner
-# `dot status` refuse de committer si l'un de ces motifs entre dans l'index
-# ─────────────────────────────────────────────────────────────
+# =============================================================
+# SECRETS, never to be versioned
+# `dot status` fails if any of these patterns enters the index
+# =============================================================
 **/.ssh/
 **/.gnupg/
 **/.certs/
@@ -54,21 +54,22 @@ suckless/dwmblocks/dwmblocks
 id_rsa*
 id_ed25519*
 
-# ─────────────────────────────────────────────────────────────
-# IDENTITÉ ET INFRA, présents sur le disque, jamais publiés
-# Seuls les modèles de `examples/` sont versionnés.
-# ─────────────────────────────────────────────────────────────
-# Identité git : nom, adresses, routage par compte. Ces fichiers vivent dans
-# $HOME, hors de tout module : ni liés, ni suivis. Le motif n'est qu'un filet
-# en cas de `dot adopt`. Il épargne `.gitconfig`, qui reste versionné.
+# =============================================================
+# IDENTITY AND INFRASTRUCTURE, on disk but never published
+# Only the templates in `examples/` are versioned.
+# =============================================================
+# Git identity: name, addresses, per-account routing. These files live in
+# $HOME, outside of any module, so they are neither linked nor tracked. The
+# pattern below is only a safety net against `dot adopt`. It spares
+# `.gitconfig`, which stays versioned.
 modules/git/.gitconfig-*
-# Accès à des infrastructures tierces (tunnel VPN, hôte et login distants).
-# Restent dans system/root/, déployés par `system-apply`, jamais publiés.
+# Access to third party infrastructure (VPN tunnel, remote host and login).
+# These stay in system/root/, deployed by `system-apply`, never published.
 system/root/usr/local/bin/connect_*
 
-# ─────────────────────────────────────────────────────────────
-# Caches et états applicatifs (pas de la configuration)
-# ─────────────────────────────────────────────────────────────
+# =============================================================
+# Caches and application state (not configuration)
+# =============================================================
 **/.cache/
 **/node_modules/
 **/__pycache__/

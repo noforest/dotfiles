@@ -1,42 +1,42 @@
-# Installations hors pacman
+# Installs that do not come from pacman
 
-Ces outils sont référencés par les configs mais ne viennent pas des dépôts Arch.
-`dot install` ne les gère pas — à faire une fois, dans cet ordre.
+These tools are referenced by the configs but do not come from the Arch
+repositories. `dot install` does not handle them. Do this once, in this order.
 
-## 1. Assistant AUR (à faire en premier)
+## 1. AUR helper (do this first)
 
-`dot install` en a besoin dès que le profil déclare `aur: yes`.
+`dot install` needs it as soon as the profile declares `aur: yes`.
 
 ```sh
 sudo pacman -S --needed git base-devel
 git clone https://aur.archlinux.org/paru.git /tmp/paru && cd /tmp/paru && makepkg -si
 ```
 
-## 2. Rust et les outils qui en dépendent
+## 2. Rust and the tools built on it
 
 ```sh
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 cargo install yazi-fm yazi-cli
 ```
 
-`~/.zshenv` fait `. "$HOME/.cargo/env"` — sans rustup, le shell affiche une erreur au démarrage.
+`~/.zshenv` runs `. "$HOME/.cargo/env"`. Without rustup the shell prints an error at startup.
 
-## 3. Starship (invite de commande)
+## 3. Starship (shell prompt)
 
 ```sh
-curl -sS https://starship.rs/install/install.sh | sh   # installe dans /usr/local/bin
+curl -sS https://starship.rs/install/install.sh | sh   # installs into /usr/local/bin
 ```
 
-Configuré par `~/.config/starship/customstarship.toml` (variable `STARSHIP_CONFIG` du `.zshrc`).
+Configured by `~/.config/starship/customstarship.toml` (the `STARSHIP_CONFIG` variable in `.zshrc`).
 
-## 4. Atuin (historique de shell)
+## 4. Atuin (shell history)
 
 ```sh
 curl --proto '=https' --tlsv1.2 -sSf https://setup.atuin.sh | sh
 ```
 
-`~/.config/atuin/config.toml` **n'est pas versionné** (il contient la clé de synchronisation).
-Après installation : `atuin login` puis `atuin sync`.
+`~/.config/atuin/config.toml` is **not versioned**, because it holds the sync key.
+After installing: `atuin login`, then `atuin sync`.
 
 ## 5. zoxide
 
@@ -44,9 +44,9 @@ Après installation : `atuin login` puis `atuin sync`.
 curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh
 ```
 
-## 6. Greffon zsh-autosuggestions
+## 6. The zsh-autosuggestions plugin
 
-`.zshrc` le source depuis `~/.zsh/zsh-autosuggestions/` :
+`.zshrc` sources it from `~/.zsh/zsh-autosuggestions/`:
 
 ```sh
 git clone https://github.com/zsh-users/zsh-autosuggestions ~/.zsh/zsh-autosuggestions
@@ -56,7 +56,7 @@ git clone https://github.com/zsh-users/zsh-autosuggestions ~/.zsh/zsh-autosugges
 
 ```sh
 curl -fsSL https://pyenv.run | bash
-pyenv install 3.11.11    # version utilisée dans le PATH du .zshrc
+pyenv install 3.11.11    # the version used in the PATH of .zshrc
 ```
 
 ## 8. opam (OCaml)
@@ -65,14 +65,14 @@ pyenv install 3.11.11    # version utilisée dans le PATH du .zshrc
 sudo pacman -S opam && opam init
 ```
 
-`.zshrc` source `~/.opam/opam-init/init.zsh` (déjà protégé par un test d'existence).
+`.zshrc` sources `~/.opam/opam-init/init.zsh`, already guarded by an existence test.
 
-## 9. Suckless
+## 9. suckless
 
-Compilés depuis `suckless/` par `dot build-suckless`. Rien à télécharger : les sources
-patchées sont dans le dépôt.
+Built from `suckless/` by `dot build-suckless`. Nothing to download, the patched
+sources are in the repo.
 
-## 10. Polices
+## 10. Fonts
 
-`dot fonts` récupère UnifontExMono et icons-in-terminal. Tout le reste est dans
+`dot fonts` fetches UnifontExMono and icons-in-terminal. Everything else is in
 `packages/fonts.txt`.
