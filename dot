@@ -130,33 +130,119 @@ cmd_list() {
 }
 
 # === adopt: the everyday command =============================================
-cmd_adopt() {
-    local path="${1:-}" mod="${2:-}"
-    [ -n "$path" ] && [ -n "$mod" ] || die "usage: dot adopt <path> <module>"
-    [ -d "$MODULES/$mod" ] || die "unknown module: $mod (available: $(ls "$MODULES" | tr '\n' ' '))"
-    local abs; abs="$(readlink -f "$path")" || die "path not found: $path"
-    case "$abs" in "$HOME"/*) ;; *) die "outside of \$HOME: $abs" ;; esac
-    [ -L "$path" ] && die "already a symlink: $path"
-    # A directory would be moved and linked as a whole, but module_units lists it back
-    # file by file: the next `dot link` would rename the module's own files to .bak-*
-    # and leave circular symlinks behind. Adopt files one at a time instead.
-    if [ -d "$abs" ]; then
-        err "adopting a directory is not supported: $path"
-        info "  ${D}Adopt the files one by one:${N}"
-        info "  ${D}  find '$path' -type f -exec $0 adopt {} $mod \\;${N}"
-        exit 1
-    fi
+# A file lives in exactly one module, and the module decides which profiles carry
+# it. The picker therefore shows, for every module, the profiles it reaches.
+modules_all() { find "$MODULES" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort; }
+
+# Profiles from the narrowest to the widest, so the table reads as growing scope.
+profiles_by_scope() {
+    local f p
+    for f in "$PROFILES"/*.conf; do
+        [ -e "$f" ] || continue
+        p="$(basename "$f" .conf)"
+        printf '%s\t%s\n' "$(profile_modules "$p" | wc -l)" "$p"
+    done | sort -n | cut -f2
+}
+
+module_profiles() {  # module_profiles <module> -> the profiles carrying it
+    local mod="$1" p out=""
+    while read -r p; do
+        profile_modules "$p" | grep -qx "$mod" && out="$out$p "
+    done < <(profiles_by_scope)
+    printf '%s' "${out% }"
+}
+
+# The chosen module goes to stdout, the table to stderr: the caller captures it.
+pick_module() {  # pick_module <path> -> module name
+    local path="$1" m w=4 i=1 choice p row
+    local mods=()
+    while read -r m; do
+        mods+=("$m")
+        [ "${#m}" -gt "$w" ] && w="${#m}"
+    done < <(modules_all)
+    [ "${#mods[@]}" -gt 0 ] || die "no module in $MODULES"
+
+    printf '\n  Which module should carry %s%s%s?\n\n' "$B" "$path" "$N" >&2
+    printf '      %s%-*s  %s%s\n' "$D" "$w" "MODULE" "PROFILES" "$N" >&2
+    for m in "${mods[@]}"; do
+        row=""
+        for p in $(module_profiles "$m"); do
+            # The default profile is this machine's, so it deserves to stand out.
+            if [ "$p" = "$DEFAULT_PROFILE" ]; then row="$row$B$p$N "; else row="$row$D$p$N "; fi
+        done
+        printf '  %s%2d)%s %s%-*s%s  %s\n' "$Y" "$i" "$N" "$G" "$w" "$m" "$N" "${row% }" >&2
+        i=$((i+1))
+    done
+    printf '\n  %s%s is this machine default profile.%s\n' "$D" "$B$DEFAULT_PROFILE$N$D" "$N" >&2
+    printf '  %sModule [1-%d], q to cancel:%s ' "$D" "${#mods[@]}" "$N" >&2
+
+    read -r choice || { err "no module given: dot adopt <path> [module]"; return 1; }
+    case "$choice" in
+        q|Q|"")   err "cancelled"; return 1 ;;
+        *[!0-9]*) err "not a number: $choice"; return 1 ;;
+    esac
+    [ "$choice" -ge 1 ] && [ "$choice" -le "${#mods[@]}" ] || { err "out of range: $choice"; return 1; }
+    printf '%s\n' "${mods[$((choice-1))]}"
+}
+
+# Moves one file into the module and links it back. Returns 1 on a skip instead
+# of exiting, so adopting a directory can carry on past a file it must leave alone.
+adopt_one() {  # adopt_one <absolute-file> <module>
+    local abs="$1" mod="$2"
     # Two separate `local`s: bash expands every argument of a `local` before assigning
     # any of them, so "$rel" would be read before it exists (and `set -u` would abort).
     local rel="${abs#"$HOME"/}"
     local dst="$MODULES/$mod/$rel"
-    cmd_check_never_link "$rel" && die "runtime state owned by a daemon, do not version it: $rel"
-    [ -e "$dst" ] && die "already present in module $mod: $rel"
+    if cmd_check_never_link "$rel"; then
+        warn "skipped, runtime state owned by a daemon: $rel"; return 1
+    fi
+    [ -e "$dst" ] && { err "already present in module $mod: $rel"; return 1; }
     mkdir -p "$(dirname "$dst")"
-    mv "$abs" "$dst" || die "move failed"
+    mv "$abs" "$dst" || { err "move failed: $rel"; return 1; }
     ln -s "$dst" "$abs"
-    ok "adopted into $mod: $rel"
-    info "  ${D}-> remember to commit${N}"
+    ok "$rel"
+}
+
+# A directory is adopted file by file, never as a whole: module_units lists a
+# module back file by file, so a directory-wide symlink would make the next
+# `dot link` rename the module own files to .bak-* and leave circular symlinks.
+# The directory itself stays a real directory in $HOME, holding the symlinks.
+adopt_dir() {  # adopt_dir <absolute-dir> <module>
+    local abs="$1" mod="$2" f n=0 skipped=0
+    while read -r f; do
+        warn "skipped, git repository: ${f%/.git}"
+        skipped=$((skipped+1))
+    done < <(find "$abs" -name .git -print)
+    while read -r f; do
+        if [ -L "$f" ]; then
+            warn "skipped, already a symlink: ${f#"$HOME"/}"; skipped=$((skipped+1)); continue
+        fi
+        if adopt_one "$f" "$mod"; then n=$((n+1)); else skipped=$((skipped+1)); fi
+    done < <(find "$abs" -name .git -prune -o \( -type f -o -type l \) -print | sort)
+    info ""
+    ok "$n file(s) adopted, $skipped skipped"
+    [ "$n" -gt 0 ]
+}
+
+cmd_adopt() {
+    local path="${1:-}" mod="${2:-}"
+    [ -n "$path" ] || die "usage: dot adopt <path> [module]"
+    local abs; abs="$(readlink -f "$path")" || die "path not found: $path"
+    [ -e "$abs" ] || die "path not found: $path"
+    case "$abs" in "$HOME"/*) ;; *) die "outside of \$HOME: $abs" ;; esac
+    [ -L "$path" ] && die "already a symlink: $path"
+    [ -n "$mod" ] || { mod="$(pick_module "~/${abs#"$HOME"/}")" || exit 1; }
+    [ -d "$MODULES/$mod" ] || die "unknown module: $mod (available: $(modules_all | tr '\n' ' '))"
+
+    head_ "adopt into $mod"
+    local rc=0
+    if [ -d "$abs" ]; then adopt_dir "$abs" "$mod" || rc=1
+    else adopt_one "$abs" "$mod" || rc=1; fi
+    if [ "$rc" -eq 0 ]; then
+        info "  ${D}-> carried by profiles: $(module_profiles "$mod")${N}"
+        info "  ${D}-> remember to commit${N}"
+    fi
+    return $rc
 }
 
 # === status ==================================================================
@@ -406,7 +492,9 @@ ${B}dot${N} - dotfiles management for dwm / Arch
   ${G}dot link${N} [profile]       Create the symlinks (existing files are backed up)
   ${G}dot unlink${N} [profile]     Remove the links it created
   ${G}dot list${N} [profile]       List the paths the profile manages
-  ${G}dot adopt${N} <path> <mod>   Move a file from \$HOME into a module
+  ${G}dot adopt${N} <path> [mod]   Move a file or a directory from \$HOME into a module
+                           Without <mod>, pick one from a table of the profiles
+                           each module reaches.
   ${G}dot status${N} [profile]     Drift of links, system/, packages and secrets
   ${G}dot sync${N}                 Regenerate lists and system state, then git add -A
 
@@ -419,6 +507,22 @@ ${B}dot${N} - dotfiles management for dwm / Arch
   ${G}dot audit${N} [what]         What this machine really uses: packages, scripts, or all
   ${G}dot state${N}                Regenerate system/state.md
   ${G}dot bootstrap${N} [profile]  Chain everything: bare machine to full environment
+
+${B}When to use what${N}
+
+  ${G}adopt${N} then ${G}sync${N}   The everyday pair. adopt moves a file from \$HOME into a
+                    module and links it back, so there is nothing to run after
+                    it. sync then picks up what lives outside \$HOME (/etc into
+                    system/root/, the AUR list, system/state.md) and runs
+                    git add -A. It stops there: commit yourself.
+  ${G}bootstrap${N}         A new machine, once. Chains install, link, system-apply,
+                    fonts, build-suckless and nvim-patch, so those five are
+                    rarely called by hand.
+  ${G}link${N}              When files reach the repo without passing through you:
+                    after a git pull, or after adding a module to a profile.
+                    Also repairs what status reports as missing or broken.
+                    Never needed right after an adopt.
+  ${G}status${N}            Any doubt. Read only, and safe to run at any time.
 
 Profiles: $(ls "$PROFILES" 2>/dev/null | sed 's/\.conf//' | tr '\n' ' ')(default: $DEFAULT_PROFILE)
 Modules : $(ls "$MODULES" 2>/dev/null | tr '\n' ' ')

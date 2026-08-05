@@ -46,6 +46,7 @@ replicating.
 ```sh
 dot status              # what moved?
 dot adopt ~/.config/mpv/mpv.conf desktop   # bring a file into the repo
+dot adopt ~/.config/mpv           # a whole directory, module picked from a menu
 dot sync                # regenerate lists, patches and state, then git add -A
 git commit -m "..."
 ```
@@ -53,6 +54,24 @@ git commit -m "..."
 `dot adopt` is the one command to remember. It moves the file into the module and
 replaces it with a symlink. Once adopted, editing `~/.config/mpv/mpv.conf` edits the
 repo directly. There is nothing left to copy.
+
+Given a directory, it adopts every file inside it one at a time, leaving the directory
+itself a real directory in `$HOME` holding the symlinks. That is on purpose: a module is
+linked file by file, so a directory-wide symlink would make the next `dot link` collide
+with itself. Nested git repositories, symlinks and daemon state are skipped and reported.
+
+Leave the module out and `dot adopt` asks, showing which profiles each module reaches:
+
+```
+      MODULE     PROFILES
+  1)  desktop    desktop laptop full
+  2)  dev        full
+  3)  git        minimal desktop laptop full
+  ...
+```
+
+A file lives in exactly one module, and the module is what decides which profiles carry
+it. To reach `minimal` as well as `laptop`, pick a module that both profiles list.
 
 `dot status` reports broken links, unlinked files, divergences between `system/` and
 the root filesystem, packages installed but not catalogued, and it **rejects any
@@ -65,7 +84,7 @@ sensitive file** that reaches the index.
 | `dot link [profile]` | Create the links. Backs up what was there as `.bak-<date>`. Idempotent. |
 | `dot unlink [profile]` | Remove the links it created, keeping the `.bak` files. |
 | `dot list [profile]` | List the managed paths. |
-| `dot adopt <path> <module>` | Bring a file from `$HOME` into a module. |
+| `dot adopt <path> [module]` | Bring a file or a directory from `$HOME` into a module. Asks for the module if omitted. |
 | `dot status [profile]` | Full drift report. |
 | `dot sync` | Regenerate everything that is generated, then `git add -A`. |
 | `dot install [profile]` | `pacman -S --needed`, then `paru -S`, according to the profile. |
