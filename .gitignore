@@ -55,6 +55,18 @@ id_rsa*
 id_ed25519*
 
 # ─────────────────────────────────────────────────────────────
+# IDENTITÉ ET INFRA, présents sur le disque, jamais publiés
+# Seuls les modèles de `examples/` sont versionnés.
+# ─────────────────────────────────────────────────────────────
+# Identité git : nom, adresses, routage par compte. Ces fichiers vivent dans
+# $HOME, hors de tout module : ni liés, ni suivis. Le motif n'est qu'un filet
+# en cas de `dot adopt`. Il épargne `.gitconfig`, qui reste versionné.
+modules/git/.gitconfig-*
+# Accès à des infrastructures tierces (tunnel VPN, hôte et login distants).
+# Restent dans system/root/, déployés par `system-apply`, jamais publiés.
+system/root/usr/local/bin/connect_*
+
+# ─────────────────────────────────────────────────────────────
 # Caches et états applicatifs (pas de la configuration)
 # ─────────────────────────────────────────────────────────────
 **/.cache/

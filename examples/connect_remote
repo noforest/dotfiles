@@ -1,0 +1,31 @@
+#!/bin/bash
+# Modèle : ouvre un tunnel VPN Fortinet (SAML) puis une session SSH derrière.
+# Copier vers system/root/usr/local/bin/ et adapter. Les scripts réels ne sont
+# pas versionnés : ils nomment des hôtes internes et des logins tiers.
+
+REMOTE_USER=""      # à compléter
+REMOTE_HOST=""      # à compléter
+VPN_CONF="$HOME/.config/openfortivpn.conf"   # non versionné lui non plus
+
+if [ -z "$1" ]; then
+    echo "Usage: $0 <trusted-cert>"
+    exit 1
+fi
+
+TRUSTED_CERT="$1"
+
+LOGFILE=$(mktemp)
+sudo openfortivpn -c "$VPN_CONF" --saml-login --trusted-cert "$TRUSTED_CERT" > "$LOGFILE" 2>&1 &
+VPN_PID=$!
+echo "Connexion VPN en cours..."
+tail -n +1 -f "$LOGFILE" &
+TAIL_PID=$!
+# Attente active sur la ligne que openfortivpn écrit une fois le tunnel monté.
+while ! grep -q "Tunnel is up and running." "$LOGFILE"; do
+    inotifywait -e modify -qq "$LOGFILE"
+done
+kill "$TAIL_PID" 2>/dev/null
+echo "Tunnel établi, connexion SSH..."
+ssh "$REMOTE_USER@$REMOTE_HOST"
+echo "Session SSH terminée, coupure du VPN..."
+sudo kill "$VPN_PID"

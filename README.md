@@ -134,7 +134,12 @@ nvim --headless "+Lazy! sync" +qa
 
 ### 4. Réglages propres à la machine
 
-Deux fichiers à adapter — c'est tout ce qui reste de machine-spécifique :
+Trois fichiers à adapter — c'est tout ce qui reste de machine-spécifique :
+
+- **`~/.gitconfig-local`** — identité git (nom, adresse) et routage par compte.
+  Modèle : [`examples/gitconfig-local`](examples/gitconfig-local). Hors dépôt : ni lié ni
+  versionné, il vit dans `$HOME`. `~/.gitconfig` l'inclut ; sans lui, git refuse de committer
+  faute d'auteur.
 
 - **`~/.zshrc.local`** — chemins de projets, variables d'école, `TD_AUTO_DIRS`.
   Modèle : [`examples/zshrc.local`](examples/zshrc.local). Non versionné, sourcé en fin de
