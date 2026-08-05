@@ -1,0 +1,8 @@
+# Surcharges facultatives pour backup-to-gdrive.sh
+#
+# À copier vers ~/.config/backup-to-gdrive/config si les valeurs par défaut
+# du script ne conviennent pas. Fichier sourcé par bash.
+
+# SRC1="$HOME/Documents"
+# SRC2="$HOME/Pictures"
+# BASE_REMOTE="gdrive:_BackupsLinux"

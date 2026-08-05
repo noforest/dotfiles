@@ -278,6 +278,19 @@ git_bucket() {
     return 0
 }
 
+# mtime_note <file-a> <file-b> -> `<side>\t<stamp-a>\t<stamp-b>`, where <side> is
+# a, b or same. Only ever a hint: git rewrites mtimes on checkout, so right after
+# a clone every repo file looks newer than its installed counterpart.
+mtime_note() {
+    local a b side=same
+    a=$(stat -c %Y "$1" 2>/dev/null) || return 1
+    b=$(stat -c %Y "$2" 2>/dev/null) || return 1
+    [ "$a" -gt "$b" ] && side=a
+    [ "$b" -gt "$a" ] && side=b
+    printf '%s\t%s\t%s\n' "$side" \
+        "$(date -d "@$a" '+%Y-%m-%d %H:%M')" "$(date -d "@$b" '+%Y-%m-%d %H:%M')"
+}
+
 cmd_status() {
     local profile="${1:-$DEFAULT_PROFILE}" rc=0
     profile_check "$profile"
@@ -303,14 +316,39 @@ cmd_status() {
 
     head_ "system/ vs the root filesystem"
     local f target diverged=0 absent=0 same=0
+    local note side rstamp sstamp repo_newer=0 sys_newer=0
     while read -r f; do
         target="$(sys_target "$f")"
         if [ ! -e "$target" ]; then warn "missing from the system: $target"; absent=$((absent+1))
-        elif ! cmp -s "$f" "$target"; then err "diverges: $target"; diverged=$((diverged+1)); rc=1
+        elif ! cmp -s "$f" "$target"; then
+            err "diverges: $target"
+            # Which copy was edited last, so the direction to fix it is obvious.
+            if note=$(mtime_note "$f" "$target"); then
+                IFS=$'\t' read -r side rstamp sstamp <<<"$note"
+                case "$side" in
+                    a)  repo_newer=$((repo_newer+1))
+                        printf '      %srepo is newer%s   %srepo %s | system %s%s\n' \
+                            "$Y" "$N" "$D" "$rstamp" "$sstamp" "$N" ;;
+                    b)  sys_newer=$((sys_newer+1))
+                        printf '      %ssystem is newer%s %srepo %s | system %s%s\n' \
+                            "$Y" "$N" "$D" "$rstamp" "$sstamp" "$N" ;;
+                    *)  printf '      %ssame mtime%s      %sboth %s%s\n' \
+                            "$D" "$N" "$D" "$rstamp" "$N" ;;
+                esac
+            fi
+            diverged=$((diverged+1)); rc=1
         else same=$((same+1)); fi
     done < <(sys_files)
     ok "$same identical, $diverged diverging, $absent missing from the system"
-    [ "$diverged" -gt 0 ] && info "  ${D}-> 'dot system-pull' to pull them back, 'dot system-apply' to overwrite${N}"
+    if [ "$diverged" -gt 0 ]; then
+        if [ "$sys_newer" -eq 0 ] && [ "$repo_newer" -gt 0 ]; then
+            info "  ${D}-> the repo holds the newer copy everywhere: 'dot system-apply'${N}"
+        elif [ "$repo_newer" -eq 0 ] && [ "$sys_newer" -gt 0 ]; then
+            info "  ${D}-> the system holds the newer copy everywhere: 'dot system-pull'${N}"
+        else
+            info "  ${D}-> 'dot system-pull' to pull them back, 'dot system-apply' to overwrite${N}"
+        fi
+    fi
 
     head_ "packages"
     if command -v pacman >/dev/null; then

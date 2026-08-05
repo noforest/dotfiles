@@ -2,11 +2,25 @@
 set -euo pipefail
 
 # === CONFIGURATION ===
+# Les chemins personnels vivent hors du dépôt (voir system/examples/).
+CONF_DIR="${BACKUP_GDRIVE_CONF_DIR:-$HOME/.config/backup-to-gdrive}"
+FILTERS="$CONF_DIR/filters"
+
 SRC1="$HOME/Documents"                            # première source
-SRC2="$HOME/Pictures/from_twitter"                # deuxième source
+SRC2="$HOME/Pictures"                             # deuxième source
 BASE_REMOTE="gdrive:_BackupsLinux"                # racine sur Drive
+
+# Surcharges locales facultatives : SRC1, SRC2, BASE_REMOTE
+[ -r "$CONF_DIR/config" ] && . "$CONF_DIR/config"
+
 HOST="$(hostname)"                                # nom de la machine
 DEST="$BASE_REMOTE/$HOST"                         # dossier principal distant
+
+if [ ! -r "$FILTERS" ]; then
+    echo "backup-to-gdrive: fichier de filtres manquant : $FILTERS" >&2
+    echo "  copiez system/examples/backup-to-gdrive.filters.example et adaptez-le." >&2
+    exit 1
+fi
 
 # === SYNCHRONISATION ===
 
@@ -18,9 +32,7 @@ rclone sync \
     --checkers 8 \
     --copy-links \
     --fast-list \
-    --filter "+ zotero/storage/**" \
-    --filter "- zotero/**" \
-    --filter "- papiers/stage/2A/internship/DEPOT_Contextpack-vuln/data/**" \
+    --filter-from "$FILTERS" \
     --exclude "*~" \
     --exclude "*.dot" \
     --exclude "*.gcda" \
@@ -61,4 +73,4 @@ rclone sync \
     --copy-links \
     --fast-list \
     "$SRC2" \
-    "$DEST/from_twitter"
+    "$DEST/$(basename "$SRC2")"
