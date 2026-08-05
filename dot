@@ -573,19 +573,20 @@ ${B}dot${N} - dotfiles management for dwm / Arch
 
 ${B}When to use what${N}
 
-  ${G}adopt${N} then ${G}sync${N}   The everyday pair. adopt moves a file from \$HOME into a
-                    module and links it back, so there is nothing to run after
-                    it. sync then picks up what lives outside \$HOME (/etc into
-                    system/root/, the AUR list, system/state.md) and runs
-                    git add -A. It stops there: commit yourself.
-  ${G}bootstrap${N}         A new machine, once. Chains install, link, system-apply,
-                    fonts, build-suckless and nvim-patch, so those five are
-                    rarely called by hand.
-  ${G}link${N}              When files reach the repo without passing through you:
-                    after a git pull, or after adding a module to a profile.
-                    Also repairs what status reports as missing or broken.
-                    Never needed right after an adopt.
-  ${G}status${N}            Any doubt. Read only, and safe to run at any time.
+  ${G}dot adopt${N} then ${G}dot sync${N}       > The everyday pair. adopt moves a file from \$HOME into a
+                                module and links it back, so there is nothing to run after
+                                it. sync then picks up what lives outside \$HOME (/etc into
+                                system/root/, the AUR list, system/state.md) and runs
+                                git add -A. It stops there: commit yourself.
+  ${G}dotgit${N}                        > Alias git -C "$REPO".
+                                Use when editing a file the repo already tracks: nothing to run
+  ${G}dot bootstrap${N}                 > A new machine, once. Chains install, link, system-apply,
+                                fonts, build-suckless and nvim-patch, so those five are
+                                rarely called by hand.
+  ${G}dot link${N}                      > When files reach the repo without passing through you:
+                                after a git pull, or after adding a module to a profile.
+                                Also repairs what status reports as missing or broken.
+                                Never needed right after an adopt.
 
 Profiles: $(ls "$PROFILES" 2>/dev/null | sed 's/\.conf//' | tr '\n' ' ')(default: $DEFAULT_PROFILE)
 Modules : $(ls "$MODULES" 2>/dev/null | tr '\n' ' ')
