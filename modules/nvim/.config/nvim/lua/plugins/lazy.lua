@@ -1560,6 +1560,14 @@ require("lazy").setup({
                 if vim.bo.filetype == 'tex' then
                     return '% %s'
                 end
+                -- Sans parser Treesitter pour le buffer, Comment.ft.calculate()
+                -- appelle parser:lang() sur un nil (nvim >= 0.11 renvoie nil au lieu
+                -- de lever une erreur) : gcc/gbc échouent en silence. Cas concret :
+                -- filetype zsh (.zshrc, .zshenv, .p10k.zsh) — aucun parser zsh installé.
+                -- On retombe alors sur le 'commentstring' du buffer.
+                if not vim.treesitter.get_parser(0, nil, { error = false }) then
+                    return vim.bo.commentstring
+                end
             end,
         }
     },
@@ -1665,7 +1673,7 @@ require("lazy").setup({
             require('nvim-treesitter').install({
                 'lua', 'python', 'bash', 'markdown', 'markdown_inline',
                 'javascript', 'c', 'cpp', 'vim', 'vimdoc', 'query', 'rust',
-                'typescript', 'java',
+                'typescript', 'java', 'zsh', 'git_config'
             })
 
             vim.api.nvim_create_autocmd('FileType', {

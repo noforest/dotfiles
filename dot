@@ -248,6 +248,36 @@ cmd_adopt() {
 # === status ==================================================================
 SECRET_PATTERNS='(^|/)(\.ssh|\.gnupg|\.certs)/|rclone\.conf$|(^|/)\.npmrc$|(^|/)\.netrc$|atuin/config\.toml$|gh/hosts\.yml$|solaar/config\.yaml$|vlcrc$|\.pem$|\.key$|id_rsa|id_ed25519'
 
+# git_bucket <colour> <label> <blurb> <hint>, reading `<letter><TAB><path>` lines
+# on stdin. Prints nothing at all when the bucket is empty, so a clean tree stays
+# quiet. The letters come from `git diff --name-status`; they are spelled out
+# because `dot status` is meant to be readable without knowing git's shorthand.
+git_bucket() {
+    local colour="$1" label="$2" blurb="$3" hint="$4" lines n
+    lines=$(cat)
+    [ -n "$lines" ] || return 0
+    n=$(printf '%s\n' "$lines" | wc -l)
+    printf '  %s%s (%d)%s %s- %s%s\n' "$colour" "$label" "$n" "$N" "$D" "$blurb" "$N"
+    printf '%s\n' "$lines" | head -15 | awk -F'\t' -v c="$colour" -v z="$N" '
+        {
+            w = $1
+            if      ($1 == "M")  w = "modified"
+            else if ($1 == "A")  w = "added"
+            else if ($1 == "D")  w = "deleted"
+            else if ($1 == "T")  w = "typechange"
+            else if ($1 == "U")  w = "unmerged"
+            else if ($1 == "?")  w = "untracked"
+            else if ($1 ~ /^R/)  w = "renamed"
+            else if ($1 ~ /^C/)  w = "copied"
+            p = $2
+            if (NF > 2) p = $2 " -> " $3
+            printf "      %s%-11s %s%s\n", c, w, p, z
+        }'
+    [ "$n" -gt 15 ] && info "      ${D}... and $((n - 15)) more${N}"
+    info "      ${D}-> $hint${N}"
+    return 0
+}
+
 cmd_status() {
     local profile="${1:-$DEFAULT_PROFILE}" rc=0
     profile_check "$profile"
@@ -305,6 +335,39 @@ cmd_status() {
         info "  ${D}-> git rm --cached <file>, then check .gitignore${N}"
         rc=1
     else ok "no sensitive file is tracked"; fi
+
+    head_ "git"
+    # A summary only: uncommitted work is normal, so this section never sets rc.
+    if git -C "$REPO" rev-parse --git-dir >/dev/null 2>&1; then
+        local branch upstream ahead=0 behind=0 staged unstaged untracked
+        branch=$(git -C "$REPO" branch --show-current 2>/dev/null)
+        upstream=$(git -C "$REPO" rev-parse --abbrev-ref '@{upstream}' 2>/dev/null)
+        if [ -n "$upstream" ]; then
+            read -r behind ahead < <(git -C "$REPO" rev-list --left-right --count "$upstream...HEAD" 2>/dev/null)
+            info "  ${D}on ${branch:-HEAD}, tracking $upstream${N}"
+        else
+            info "  ${D}on ${branch:-HEAD}, no upstream${N}"
+        fi
+        [ "${ahead:-0}"  -gt 0 ] && warn "${ahead} commit(s) ahead of $upstream, never pushed"
+        [ "${behind:-0}" -gt 0 ] && warn "${behind} commit(s) behind $upstream, never pulled"
+
+        # The same three buckets as `git status`, queried separately so a file
+        # edited after being staged shows up in both, exactly as git reports it.
+        staged=$(git -C "$REPO" diff --cached --name-status 2>/dev/null)
+        unstaged=$(git -C "$REPO" diff --name-status 2>/dev/null)
+        untracked=$(git -C "$REPO" ls-files --others --exclude-standard 2>/dev/null | sed 's/^/?\t/')
+
+        git_bucket "$G" "staged"    "in the index, will go into the next commit" "dotgit commit" <<<"$staged"
+        git_bucket "$R" "unstaged"  "edited in the working tree, NOT in the next commit" "dotgit add <file>" <<<"$unstaged"
+        git_bucket "$Y" "untracked" "unknown to git, NOT in the next commit" "dotgit add <file>, or add to .gitignore" <<<"$untracked"
+
+        if [ -z "$staged$unstaged$untracked" ]; then
+            if [ "${ahead:-0}" -eq 0 ]; then ok "working tree clean, nothing to push"
+            else ok "working tree clean"; fi
+        fi
+    else
+        warn "$REPO is not a git repository"
+    fi
 
     return $rc
 }

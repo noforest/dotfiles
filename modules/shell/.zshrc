@@ -96,12 +96,13 @@ alias ......="cd ../../../../.."
 
 alias lg="lazygit"
 
-# Ancien dépôt bare, conservé intact comme archive.
-# Toujours consultable : `dotfiles log`, `dotfiles show HEAD:.zshrc`…
-alias dotfiles='git --git-dir=$HOME/.dotfiles/ --work-tree=$HOME'
+# # ANCIEN dépôt bare, conservé intact comme archive.
+# # Toujours consultable : `dotfiles log`, `dotfiles show HEAD:.zshrc`…
+# alias dotfiles='git --git-dir=$HOME/.dotfiles_old/ --work-tree=$HOME'
 
 # Nouveau dépôt et sa CLI (voir $DOTFILES_DIR/README.md)
 export DOTFILES_DIR="$HOME/Documents/programming/github-noforest/dotfiles"
+alias dotfiles="cd $DOTFILES_DIR"
 alias dot="$DOTFILES_DIR/dot"
 alias dotgit="git -C $DOTFILES_DIR"
 
@@ -116,20 +117,20 @@ bindkey "^[[1;5C" forward-word     # Ctrl + flèche droite
 
 # recherche fuzzy dans tous les dossiers, y compris cachés
 
-fuzzy_cd() {
-    local dir
-    dir=$(find "$HOME" -type d ! -path '*/.*' -print 2>/dev/null \
-        | fzf \
-              --height=40% \
-              --bind 'ctrl-h:reload(find . -type d -print 2>/dev/null)' \
-              --bind 'esc:abort' \
-              --header 'Ctrl-H: to include hidden folders') || return
-    cd "$dir" || return
-}
+# fuzzy_cd() {
+#     local dir
+#     dir=$(find "$HOME" -type d ! -path '*/.*' -print 2>/dev/null \
+#         | fzf \
+#               --height=40% \
+#               --bind 'ctrl-h:reload(find . -type d -print 2>/dev/null)' \
+#               --bind 'esc:abort' \
+#               --header 'Ctrl-H: to include hidden folders') || return
+#     cd "$dir" || return
+# }
 
 
-# pour zsh
-bindkey -s '^f' 'fuzzy_cd\n'
+# # pour zsh
+# bindkey -s '^f' 'fuzzy_cd\n'
 
 git() {
   if [[ "$1" == "glog" ]]; then
