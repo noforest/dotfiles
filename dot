@@ -126,7 +126,19 @@ cmd_adopt() {
     local abs; abs="$(readlink -f "$path")" || die "path not found: $path"
     case "$abs" in "$HOME"/*) ;; *) die "outside of \$HOME: $abs" ;; esac
     [ -L "$path" ] && die "already a symlink: $path"
-    local rel="${abs#"$HOME"/}" dst="$MODULES/$mod/$rel"
+    # A directory would be moved and linked as a whole, but module_units lists it back
+    # file by file: the next `dot link` would rename the module's own files to .bak-*
+    # and leave circular symlinks behind. Adopt files one at a time instead.
+    if [ -d "$abs" ]; then
+        err "adopting a directory is not supported: $path"
+        info "  ${D}Adopt the files one by one:${N}"
+        info "  ${D}  find '$path' -type f -exec $0 adopt {} $mod \\;${N}"
+        exit 1
+    fi
+    # Two separate `local`s: bash expands every argument of a `local` before assigning
+    # any of them, so "$rel" would be read before it exists (and `set -u` would abort).
+    local rel="${abs#"$HOME"/}"
+    local dst="$MODULES/$mod/$rel"
     cmd_check_never_link "$rel" && die "runtime state owned by a daemon, do not version it: $rel"
     [ -e "$dst" ] && die "already present in module $mod: $rel"
     mkdir -p "$(dirname "$dst")"
