@@ -537,6 +537,7 @@ case "$cmd" in
     list)           cmd_list "$@" ;;
     adopt)          cmd_adopt "$@" ;;
     status)         cmd_status "$@" ;;
+    st)             cmd_status "$@" ;;
     sync)           cmd_sync "$@" ;;
     install)        cmd_install "$@" ;;
     system-apply)   cmd_system_apply "$@" ;;
