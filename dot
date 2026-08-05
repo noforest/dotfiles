@@ -22,6 +22,14 @@ head_() { printf '\n%s== %s %s%s\n' "$B" "$*" "$(printf '=%.0s' $(seq 1 $((60 - 
 die()  { err "$*"; exit 1; }
 
 # === Profiles and modules ====================================================
+# profile_modules runs inside a process substitution, where die() only exits the
+# subshell. Commands therefore validate the profile up front, so an unknown name
+# exits non zero instead of reporting an error and returning success.
+profile_check() {
+    local p="${1:-$DEFAULT_PROFILE}"
+    [ -f "$PROFILES/$p.conf" ] || die "unknown profile: $p (available: $(ls "$PROFILES" | sed 's/\.conf//' | tr '\n' ' '))"
+}
+
 profile_modules() {
     local p="${1:-$DEFAULT_PROFILE}" f="$PROFILES/${1:-$DEFAULT_PROFILE}.conf"
     [ -f "$f" ] || die "unknown profile: $p (available: $(ls "$PROFILES" | sed 's/\.conf//' | tr '\n' ' '))"
@@ -69,6 +77,7 @@ cmd_check_never_link() {  # cmd_check_never_link <relative-path> -> 0 if forbidd
 # === link / unlink ===========================================================
 cmd_link() {
     local profile="${1:-$DEFAULT_PROFILE}" stamp created=0 backed=0 already=0
+    profile_check "$profile"
     stamp=$(date +%Y%m%d-%H%M%S)
     head_ "link ($profile)"
     local mod rel src dst
@@ -100,6 +109,7 @@ cmd_link() {
 
 cmd_unlink() {
     local profile="${1:-$DEFAULT_PROFILE}" n=0 mod rel dst
+    profile_check "$profile"
     head_ "unlink ($profile)"
     while read -r mod; do
         while read -r rel; do
@@ -115,6 +125,7 @@ cmd_unlink() {
 
 cmd_list() {
     local profile="${1:-$DEFAULT_PROFILE}" mod
+    profile_check "$profile"
     while read -r mod; do module_units "$mod"; done < <(profile_modules "$profile")
 }
 
@@ -153,6 +164,7 @@ SECRET_PATTERNS='(^|/)(\.ssh|\.gnupg|\.certs)/|rclone\.conf$|(^|/)\.npmrc$|(^|/)
 
 cmd_status() {
     local profile="${1:-$DEFAULT_PROFILE}" rc=0
+    profile_check "$profile"
 
     head_ "links ($profile)"
     local mod rel dst missing=0 broken=0 foreign=0 linked=0
@@ -225,7 +237,8 @@ cmd_system_apply() {
         target="$(sys_target "$f")"
         sudo install -Dm"$(sys_mode "$target")" "$f" "$target" && ok "$target"
     done < <(sys_files)
-    info "\n  ${D}Reloading is recommended: sudo udevadm control --reload && sudo systemctl daemon-reload${N}"
+    info ""
+    info "  ${D}Reloading is recommended: sudo udevadm control --reload && sudo systemctl daemon-reload${N}"
 }
 
 cmd_system_pull() {
@@ -244,6 +257,7 @@ cmd_system_pull() {
 # === packages ================================================================
 cmd_install() {
     local profile="${1:-$DEFAULT_PROFILE}"
+    profile_check "$profile"
     head_ "install ($profile)"
     command -v pacman >/dev/null || die "pacman not found, Arch only"
     local groups native aur helper
@@ -291,7 +305,8 @@ cmd_sync() {
     head_ "git"
     git -C "$REPO" add -A
     git -C "$REPO" status --short | head -30
-    info "\n  ${D}Ready to commit: git commit -m \"...\"${N}"
+    info ""
+    info "  ${D}Ready to commit: git commit -m \"...\"${N}"
 }
 
 # === system snapshot =========================================================
