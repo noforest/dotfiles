@@ -31,6 +31,7 @@ feh
 numlockx
 xss-lock
 xdotool
+xprintidle
 wmctrl
 # Screenshots
 maim

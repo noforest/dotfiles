@@ -1,26 +1,46 @@
 #!/usr/bin/env bash
 # Removes snapd from an Ubuntu machine and keeps it from coming back.
 #
-# READ THIS FIRST. On Ubuntu Desktop, `firefox` and `thunderbird` are transitional
-# packages whose only job is to install the corresponding snap. Purging snapd
-# therefore removes your browser. Install a real one before or right after:
+# READ THIS FIRST. Removing snapd removes every application installed as a snap,
+# and on Ubuntu Desktop that includes your browser: `firefox` and `thunderbird`
+# are transitional packages whose only job is to install the corresponding snap.
 #
-#     # Mozilla's own apt repository, a genuine .deb, updated by apt
-#     sudo install -d -m 0755 /etc/apt/keyrings
-#     wget -qO- https://packages.mozilla.org/apt/repo-signing-key.gpg \
-#         | sudo tee /etc/apt/keyrings/packages.mozilla.org.asc > /dev/null
-#     echo "deb [signed-by=/etc/apt/keyrings/packages.mozilla.org.asc] \
-#https://packages.mozilla.org/apt mozilla main" \
-#         | sudo tee /etc/apt/sources.list.d/mozilla.list
-#     printf 'Package: *\nPin: origin packages.mozilla.org\nPin-Priority: 1000\n' \
-#         | sudo tee /etc/apt/preferences.d/mozilla
-#     sudo apt update && sudo apt install firefox
+# So the script starts by listing what you are about to lose, with a suggested
+# replacement for each one it recognises, and stops there unless you confirm.
+# Run it with --list to see that inventory and do nothing else.
+#
+# For Firefox, ./scripts/ubuntu-install-firefox-deb.sh installs the real .deb
+# from Mozilla's own repository, following their official instructions.
 #
 # Everything here is idempotent: running it twice changes nothing the second time.
 set -euo pipefail
 
-YES=0
-[ "${1:-}" = "--yes" ] && YES=1
+YES=0; LIST_ONLY=0
+case "${1:-}" in
+    --yes)  YES=1 ;;
+    --list) LIST_ONLY=1 ;;
+esac
+
+# Known non-snap replacements. Anything not listed here is reported as "look for
+# a deb, a PPA, an AppImage or a flatpak" rather than guessed at.
+replacement_for() {
+    case "$1" in
+        firefox)            echo "./scripts/ubuntu-install-firefox-deb.sh (real deb from Mozilla)" ;;
+        thunderbird)        echo "apt install thunderbird from the Mozilla repository, same method as firefox" ;;
+        chromium)           echo "apt install chromium from the Debian repository, or use firefox" ;;
+        code)               echo "Microsoft apt repository, packages.microsoft.com" ;;
+        spotify)            echo "Spotify apt repository, repository.spotify.com" ;;
+        discord)            echo "the .deb from discord.com/download" ;;
+        obsidian)           echo "the .deb from obsidian.md/download" ;;
+        bitwarden)          echo "the .deb from bitwarden.com/download" ;;
+        slack|zoom-client)  echo "the vendor .deb" ;;
+        snap-store|gnome-*|gtk-common-themes|firmware-updater|snapd-desktop-integration|desktop-security-center|prompting-client)
+                            echo "part of the Ubuntu desktop plumbing, nothing to replace on a dwm session" ;;
+        core|core[0-9]*|bare)
+                            echo "snap runtime, disappears with snapd" ;;
+        *)                  echo "" ;;
+    esac
+}
 
 if [ -t 1 ]; then R=$'\e[31m'; G=$'\e[32m'; Y=$'\e[33m'; D=$'\e[2m'; N=$'\e[0m'
 else R=; G=; Y=; D=; N=; fi
@@ -38,16 +58,42 @@ case "${ID:-}${ID_LIKE:-}" in
 esac
 [ "$(id -u)" -ne 0 ] || die "run as your user, not root: the script calls sudo where needed"
 
-step "what is installed today"
+step "what you are about to lose"
 if ! command -v snap >/dev/null && ! dpkg -l snapd 2>/dev/null | grep -q '^ii'; then
     ok "snapd is already absent, nothing to do"
     exit 0
 fi
-snap list 2>/dev/null | tail -n +2 | awk '{printf "      %s\n", $1}' || true
+
+n_unknown=0
+printf '  %-28s %-10s %s\n' "SNAP" "VERSION" "REPLACEMENT"
+printf '  %s\n' "$(printf '%.0s-' $(seq 1 72))"
+while read -r name version _; do
+    [ -n "$name" ] || continue
+    [ "$name" = "Name" ] && continue
+    rep=$(replacement_for "$name")
+    if [ -z "$rep" ]; then
+        rep="${Y}no known deb, look for a PPA, an AppImage or a flatpak${N}"
+        n_unknown=$((n_unknown + 1))
+    fi
+    printf '  %-28s %-10s %b\n' "$name" "${version:0:10}" "$rep"
+done < <(snap list 2>/dev/null | tail -n +2)
+
+if [ "$n_unknown" -gt 0 ]; then
+    printf '\n'
+    warn "$n_unknown snap(s) above have no replacement listed in this script."
+    warn "Install what you need from another source BEFORE continuing, or you"
+    warn "will be without them until you do."
+fi
+
+if [ "$LIST_ONLY" -eq 1 ]; then
+    printf '\n  %s--list: nothing was removed.%s\n' "$D" "$N"
+    exit 0
+fi
 
 if [ "$YES" -eq 0 ]; then
     printf '\n  This removes every snap above, purges snapd and blocks it in apt.\n'
-    printf '  %sfirefox and thunderbird will go with it if they are snaps.%s\n' "$Y" "$N"
+    printf '  %sYour browser goes with it if it is a snap.%s\n' "$Y" "$N"
+    printf '  %sRe-run with --list to review the table without touching anything.%s\n' "$D" "$N"
     printf '  Continue? [y/N] '
     read -r a
     case "$a" in [yY]*) ;; *) die "aborted" ;; esac

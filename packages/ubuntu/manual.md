@@ -3,9 +3,11 @@
 Ubuntu 26.04 LTS. These tools are referenced by the configs but have no package in
 the official archive. `dot install` does not handle them.
 
-## 0. Run these two first
+## 0. Run these first
 
 ```sh
+./scripts/ubuntu-remove-snap.sh --list    # what you would lose, with replacements
+./scripts/ubuntu-install-firefox-deb.sh   # real Firefox deb, before losing the snap
 ./scripts/ubuntu-remove-snap.sh           # purges snapd and blocks it in apt
 ./scripts/ubuntu-no-ads-no-telemetry.sh   # Ubuntu Pro adverts, APT News, MOTD, reporting
 ```
@@ -14,9 +16,10 @@ No package in `packages/ubuntu/` pulls in a snap, every name was checked against
 the archive index for that. But a fresh Ubuntu ships snapd already installed, so
 removing it is a separate step.
 
-Order matters: the snap script removes the `firefox` snap, and its header shows how
-to install a real Firefox deb from the Mozilla repository. Do that before you need
-a browser.
+Order matters. `--list` prints every installed snap with a suggested non-snap
+replacement and removes nothing, so you can install what you need first. The
+Firefox script follows Mozilla's official instructions, including the fingerprint
+check and the deb822 `.sources` format that 26.04 expects.
 
 ## 1. Two renamed binaries, to fix first
 

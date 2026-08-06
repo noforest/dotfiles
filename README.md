@@ -157,6 +157,8 @@ package in the archive, and Debian renames the `bat` and `fd` binaries.
 Two scripts to run once on a fresh Ubuntu, before the rest:
 
 ```sh
+./scripts/ubuntu-remove-snap.sh --list    # what you would lose, with replacements
+./scripts/ubuntu-install-firefox-deb.sh   # real Firefox deb from Mozilla
 ./scripts/ubuntu-remove-snap.sh           # purges snapd, blocks it in apt
 ./scripts/ubuntu-no-ads-no-telemetry.sh   # Ubuntu Pro adverts, APT News, MOTD news, reporting
 ```

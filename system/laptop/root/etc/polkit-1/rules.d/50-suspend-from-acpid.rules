@@ -1,0 +1,28 @@
+// Autorise la mise en veille demandée par un programme lancé en arrière-plan.
+//
+// Par défaut, `systemctl suspend` n'est accordé qu'à un programme lancé depuis
+// la session graphique. Or c'est acpid qui lance xidlehook-start.sh à chaque
+// branchement et débranchement, et acpid tourne en dehors de la session. Pour
+// polkit, le xidlehook qui en sort n'appartient à aucune session : il réclame
+// un mot de passe administrateur, personne n'est là pour le taper, et la mise
+// en veille est abandonnée sans le moindre message dans le journal.
+//
+// C'est ce qui faisait que l'écran s'éteignait bien mais que le portable ne se
+// suspendait jamais après un débranchement. L'extinction de l'écran passe par
+// `xset`, qui parle au serveur X : X se contente d'un cookie, celui que
+// desktop-env.sh fournit avec DISPLAY et XAUTHORITY. polkit, lui, ne regarde
+// aucun fichier mais la session du processus appelant, et une session ne se
+// transmet pas par des variables d'environnement.
+//
+// Portée volontairement étroite : le groupe wheel, et seulement la veille et
+// l'hibernation. Rien sur l'extinction ni le redémarrage.
+
+polkit.addRule(function(action, subject) {
+    if ((action.id == "org.freedesktop.login1.suspend" ||
+         action.id == "org.freedesktop.login1.suspend-multiple-sessions" ||
+         action.id == "org.freedesktop.login1.hibernate" ||
+         action.id == "org.freedesktop.login1.hibernate-multiple-sessions") &&
+        subject.isInGroup("wheel")) {
+        return polkit.Result.YES;
+    }
+});

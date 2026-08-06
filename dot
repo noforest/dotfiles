@@ -409,7 +409,7 @@ cmd_status() {
     ok "$linked linked, $missing missing, $foreign not linked, $broken broken"
 
     head_ "system/ vs the root filesystem"
-    local f target diverged=0 absent=0 same=0
+    local f target diverged=0 absent=0 same=0 unreadable=0
     local note side rstamp sstamp repo_newer=0 sys_newer=0
     info "  ${D}scopes: $(sys_scopes "$profile" | tr '\n' ' ')${N}"
     local conflicts
@@ -420,7 +420,25 @@ cmd_status() {
     fi
     while read -r f; do
         target="$(sys_target "$f")"
-        if [ ! -e "$target" ]; then warn "missing from the system: $target"; absent=$((absent+1))
+        # `test -e` failing on a directory we may not traverse says nothing about
+        # the file. /etc/polkit-1/rules.d is drwxr-x--- root:polkitd on purpose,
+        # since its rules describe who may do what, so a file deployed there
+        # reads as missing to anyone but root and system-apply gets blamed for
+        # work it did correctly.
+        #
+        # `sudo -n` retries the check as root, but only if a sudo ticket is
+        # already open: it never prompts, so `dot status` stays a read only
+        # command that runs without a password. Otherwise the file is reported as
+        # unverifiable rather than missing.
+        if [ ! -e "$target" ] && [ ! -x "$(dirname "$target")" ]; then
+            if sudo -n test -e "$target" 2>/dev/null; then
+                if sudo -n cmp -s "$f" "$target" 2>/dev/null; then same=$((same+1))
+                else err "diverges: $target"; diverged=$((diverged+1)); rc=1; fi
+            else
+                warn "cannot check without root: $target"
+                unreadable=$((unreadable+1))
+            fi
+        elif [ ! -e "$target" ]; then warn "missing from the system: $target"; absent=$((absent+1))
         elif ! cmp -s "$f" "$target"; then
             err "diverges: $target"
             # Where it comes from in the repo: with several scopes shipping into
@@ -444,18 +462,7 @@ cmd_status() {
         else same=$((same+1)); fi
     done < <(sys_files "$profile")
     ok "$same identical, $diverged diverging, $absent missing from the system"
-    # Files that exist in system/ but belong to no active scope. Nothing compares
-    # them to the system, so naming them is the only way they stay visible.
-    local outside n_outside
-    outside=$(sys_out_of_scope "$profile")
-    n_outside=$(printf '%s' "$outside" | grep -c . || true)
-    if [ "${n_outside:-0}" -gt 0 ]; then
-        info "  ${D}$n_outside file(s) in scopes this profile does not deploy, left unchecked:${N}"
-        printf '%s\n' "$outside" | sed "s|^$REPO/system/||" \
-            | awk -F/ -v d="$D" -v z="$N" '{s=$1; sub(/^[^/]*\/root/, "", $0); printf "      %s%-12s %s%s\n", d, s, $0, z}' \
-            | head -10
-        [ "$n_outside" -gt 10 ] && info "      ${D}...${N}"
-    fi
+    [ "$unreadable" -gt 0 ] && info "  ${D}$unreadable file(s) unverifiable, run a sudo command first then retry${N}"
     if [ "$diverged" -gt 0 ]; then
         if [ "$sys_newer" -eq 0 ] && [ "$repo_newer" -gt 0 ]; then
             info "  ${D}-> the repo holds the newer copy everywhere: 'dot system-apply'${N}"
@@ -573,17 +580,6 @@ sys_conflicts() {
         printf '%s\t%s\n' "$(sys_target "$f")" "${f#"$REPO"/system/}"
     done < <(sys_files "${1:-$DEFAULT_PROFILE}") \
         | sort | awk -F'\t' '{ if ($1 == prev) print; prev = $1 }'
-}
-
-# Files present in system/ but in no active scope: out of scope is normal, but
-# unreported it would mean a diverging file nobody ever sees again.
-sys_out_of_scope() {
-    local active
-    active=$(sys_scopes "${1:-$DEFAULT_PROFILE}" | sed 's|^|'"$REPO"'/system/|;s|$|/root|')
-    find "$REPO/system" -mindepth 1 -maxdepth 1 -type d 2>/dev/null \
-        | while read -r d; do
-              printf '%s\n' "$active" | grep -qx "$d/root" || find "$d/root" -type f 2>/dev/null
-          done
 }
 
 cmd_system_apply() {
