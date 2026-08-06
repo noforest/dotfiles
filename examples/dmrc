@@ -2,7 +2,7 @@
 # Copy it to ~/.dmrc and adapt.
 #
 # It records which session the display manager starts by default. That is a per
-# machine choice — one machine runs dwm, another Hyprland — so versioning it
+# machine choice (one machine runs dwm, another Hyprland), so versioning it
 # would impose one machine's session on all the others.
 
 [Desktop]

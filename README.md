@@ -8,8 +8,8 @@ One repository for several machines. What varies is expressed as **data**, never
 a fork:
 
 - **the distribution** is detected from `/etc/os-release` and selects the package
-  lists (`packages/arch/`, `packages/ubuntu/`) and one of the `system/` scopes;
-- **the machine** (tower or laptop) comes from its chassis and picks the profile;
+  lists (`packages/arch/`, `packages/ubuntu/`) and one of the `system/` scopes,
+- **the machine** (tower or laptop) comes from its chassis and picks the profile,
 - **the graphical environment** is a module plus a scope, so several of them can be
   installed side by side and chosen at login.
 
@@ -31,7 +31,7 @@ cd ~/Documents/programming/github-noforest/dotfiles
 |---|---|
 | `dot` | The CLI. Everything goes through it. |
 | `modules/` | What goes into `$HOME`, grouped by theme. `modules/shell/.zshrc` maps to `~/.zshrc`. |
-| `system/<scope>/root/` | What goes outside `$HOME`. Mirrors the root tree: `system/common/root/etc/x` maps to `/etc/x`. A scope is a reason to deploy a file — `common`, the distribution (`arch`, `ubuntu`), the hardware (`laptop`, `peripherals`), the graphical environment (`x11-dwm`, `hyprland`) — and a profile declares the ones it wants on its `system:` line. |
+| `system/<scope>/root/` | What goes outside `$HOME`. Mirrors the root tree: `system/common/root/etc/x` maps to `/etc/x`. A scope is a reason to deploy a file (`common`, the distribution `arch` or `ubuntu`, the hardware `laptop` or `peripherals`, the graphical environment `x11-dwm` or `hyprland`), and a profile declares the ones it wants on its `system:` line. |
 | `machine.d/` | Which profile each machine defaults to. Not versioned, see its README. |
 | `suckless/` | Patched sources of dwm, st, dmenu, slock, dwmblocks. **No binaries.** |
 | `packages/<distro>/` | Package lists per group, one directory per distribution, plus `manual.md` for what the package manager does not carry. |
@@ -42,7 +42,7 @@ cd ~/Documents/programming/github-noforest/dotfiles
 
 A profile answers three questions on three lines: which **modules** go into
 `$HOME` (one name per line), which **`system:` scopes** go outside it, and which
-**`packages:` groups** to install. It never names a distribution — the same
+**`packages:` groups** to install. It never names a distribution. The same
 `laptop` profile is meant to hold on Arch and on Ubuntu, only the directory the
 groups are read from changes.
 
@@ -57,13 +57,12 @@ groups are read from changes.
 no profile has to repeat them.
 
 A profile may also carry `steps:`, the chain `dot bootstrap` runs. Without it the
-default chain applies, which compiles the suckless tools — hence `minimal` cutting
-`build-suckless` and `fonts` out of its own.
+default chain applies, which compiles the suckless tools. That is why `minimal`
+cuts `build-suckless` and `fonts` out of its own.
 
 `full` is not meant to be installed on a fresh machine. It is the safety net that
 guarantees nothing present here gets lost. For a real machine, take `desktop` or
-`laptop`. See [docs/cleanup.md](docs/cleanup.md) for trimming things down before
-replicating.
+`laptop`. Run `dot audit` to see what a machine actually uses before replicating it.
 
 ---
 
@@ -99,7 +98,7 @@ Leave the module out and `dot adopt` asks, showing which profiles each module re
 A file lives in exactly one module, and the module is what decides which profiles carry
 it. To reach `minimal` as well as `laptop`, pick a module that both profiles list.
 
-`dot status` opens by stating what it takes the machine to be — host, distribution,
+`dot status` opens by stating what it takes the machine to be: host, distribution,
 chassis, and **where the profile comes from**, since everything below is scoped by
 it. A profile that was guessed rather than chosen is reported as such:
 
@@ -170,7 +169,7 @@ If you forgot it: `git submodule update --init --recursive`.
 
 Run `dot status` first: it prints the distribution and the profile it inferred.
 `bootstrap` writes into `/etc` as root according to that profile, so it is worth
-one look — and `echo <profile> > machine.d/$(hostname).conf` settles it for good.
+one look. Running `echo <profile> > machine.d/$(hostname).conf` settles it for good.
 
 By default `bootstrap` chains `install`, `link`, `system-apply`, `fonts`,
 `build-suckless` and `nvim-patch`. A profile carrying a `steps:` line runs that
@@ -188,7 +187,7 @@ chsh -s /bin/zsh
 # Groups (docker, virtualbox and so on, compare with system/state.md)
 sudo usermod -aG docker,vboxusers "$USER"
 
-# System services (ly and auto-cpufreq are Arch here; adapt the display manager
+# System services (ly and auto-cpufreq are Arch here, adapt the display manager
 # to the distribution, Ubuntu ships gdm3 or lightdm)
 sudo systemctl enable --now ly NetworkManager acpid docker cups auto-cpufreq
 
@@ -209,8 +208,8 @@ nvim --headless "+Lazy! sync" +qa
 Five files to adapt. That is all that stays machine specific.
 
 - **`machine.d/<hostname>.conf`**, one line: the profile this machine defaults to.
-  Optional — without it the profile is inferred from the chassis — but it is what
-  turns a guess into a decision. Not versioned, see
+  Optional, since without it the profile is inferred from the chassis, but it is
+  what turns a guess into a decision. Not versioned, see
   [`machine.d/README.md`](machine.d/README.md).
 
 - **`~/.dmrc`**, which session the display manager starts by default. Template:
@@ -241,7 +240,7 @@ XFCE is data, not code:
 
 1. `modules/<wm>/` for what goes into `$HOME`. Anything shared with another X11
    environment (`.Xresources`, `.Xmodmap`, `.xserverrc`, `.xprofile_autostart.sh`)
-   already lives in `modules/x11-common/` — depend on it rather than copying, or
+   already lives in `modules/x11-common/`. Depend on it rather than copying, or
    `dot link` will refuse both modules for claiming the same path.
 2. `system/<wm>/root/` if it needs anything outside `$HOME` (a session entry in
    `/usr/share/xsessions`, a udev rule). Optional.
@@ -249,8 +248,8 @@ XFCE is data, not code:
    line.
 
 Several environments can be installed side by side and picked at login: their
-modules are linked together, and it is `~/.dmrc` — a local file, see
-[`examples/dmrc`](examples/dmrc) — that records the default session of a machine.
+modules are linked together, and it is `~/.dmrc`, a local file (see
+[`examples/dmrc`](examples/dmrc)), that records the default session of a machine.
 
 Two things to know before writing an XFCE module: `.config/xfce4/xfconf/` is
 refused by `NEVER_LINK` (xfconfd rewrites it and watches it through inotify, see
@@ -259,8 +258,8 @@ stays in `modules/x11-dwm/` rather than in `x11-common`.
 
 ## Design choices
 
-**One repository, not one per machine.** `shell`, `git`, `nvim` and `terminal` —
-zsh, p10k, tmux, nvim — are identical everywhere and are most of the value here.
+**One repository, not one per machine.** `shell`, `git`, `nvim` and `terminal`
+(zsh, p10k, tmux, nvim) are identical everywhere and are most of the value here.
 Splitting them across two repositories would guarantee they drift apart, and would
 mean maintaining `dot` twice. What actually differs is narrow: package names, a
 handful of files under `/etc`.
@@ -268,7 +267,7 @@ handful of files under `/etc`.
 **`system/` is split by scope, not by distribution.** A scope is a *reason* to
 deploy a file: `common`, the distribution (`arch`, `ubuntu`), the hardware
 (`laptop`, `peripherals`), the graphical environment (`x11-dwm`, `hyprland`). The
-distribution is only one axis among them, and not the one that hurt first — a
+distribution is only one axis among them, and not the one that hurt first. A
 tower used to receive the touchpad, backlight and lid rules of a laptop because
 `system/root/` was deployed whole. Scope names are free: `dot` never enumerates
 them, so adding `sway` is a directory plus a line in a profile.
@@ -276,7 +275,7 @@ them, so adding `sway` is a directory plus a line in a profile.
 **The machine is detected, the profile is declared.** The distribution comes from
 `/etc/os-release` and is never written in a profile: a machine knows what it runs,
 and a second source of truth would eventually disagree with the first. The profile
-is the opposite — it is a choice (`laptop`, `full`, `minimal`), so it is read from
+is the opposite, being a choice (`laptop`, `full`, `minimal`), so it is read from
 `machine.d/<hostname>.conf`, falls back to the chassis, and `dot status` always
 says which of the two it used.
 

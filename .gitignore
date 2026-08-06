@@ -71,6 +71,10 @@ system/root/usr/local/bin/connect_*
 # Which profile each machine uses. Hostnames stay out of a public repository.
 machine.d/*.conf
 
+# td stores the todo list itself in .config. That is personal data, not
+# configuration, and this repository is public.
+**/td/todo.json
+
 # =============================================================
 # Caches and application state (not configuration)
 # =============================================================
