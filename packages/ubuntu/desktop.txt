@@ -1,0 +1,36 @@
+# Graphical applications
+thunar
+thunar-archive-plugin
+thunar-media-tags-plugin
+thunar-volman
+tumbler
+gvfs
+gvfs-backends
+xarchiver
+exo-utils
+libfile-mimeinfo-perl
+xdg-desktop-portal-gtk
+vlc
+vlc-plugin-access-extra
+mpv
+parole
+cava
+okular
+zathura
+zathura-pdf-poppler
+ristretto
+mousepad
+qbittorrent
+filezilla
+pavucontrol
+blueman
+flameshot
+qimgv
+#
+# Not in the archive as a real package, see packages/ubuntu/manual.md:
+#   firefox     -> the `firefox` deb only installs the snap. Use the Mozilla apt
+#                  repository if you want a real package.
+#   libdvdcss   -> legal reasons, comes from the VideoLAN repository
+#   obsidian, bitwarden, discord, spotify, teams-for-linux, librewolf: vendor
+#   repositories, AppImage or flatpak
+#   garcon      -> pulled in as a library by thunar, no standalone package

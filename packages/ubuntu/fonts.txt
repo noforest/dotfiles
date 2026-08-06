@@ -1,0 +1,15 @@
+# Fonts
+# The Nerd Fonts patched families are not packaged here, they are installed by
+# `dot fonts`. See packages/ubuntu/manual.md.
+fonts-firacode
+fonts-hack
+fonts-jetbrains-mono
+fonts-powerline
+fonts-noto-core
+fonts-noto-cjk
+fonts-noto-color-emoji
+unifont
+xfonts-100dpi
+xfonts-75dpi
+xfonts-utils
+xfonts-encodings

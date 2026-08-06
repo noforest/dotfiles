@@ -1,0 +1,30 @@
+# System base, required on every machine
+# Ubuntu 26.04 LTS (resolute). Verified against the official archive index.
+build-essential
+efibootmgr
+os-prober
+network-manager
+rsync
+manpages
+manpages-fr
+tree
+plocate
+net-tools
+curl
+ca-certificates
+# Archives
+7zip
+zip
+unzip
+unrar
+cpio
+# Filesystems
+dosfstools
+exfatprogs
+mtools
+#
+# Dropped from packages/arch/core.txt, on purpose:
+#   base, base-devel   -> build-essential covers it
+#   linux, linux-firmware, grub -> the distribution owns the kernel and the bootloader
+#   pacman-contrib, reflector   -> pacman only
+#   openresolv         -> systemd-resolved handles DNS here

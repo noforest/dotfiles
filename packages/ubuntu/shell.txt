@@ -1,0 +1,44 @@
+# Shell, terminal tools, editor
+zsh
+zsh-syntax-highlighting
+bash-completion
+tmux
+bat
+eza
+fd-find
+ripgrep
+fzf
+zoxide
+vivid
+du-dust
+duf
+most
+nano
+git
+gh
+lazygit
+git-delta
+neovim
+vim-runtime
+htop
+btop
+ranger
+nnn
+keychain
+pass
+wget
+yt-dlp
+mediainfo
+chafa
+tealdeer
+fastfetch
+#
+# Watch out, Debian renames two binaries. See packages/ubuntu/manual.md:
+#   bat      installs `batcat`, and ~/.zshrc has `alias cat=bat`
+#   fd-find  installs `fdfind`
+#
+# No equivalent in the archive:
+#   diff-so-fancy -> git-delta above, same job, different binary (`delta`)
+#   tldr          -> tealdeer above, same `tldr` command
+#   neofetch      -> fastfetch above, it succeeds the unmaintained neofetch
+#   rainfrog, television, ueberzugpp, zellij: absent

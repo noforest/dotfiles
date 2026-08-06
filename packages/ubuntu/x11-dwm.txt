@@ -1,0 +1,39 @@
+# X11 graphical session and dwm
+xserver-xorg
+xserver-common
+xauth
+x11-xserver-utils
+x11-utils
+x11-xkb-utils
+xinput
+xserver-xorg-video-amdgpu
+xserver-xorg-video-vesa
+picom
+dunst
+feh
+numlockx
+xss-lock
+xdotool
+wmctrl
+maim
+scrot
+alacritty
+arandr
+lxappearance
+papirus-icon-theme
+# Headers needed by `dot build-suckless` to compile dwm, st, dmenu, slock and
+# dwmblocks. On Arch they come with base-devel and the xorg groups.
+libx11-dev
+libxft-dev
+libxinerama-dev
+libxrandr-dev
+libimlib2-dev
+libfreetype-dev
+libfontconfig-dev
+libharfbuzz-dev
+pkg-config
+#
+# No equivalent in the archive, see packages/ubuntu/manual.md:
+#   ly       -> pick a display manager Ubuntu ships (lightdm), or build ly
+#   clipster -> called by .xinitrc, install by hand
+#   swappy   -> was only used by a screenshot script that no longer exists

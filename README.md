@@ -13,8 +13,8 @@ a fork:
 - **the graphical environment** is a module plus a scope, so several of them can be
   installed side by side and chosen at login.
 
-Reference machine: Arch Linux with dwm. Ubuntu support is in place in `dot`, with
-`packages/ubuntu/` still to fill in.
+Reference machine: Arch Linux with dwm. Ubuntu 26.04 LTS is supported, its package
+lists checked against the official archive.
 
 ```
 git clone --recursive git@github.com:noforest/dotfiles.git \
@@ -150,9 +150,21 @@ On Arch, then the AUR helper and the tools outside pacman: see
 **[packages/arch/manual.md](packages/arch/manual.md)**. At minimum install `paru`
 before going further, otherwise `dot install` skips the 53 AUR packages.
 
-On Ubuntu, `packages/ubuntu/` is still a skeleton: read
-[its README](packages/ubuntu/README.md) first, since `dot install` has nothing to
-install until the groups are filled in.
+On Ubuntu, read **[packages/ubuntu/manual.md](packages/ubuntu/manual.md)** first.
+The lists are filled in for 26.04 LTS, but a few tools called by `.xinitrc` have no
+package in the archive, and Debian renames the `bat` and `fd` binaries.
+
+Two scripts to run once on a fresh Ubuntu, before the rest:
+
+```sh
+./scripts/ubuntu-remove-snap.sh           # purges snapd, blocks it in apt
+./scripts/ubuntu-no-ads-no-telemetry.sh   # Ubuntu Pro adverts, APT News, MOTD news, reporting
+```
+
+No package in `packages/ubuntu/` installs a snap. Every name was checked against
+the archive index, and the transitional packages whose only job is to pull a snap
+(`firefox`, `chromium-browser`, `thunderbird`) are left out on purpose. The first
+script deals with the snapd that ships with the distribution itself.
 
 ### 2. Clone and bootstrap
 

@@ -1,0 +1,16 @@
+# Sound, network, USB, bluetooth
+pipewire-alsa
+pipewire-pulse
+pipewire-jack
+wireplumber
+alsa-utils
+firmware-sof-signed
+network-manager
+network-manager-applet
+usbutils
+usb-modeswitch
+evtest
+dmidecode
+bluez
+blueman
+# bluez-utils is part of bluez here, there is no separate package
