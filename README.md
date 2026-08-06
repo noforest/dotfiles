@@ -3,7 +3,7 @@
 My Linux environment: configs, scripts, suckless patches, package lists. Install a
 bare machine and get the same setup back without doing it all by hand.
 
-One repository for several machines. What varies is data, never a fork:
+One repository for several machines.
 
 - **the distribution** comes from `/etc/os-release` and picks the package lists
   and one of the `system/` scopes,
