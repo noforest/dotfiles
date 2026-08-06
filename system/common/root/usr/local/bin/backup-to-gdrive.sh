@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # === CONFIGURATION ===
-# Les chemins personnels vivent hors du dépôt (voir system/examples/).
+# Les chemins personnels vivent hors du dépôt (voir examples/ dans le dépôt).
 CONF_DIR="${BACKUP_GDRIVE_CONF_DIR:-$HOME/.config/backup-to-gdrive}"
 FILTERS="$CONF_DIR/filters"
 
@@ -18,7 +18,7 @@ DEST="$BASE_REMOTE/$HOST"                         # dossier principal distant
 
 if [ ! -r "$FILTERS" ]; then
     echo "backup-to-gdrive: fichier de filtres manquant : $FILTERS" >&2
-    echo "  copiez system/examples/backup-to-gdrive.filters.example et adaptez-le." >&2
+    echo "  copiez examples/backup-to-gdrive.filters du dépôt et adaptez-le." >&2
     exit 1
 fi
 

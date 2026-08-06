@@ -2,7 +2,7 @@
 #
 # À copier vers ~/.config/backup-to-gdrive/filters puis à adapter :
 #   mkdir -p ~/.config/backup-to-gdrive
-#   cp system/examples/backup-to-gdrive.filters.example \
+#   cp examples/backup-to-gdrive.filters \
 #      ~/.config/backup-to-gdrive/filters
 #
 # Ce fichier reste hors du dépôt : il contient des chemins personnels.

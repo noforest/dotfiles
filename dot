@@ -6,7 +6,44 @@ set -uo pipefail
 REPO="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 MODULES="$REPO/modules"
 PROFILES="$REPO/profiles"
-DEFAULT_PROFILE=laptop
+MACHINES="$REPO/machine.d"
+FALLBACK_PROFILE=laptop
+
+# The distribution this machine runs, as `ID` from /etc/os-release: arch, ubuntu,
+# debian... It selects the package lists and one of the system/ scopes, and is
+# never declared in a profile: a machine knows its own distribution, and two
+# sources of truth for it would eventually disagree. $DOT_DISTRO overrides it,
+# which is the only way to dry run another distribution from here.
+distro() {
+    [ -n "${DOT_DISTRO:-}" ] && { printf '%s\n' "$DOT_DISTRO"; return 0; }
+    [ -r /etc/os-release ] && (. /etc/os-release && printf '%s\n' "${ID:-unknown}")
+}
+
+# The profile to use when the command line does not name one, as
+# `<profile><TAB><where it comes from>`. Three sources, most explicit first:
+#
+#   1. machine.d/<hostname>.conf, which a machine writes for itself. NOT
+#      versioned: the repository is public and hostnames have no business in it.
+#   2. the chassis, so that a tower does not silently inherit the touchpad,
+#      backlight and lid rules of a laptop just because the fallback said so.
+#   3. FALLBACK_PROFILE, when even the chassis is unknown (a VM says "vm").
+#
+# The source is carried along because a profile nobody chose deserves to be
+# reported as such, especially before system-apply writes into /etc as root.
+default_profile() {
+    local f="$MACHINES/$(hostname).conf" p
+    if [ -r "$f" ]; then
+        p=$(grep -vE '^\s*(#|$)' "$f" | head -1 | tr -d ' \t')
+        [ -n "$p" ] && { printf '%s\tmachine.d/%s.conf\n' "$p" "$(hostname)"; return 0; }
+    fi
+    case "$(hostnamectl chassis 2>/dev/null)" in
+        desktop|server) printf 'desktop\tchassis\n'; return 0 ;;
+        laptop|convertible|tablet|handset) printf 'laptop\tchassis\n'; return 0 ;;
+    esac
+    printf '%s\tfallback\n' "$FALLBACK_PROFILE"
+}
+DEFAULT_PROFILE_SOURCE="$(default_profile | cut -f2)"
+DEFAULT_PROFILE="$(default_profile | cut -f1)"
 
 # === Output ==================================================================
 if [ -t 1 ]; then
@@ -35,6 +72,36 @@ profile_modules() {
     [ -f "$f" ] || die "unknown profile: $p (available: $(ls "$PROFILES" | sed 's/\.conf//' | tr '\n' ' '))"
     # Lines shaped `key: value` are settings. Everything else is a module name.
     grep -vE '^\s*(#|$)' "$f" | grep -v ':' | tr -d ' \t'
+}
+
+# The other half of the same grammar: the value of a `key: value` line.
+# Empty when the key is absent, so a profile written before the key existed keeps
+# working. Used for `system:` and `steps:`.
+profile_setting() {  # profile_setting <profile> <key>
+    local f="$PROFILES/${1:-$DEFAULT_PROFILE}.conf"
+    [ -f "$f" ] || return 0
+    sed -n "s/^[[:space:]]*$2:[[:space:]]*//p" "$f" | head -1
+}
+
+# Paths claimed by more than one module of the same profile, as `<path><TAB><modules>`.
+#
+# Several graphical environments are meant to be linked side by side, so their
+# modules coexist in one profile and nothing stops two of them from shipping the
+# same ~/.something. Left undetected, cmd_link would simply link the last one and
+# status would then report "link points elsewhere" forever, without ever saying
+# that two modules disagree.
+module_conflicts() {
+    local profile="${1:-$DEFAULT_PROFILE}" mod rel
+    {
+        while read -r mod; do
+            while read -r rel; do
+                [ -n "$rel" ] && printf '%s\t%s\n' "$rel" "$mod"
+            done < <(module_units "$mod")
+        done < <(profile_modules "$profile")
+    } | awk -F'\t' '
+        { owners[$1] = ($1 in owners) ? owners[$1] ", " $2 : $2; n[$1]++ }
+        END { for (p in owners) if (n[p] > 1) printf "%s\t%s\n", p, owners[p] }
+    ' | sort
 }
 
 is_submodule() {  # is_submodule <absolute-path>
@@ -80,6 +147,13 @@ cmd_link() {
     profile_check "$profile"
     stamp=$(date +%Y%m%d-%H%M%S)
     head_ "link ($profile)"
+    local clash
+    clash=$(module_conflicts "$profile")
+    if [ -n "$clash" ]; then
+        err "two modules claim the same path, refusing to link:"
+        printf '%s\n' "$clash" | awk -F'\t' -v d="$D" -v z="$N" '{printf "      %s%-40s %s%s\n", d, $1, $2, z}'
+        die "move the shared file into a module both can depend on"
+    fi
     local mod rel src dst
     while read -r mod; do
         while read -r rel; do
@@ -295,7 +369,27 @@ cmd_status() {
     local profile="${1:-$DEFAULT_PROFILE}" rc=0
     profile_check "$profile"
 
+    # What this machine is taken to be. A profile that was guessed rather than
+    # chosen is worth saying out loud: everything below is scoped by it.
+    head_ "machine"
+    local psrc="named on the command line"
+    [ $# -eq 0 ] && psrc="from $DEFAULT_PROFILE_SOURCE"
+    info "  ${D}host    $(hostname), chassis $(hostnamectl chassis 2>/dev/null || echo unknown)${N}"
+    info "  ${D}distro  $(distro)${NOTE:-}${N}${D}${DOT_DISTRO:+ (forced by \$DOT_DISTRO)}${N}"
+    if [ "$psrc" = "from fallback" ]; then
+        warn "profile $profile ${D}($psrc: no machine.d/$(hostname).conf and no usable chassis)${N}"
+    else
+        info "  ${D}profile $profile ($psrc)${N}"
+    fi
+
     head_ "links ($profile)"
+    local clash
+    clash=$(module_conflicts "$profile")
+    if [ -n "$clash" ]; then
+        err "claimed by several modules, 'dot link' would refuse:"
+        printf '%s\n' "$clash" | awk -F'\t' -v d="$D" -v z="$N" '{printf "      %s%-40s %s%s\n", d, $1, $2, z}'
+        rc=1
+    fi
     local mod rel dst missing=0 broken=0 foreign=0 linked=0
     while read -r mod; do
         while read -r rel; do
@@ -317,11 +411,21 @@ cmd_status() {
     head_ "system/ vs the root filesystem"
     local f target diverged=0 absent=0 same=0
     local note side rstamp sstamp repo_newer=0 sys_newer=0
+    info "  ${D}scopes: $(sys_scopes "$profile" | tr '\n' ' ')${N}"
+    local conflicts
+    conflicts=$(sys_conflicts "$profile")
+    if [ -n "$conflicts" ]; then
+        warn "shipped by several scopes, the last one wins:"
+        printf '%s\n' "$conflicts" | sed "s/^/      ${D}/;s/\$/${N}/"
+    fi
     while read -r f; do
         target="$(sys_target "$f")"
         if [ ! -e "$target" ]; then warn "missing from the system: $target"; absent=$((absent+1))
         elif ! cmp -s "$f" "$target"; then
             err "diverges: $target"
+            # Where it comes from in the repo: with several scopes shipping into
+            # the same tree, the target path alone does not say which file to edit.
+            printf '      %srepo  %s%s\n' "$D" "${f#"$REPO"/}" "$N"
             # Which copy was edited last, so the direction to fix it is obvious.
             if note=$(mtime_note "$f" "$target"); then
                 IFS=$'\t' read -r side rstamp sstamp <<<"$note"
@@ -338,8 +442,20 @@ cmd_status() {
             fi
             diverged=$((diverged+1)); rc=1
         else same=$((same+1)); fi
-    done < <(sys_files)
+    done < <(sys_files "$profile")
     ok "$same identical, $diverged diverging, $absent missing from the system"
+    # Files that exist in system/ but belong to no active scope. Nothing compares
+    # them to the system, so naming them is the only way they stay visible.
+    local outside n_outside
+    outside=$(sys_out_of_scope "$profile")
+    n_outside=$(printf '%s' "$outside" | grep -c . || true)
+    if [ "${n_outside:-0}" -gt 0 ]; then
+        info "  ${D}$n_outside file(s) in scopes this profile does not deploy, left unchecked:${N}"
+        printf '%s\n' "$outside" | sed "s|^$REPO/system/||" \
+            | awk -F/ -v d="$D" -v z="$N" '{s=$1; sub(/^[^/]*\/root/, "", $0); printf "      %s%-12s %s%s\n", d, s, $0, z}' \
+            | head -10
+        [ "$n_outside" -gt 10 ] && info "      ${D}...${N}"
+    fi
     if [ "$diverged" -gt 0 ]; then
         if [ "$sys_newer" -eq 0 ] && [ "$repo_newer" -gt 0 ]; then
             info "  ${D}-> the repo holds the newer copy everywhere: 'dot system-apply'${N}"
@@ -351,10 +467,11 @@ cmd_status() {
     fi
 
     head_ "packages"
-    if command -v pacman >/dev/null; then
-        local catalogued installed uncat
-        catalogued=$(cat "$REPO"/packages/*.txt 2>/dev/null | grep -vE '^\s*(#|$)' | sort -u)
-        installed=$(pacman -Qqen 2>/dev/null | sort -u; pacman -Qqem 2>/dev/null | sort -u)
+    local installed
+    installed=$(pkg_installed)
+    if [ -n "$installed" ]; then
+        local catalogued uncat
+        catalogued=$(cat "$(PKGDIR)"/*.txt 2>/dev/null | grep -vE '^\s*(#|$)' | sort -u)
         uncat=$(comm -13 <(printf '%s\n' "$catalogued") <(printf '%s\n' "$installed" | sort -u))
         if [ -n "$uncat" ]; then
             warn "$(printf '%s\n' "$uncat" | wc -l) package(s) installed but missing from the lists:"
@@ -411,53 +528,145 @@ cmd_status() {
 }
 
 # === system ==================================================================
-# system/root/ mirrors the real tree: system/root/etc/x maps to /etc/x
-sys_files()  { find "$REPO/system/root" -type f 2>/dev/null; }
-sys_target() { printf '%s\n' "${1#"$REPO"/system/root}"; }
+# system/<scope>/root/ mirrors the real tree: system/common/root/etc/x maps to
+# /etc/x. A scope is a reason to deploy a file: the distribution (arch, ubuntu),
+# the hardware (laptop, peripherals), the graphical environment (x11-dwm,
+# hyprland). Splitting them is what keeps a tower from receiving the touchpad and
+# backlight rules of a laptop.
+#
+# Scope names are free: `dot` never enumerates them. Adding sway means creating
+# system/sway/root/ and naming it in a profile, with no change to this script.
+
+# The scopes a profile deploys: common, then the distribution of THIS machine,
+# then whatever the profile declares. Order matters, see sys_files.
+sys_scopes() {
+    local p="${1:-$DEFAULT_PROFILE}" d
+    printf 'common\n'
+    d=$(distro); [ -n "$d" ] && printf '%s\n' "$d"
+    profile_setting "$p" system | tr ' ' '\n' | grep -v '^$'
+}
+
+# Every file of every active scope. Two scopes may legitimately ship the same
+# target (a distribution overriding a common file): the last one wins, which is
+# why the order of sys_scopes is part of the contract. sys_conflicts reports it.
+sys_files() {
+    local scope
+    while read -r scope; do
+        find "$REPO/system/$scope/root" -type f 2>/dev/null
+    done < <(sys_scopes "${1:-$DEFAULT_PROFILE}")
+}
+
+# Path in the repository -> path on the system. The scope is a variable path
+# component, so it is stripped with a glob rather than a fixed prefix.
+sys_target() {
+    local rel="${1#"$REPO"/system/}"
+    printf '%s\n' "${rel#*/root}"
+}
+
 sys_mode()   { case "$1" in */bin/*|*/sbin/*) echo 755 ;; *) echo 644 ;; esac; }
 
+# Targets shipped by more than one active scope. Silence here would mean a file
+# deployed from a scope the reader did not expect.
+sys_conflicts() {
+    local f
+    while read -r f; do
+        printf '%s\t%s\n' "$(sys_target "$f")" "${f#"$REPO"/system/}"
+    done < <(sys_files "${1:-$DEFAULT_PROFILE}") \
+        | sort | awk -F'\t' '{ if ($1 == prev) print; prev = $1 }'
+}
+
+# Files present in system/ but in no active scope: out of scope is normal, but
+# unreported it would mean a diverging file nobody ever sees again.
+sys_out_of_scope() {
+    local active
+    active=$(sys_scopes "${1:-$DEFAULT_PROFILE}" | sed 's|^|'"$REPO"'/system/|;s|$|/root|')
+    find "$REPO/system" -mindepth 1 -maxdepth 1 -type d 2>/dev/null \
+        | while read -r d; do
+              printf '%s\n' "$active" | grep -qx "$d/root" || find "$d/root" -type f 2>/dev/null
+          done
+}
+
 cmd_system_apply() {
-    head_ "system-apply (sudo)"
+    local profile="${1:-$DEFAULT_PROFILE}"
+    profile_check "$profile"
+    head_ "system-apply ($profile, sudo)"
     command -v sudo >/dev/null || die "sudo required"
+    info "  ${D}scopes: $(sys_scopes "$profile" | tr '\n' ' ')${N}"
     local f target
     while read -r f; do
         target="$(sys_target "$f")"
         sudo install -Dm"$(sys_mode "$target")" "$f" "$target" && ok "$target"
-    done < <(sys_files)
+    done < <(sys_files "$profile")
     info ""
     info "  ${D}Reloading is recommended: sudo udevadm control --reload && sudo systemctl daemon-reload${N}"
 }
 
 cmd_system_pull() {
-    head_ "system-pull"
+    local profile="${1:-$DEFAULT_PROFILE}"
+    profile_check "$profile"
+    head_ "system-pull ($profile)"
     local f target n=0
     while read -r f; do
         target="$(sys_target "$f")"
         if [ -r "$target" ] && ! cmp -s "$f" "$target"; then
             cp "$target" "$f"; chmod u+w "$f"; ok "$target"; n=$((n+1))
         fi
-    done < <(sys_files)
+    done < <(sys_files "$profile")
     [ "$n" -eq 0 ] && ok "nothing to pull back"
     return 0
 }
 
 # === packages ================================================================
+# packages/<distro>/<group>.txt. The profile names groups and never a
+# distribution: `packages: core shell fonts` is meant to hold on Arch as well as
+# on Ubuntu, only the directory it is read from changes.
+PKGDIR() { printf '%s\n' "$REPO/packages/$(distro)"; }
+
+# The packages a profile asks for, one per line, comments stripped.
+pkg_wanted() {
+    local profile="$1" groups g
+    groups=$(profile_setting "$profile" packages)
+    [ -n "$groups" ] || die "profile $profile declares no package group"
+    for g in $groups; do cat "$(PKGDIR)/$g.txt" 2>/dev/null; done \
+        | grep -vE '^\s*(#|$)' | sort -u
+}
+
+# Manually installed packages, as this distribution reports them. Empty when the
+# distribution is unknown, which every caller treats as "cannot tell".
+pkg_installed() {
+    case "$(distro)" in
+        arch)   command -v pacman >/dev/null || return 0
+                pacman -Qqen 2>/dev/null | sort -u; pacman -Qqem 2>/dev/null | sort -u ;;
+        ubuntu|debian)
+                command -v apt-mark >/dev/null || return 0
+                apt-mark showmanual 2>/dev/null | sort -u ;;
+    esac
+}
+
 cmd_install() {
     local profile="${1:-$DEFAULT_PROFILE}"
     profile_check "$profile"
-    head_ "install ($profile)"
-    command -v pacman >/dev/null || die "pacman not found, Arch only"
-    local groups native aur helper
-    groups=$(grep -E '^\s*packages:' "$PROFILES/$profile.conf" | sed 's/.*packages:\s*//')
-    [ -n "$groups" ] || die "profile $profile declares no package group"
-    native=$(for g in $groups; do cat "$REPO/packages/$g.txt" 2>/dev/null; done | grep -vE '^\s*(#|$)' | sort -u)
-    [ -n "$native" ] && { info "  Official packages: $(printf '%s\n' "$native" | wc -l)"; sudo pacman -S --needed --noconfirm $native || warn "some packages failed"; }
-    if grep -qE '^\s*aur:\s*yes' "$PROFILES/$profile.conf"; then
-        helper=$(command -v paru || command -v yay) || { warn "neither paru nor yay, AUR skipped (see packages/manual.md)"; return 0; }
-        aur=$(grep -vE '^\s*(#|$)' "$REPO/packages/aur.txt" | sort -u)
-        info "  AUR packages: $(printf '%s\n' "$aur" | wc -l)"
-        "$helper" -S --needed --noconfirm $aur || warn "some AUR packages failed"
-    fi
+    head_ "install ($profile, $(distro))"
+    [ -d "$(PKGDIR)" ] || die "no package list for $(distro): $(PKGDIR) does not exist"
+    local native aur helper
+    native=$(pkg_wanted "$profile")
+    [ -n "$native" ] || die "no package to install: $(PKGDIR) is empty for these groups"
+    info "  Official packages: $(printf '%s\n' "$native" | wc -l)"
+    case "$(distro)" in
+        arch)
+            sudo pacman -S --needed --noconfirm $native || warn "some packages failed"
+            # The AUR has no equivalent elsewhere: the setting is simply ignored.
+            if grep -qE '^\s*aur:\s*yes' "$PROFILES/$profile.conf"; then
+                helper=$(command -v paru || command -v yay) \
+                    || { warn "neither paru nor yay, AUR skipped (see packages/arch/manual.md)"; return 0; }
+                aur=$(grep -vE '^\s*(#|$)' "$(PKGDIR)/aur.txt" | sort -u)
+                info "  AUR packages: $(printf '%s\n' "$aur" | wc -l)"
+                "$helper" -S --needed --noconfirm $aur || warn "some AUR packages failed"
+            fi ;;
+        ubuntu|debian)
+            sudo apt-get install -y $native || warn "some packages failed" ;;
+        *)  die "unsupported distribution: $(distro) (add packages/$(distro)/ and a case here)" ;;
+    esac
 }
 
 # === suckless ================================================================
@@ -482,11 +691,14 @@ cmd_build_suckless() {
 cmd_sync() {
     head_ "sync"
     "$0" system-pull
-    if command -v pacman >/dev/null; then
-        pacman -Qqem | sort > "$REPO/packages/aur.txt.new"
-        if ! cmp -s "$REPO/packages/aur.txt.new" "$REPO/packages/aur.txt"; then
-            mv "$REPO/packages/aur.txt.new" "$REPO/packages/aur.txt"; ok "packages/aur.txt updated"
-        else rm -f "$REPO/packages/aur.txt.new"; fi
+    # Only Arch has a list that regenerates itself: aur.txt is exactly the set of
+    # foreign packages. apt has no such notion, so nothing to sync there.
+    if [ "$(distro)" = arch ] && command -v pacman >/dev/null; then
+        local aurlist="$(PKGDIR)/aur.txt"
+        pacman -Qqem | sort > "$aurlist.new"
+        if ! cmp -s "$aurlist.new" "$aurlist"; then
+            mv "$aurlist.new" "$aurlist"; ok "packages/arch/aur.txt updated"
+        else rm -f "$aurlist.new"; fi
     fi
     "$0" state
     head_ "git"
@@ -571,15 +783,28 @@ cmd_audit() {
 }
 
 # === bootstrap ===============================================================
+# The default chain assumes a suckless environment: build-suckless compiles dwm,
+# st, dmenu, slock and dwmblocks, which is pointless on a profile that runs none
+# of them. A profile overrides the chain with a `steps:` line rather than this
+# script testing for a module by name.
+BOOTSTRAP_STEPS="install link system-apply fonts build-suckless nvim-patch"
+
 cmd_bootstrap() {
     local profile="${1:-$DEFAULT_PROFILE}"
+    profile_check "$profile"
     head_ "bootstrap ($profile)"
-    "$0" install "$profile"
-    "$0" link "$profile"
-    "$0" system-apply
-    "$0" fonts
-    "$0" build-suckless
-    "$0" nvim-patch
+    local steps step
+    steps=$(profile_setting "$profile" steps)
+    [ -n "$steps" ] || steps="$BOOTSTRAP_STEPS"
+    info "  ${D}steps: $steps${N}"
+    for step in $steps; do
+        case "$step" in
+            # Only these take a profile; passing one to the others would be read
+            # as their own argument (nvim-patch --save, audit <what>).
+            install|link|system-apply|system-pull) "$0" "$step" "$profile" ;;
+            *) "$0" "$step" ;;
+        esac
+    done
     info ""
     ok "bootstrap finished"
     info "  ${D}Remaining manual steps: see the \"After the bootstrap\" section of the README.${N}"
@@ -600,8 +825,8 @@ ${B}dot${N} - dotfiles management for dwm / Arch
   ${G}dot sync${N}                 Regenerate lists and system state, then git add -A
 
   ${G}dot install${N} [profile]    Install the packages of the profile
-  ${G}dot system-apply${N}         Copy system/ to /etc and /usr/local/bin (sudo)
-  ${G}dot system-pull${N}          Pull /etc and /usr/local/bin back into the repo
+  ${G}dot system-apply${N} [profile] Copy the profile scopes of system/ to / (sudo)
+  ${G}dot system-pull${N} [profile]  Pull /etc and /usr/local/bin back into the repo
   ${G}dot nvim-patch${N}           Apply the snacks patch that config cannot express
   ${G}dot build-suckless${N}       Build and install dwm, st, dmenu, slock, dwmblocks
   ${G}dot fonts${N}                Install the fonts that are not packaged
@@ -614,7 +839,7 @@ ${B}When to use what${N}
   ${G}dot adopt${N} then ${G}dot sync${N}       > The everyday pair. adopt moves a file from \$HOME into a
                                 module and links it back, so there is nothing to run after
                                 it. sync then picks up what lives outside \$HOME (/etc into
-                                system/root/, the AUR list, system/state.md) and runs
+                                system/<scope>/root/, the AUR list, system/state.md) and runs
                                 git add -A. It stops there: commit yourself.
   ${G}dotgit${N}                        > Alias git -C "$REPO".
                                 Use when editing a file the repo already tracks: nothing to run

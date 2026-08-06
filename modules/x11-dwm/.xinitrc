@@ -20,10 +20,13 @@ export PATH="$PYENV_ROOT/bin:$PYENV_ROOT/shims:$PATH"
 # *****************************************************
 
 exec >"$HOME/.xinitrc.log" 2>&1
-cp /run/user/$(id -u)/lyxauth ~/.Xauthority     # NOTE: because authority file is at
-                                                #       /run/user/1000/lyxauth (created by ly), 
-                                                #       we synchronize with ~/.Xauthority
-                                                #       (used by multiple scripts)
+# ly stocke le fichier d'autorité dans /run/user/<uid>/lyxauth : on le recopie vers
+# ~/.Xauthority, que plusieurs scripts lisent. Les autres gestionnaires de session
+# (GDM, LightDM, SDDM) exportent XAUTHORITY eux-mêmes et n'ont rien à recopier —
+# d'où le test, sans lequel `set -e` ferait échouer la session sur une machine sans ly.
+if [ -r "/run/user/$(id -u)/lyxauth" ]; then
+    cp "/run/user/$(id -u)/lyxauth" ~/.Xauthority
+fi
 # Donne DISPLAY et XAUTHORITY au gestionnaire systemd utilisateur.
 # ly + .xinitrc ne démarrent pas la session via systemd : sans cet import, les
 # services activés à la demande (xdg-desktop-portal-gtk, xfconfd…) échouent sur

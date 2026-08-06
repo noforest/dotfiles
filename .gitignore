@@ -64,8 +64,12 @@ id_ed25519*
 # `.gitconfig`, which stays versioned.
 modules/git/.gitconfig-*
 # Access to third party infrastructure (VPN tunnel, remote host and login).
-# These stay in system/root/, deployed by `system-apply`, never published.
+# These stay in system/, deployed by `system-apply`, never published.
+system/*/root/usr/local/bin/connect_*
 system/root/usr/local/bin/connect_*
+
+# Which profile each machine uses. Hostnames stay out of a public repository.
+machine.d/*.conf
 
 # =============================================================
 # Caches and application state (not configuration)

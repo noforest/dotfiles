@@ -19,7 +19,8 @@ cd ~/Documents/programming/github-noforest/dotfiles
 |---|---|
 | `dot` | The CLI. Everything goes through it. |
 | `modules/` | What goes into `$HOME`, grouped by theme. `modules/shell/.zshrc` maps to `~/.zshrc`. |
-| `system/root/` | What goes outside `$HOME`. Mirrors the root tree: `system/root/etc/x` maps to `/etc/x`. |
+| `system/<scope>/root/` | What goes outside `$HOME`. Mirrors the root tree: `system/common/root/etc/x` maps to `/etc/x`. A scope is a reason to deploy a file — `common`, the distribution (`arch`, `ubuntu`), the hardware (`laptop`, `peripherals`), the graphical environment (`x11-dwm`, `hyprland`) — and a profile declares the ones it wants on its `system:` line. |
+| `machine.d/` | Which profile each machine defaults to. Not versioned, see its README. |
 | `suckless/` | Patched sources of dwm, st, dmenu, slock, dwmblocks. **No binaries.** |
 | `packages/` | Package lists per group, plus `manual.md` for what pacman does not carry. |
 | `profiles/` | Combinations of modules and package groups. |
@@ -88,8 +89,8 @@ sensitive file** that reaches the index.
 | `dot status [profile]` | Full drift report. |
 | `dot sync` | Regenerate everything that is generated, then `git add -A`. |
 | `dot install [profile]` | `pacman -S --needed`, then `paru -S`, according to the profile. |
-| `dot system-apply` | Copy `system/root/` to the root filesystem (sudo). |
-| `dot system-pull` | Pull back into the repo whatever changed on the system. |
+| `dot system-apply [profile]` | Copy the scopes of `system/` that the profile declares to the root filesystem (sudo). |
+| `dot system-pull [profile]` | Pull back into the repo whatever changed on the system. |
 | `dot build-suckless` | Build and install the five suckless projects. |
 | `dot fonts` | Fetch the two fonts that live outside the repositories. |
 | `dot audit [packages\|scripts]` | What this machine actually uses (shell history plus disk traces). |
@@ -173,6 +174,29 @@ Three files to adapt. That is all that stays machine specific.
 
 ---
 
+## Adding a graphical environment
+
+Nothing in `dot` knows the list of window managers, so adding sway, Hyprland or
+XFCE is data, not code:
+
+1. `modules/<wm>/` for what goes into `$HOME`. Anything shared with another X11
+   environment (`.Xresources`, `.Xmodmap`, `.xserverrc`, `.xprofile_autostart.sh`)
+   already lives in `modules/x11-common/` — depend on it rather than copying, or
+   `dot link` will refuse both modules for claiming the same path.
+2. `system/<wm>/root/` if it needs anything outside `$HOME` (a session entry in
+   `/usr/share/xsessions`, a udev rule). Optional.
+3. Name both in a profile: the module on its own line, the scope on the `system:`
+   line.
+
+Several environments can be installed side by side and picked at login: their
+modules are linked together, and it is `~/.dmrc` — a local file, see
+[`examples/dmrc`](examples/dmrc) — that records the default session of a machine.
+
+Two things to know before writing an XFCE module: `.config/xfce4/xfconf/` is
+refused by `NEVER_LINK` (xfconfd rewrites it and watches it through inotify, see
+*Things to watch*), and `.xinitrc` belongs to the environment it starts, so it
+stays in `modules/x11-dwm/` rather than in `x11-common`.
+
 ## Design choices
 
 **Symlinks for `$HOME`, copies for the root filesystem.** `/etc/udev/rules.d` and
@@ -219,7 +243,7 @@ fonts come from pacman (`packages/fonts.txt`) or from `dot fonts`. The repo weig
   `/usr/local/bin`, which is the only reference called by `.xinitrc`, dwmblocks and dwm.
 - **`~/.config/systemd/user/graphical-session.target.wants/xset.service`** is an inherited
   broken link, because its target no longer exists. The setting is taken over by
-  `xset-r-rate.service` at the system level, which lives in `system/root/`.
+  `xset-r-rate.service` at the system level, which lives in `system/common/root/`.
 - **Secrets**: SSH and GPG keys, `rclone.conf`, `atuin/config.toml`, `.npmrc`,
   `gh/hosts.yml` and `solaar/config.yaml` are excluded by `.gitignore` and checked on
   every `dot status`.

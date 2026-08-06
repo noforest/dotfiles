@@ -8,7 +8,16 @@
 #
 # IMPORTANT LIMIT: "no trace" does not mean "useless". Services (ly, pipewire,
 # grub) and libraries are never launched by hand. This script sorts, you decide.
+#
+# ARCH ONLY: the package half is built on `pacman -Qqe` and `pacman -Ql`, which
+# maps a package to the binaries it ships. apt has no direct equivalent, and this
+# is an occasional audit tool, not a link in the bootstrap chain.
 set -uo pipefail
+
+command -v pacman >/dev/null || {
+    echo "audit-usage.sh: Arch only (needs pacman -Ql to map packages to binaries)" >&2
+    exit 1
+}
 
 REPO="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
 DB="$HOME/.local/share/atuin/history.db"
