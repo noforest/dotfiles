@@ -789,6 +789,28 @@ cmd_bootstrap() {
     local profile="${1:-$DEFAULT_PROFILE}"
     profile_check "$profile"
     head_ "bootstrap ($profile)"
+
+    # De toutes les commandes, c'est la plus lourde : elle installe des paquets,
+    # écrit dans /etc en root et remplace des fichiers de $HOME. Quand personne
+    # n'a nommé le profil, il vient du châssis ou d'un repli, et une tour prise
+    # pour un portable recevrait le touchpad, le rétroéclairage et la gestion du
+    # capot. D'où le récapitulatif, et la confirmation quand rien n'a été choisi.
+    if [ $# -eq 0 ]; then
+        info "  ${D}host $(hostname), chassis $(hostnamectl chassis 2>/dev/null || echo unknown), distro $(distro)${N}"
+        if [ "$DEFAULT_PROFILE_SOURCE" = fallback ]; then
+            warn "profile '$profile' chosen by nobody: no machine.d/$(hostname).conf and no usable chassis"
+        else
+            info "  ${D}profile '$profile', from $DEFAULT_PROFILE_SOURCE${N}"
+        fi
+        info "  ${D}scopes: $(sys_scopes "$profile" | tr '\n' ' ')${N}"
+        printf '  Continue? [y/N] '
+        read -r answer
+        case "$answer" in
+            [yY]*) ;;
+            *) die "aborted. Name it explicitly: dot bootstrap <profile>" ;;
+        esac
+    fi
+
     local steps step
     steps=$(profile_setting "$profile" steps)
     [ -n "$steps" ] || steps="$BOOTSTRAP_STEPS"
