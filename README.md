@@ -1,14 +1,26 @@
 # dotfiles
 
-My **dwm on Arch Linux** environment: configs, scripts, suckless patches, package
-lists. The goal is to reinstall Arch on a bare machine and get the same experience
-back without having to install everything by hand.
+My Linux environment: configs, scripts, suckless patches, package lists. The goal
+is to install a bare machine and get the same experience back without doing it all
+by hand.
+
+One repository for several machines. What varies is expressed as **data**, never as
+a fork:
+
+- **the distribution** is detected from `/etc/os-release` and selects the package
+  lists (`packages/arch/`, `packages/ubuntu/`) and one of the `system/` scopes;
+- **the machine** (tower or laptop) comes from its chassis and picks the profile;
+- **the graphical environment** is a module plus a scope, so several of them can be
+  installed side by side and chosen at login.
+
+Reference machine: Arch Linux with dwm. Ubuntu support is in place in `dot`, with
+`packages/ubuntu/` still to fill in.
 
 ```
 git clone --recursive git@github.com:noforest/dotfiles.git \
     ~/Documents/programming/github-noforest/dotfiles
 cd ~/Documents/programming/github-noforest/dotfiles
-./dot bootstrap laptop
+./dot bootstrap          # the profile comes from the chassis, or name it: ./dot bootstrap laptop
 ```
 
 ---
@@ -22,18 +34,31 @@ cd ~/Documents/programming/github-noforest/dotfiles
 | `system/<scope>/root/` | What goes outside `$HOME`. Mirrors the root tree: `system/common/root/etc/x` maps to `/etc/x`. A scope is a reason to deploy a file — `common`, the distribution (`arch`, `ubuntu`), the hardware (`laptop`, `peripherals`), the graphical environment (`x11-dwm`, `hyprland`) — and a profile declares the ones it wants on its `system:` line. |
 | `machine.d/` | Which profile each machine defaults to. Not versioned, see its README. |
 | `suckless/` | Patched sources of dwm, st, dmenu, slock, dwmblocks. **No binaries.** |
-| `packages/` | Package lists per group, plus `manual.md` for what pacman does not carry. |
-| `profiles/` | Combinations of modules and package groups. |
+| `packages/<distro>/` | Package lists per group, one directory per distribution, plus `manual.md` for what the package manager does not carry. |
+| `profiles/` | Combinations of modules, `system/` scopes and package groups. |
 | `examples/` | Templates for local files that are never versioned. |
 
 ### Profiles
 
-| Profile | For what | Packages | Extra modules |
+A profile answers three questions on three lines: which **modules** go into
+`$HOME` (one name per line), which **`system:` scopes** go outside it, and which
+**`packages:` groups** to install. It never names a distribution — the same
+`laptop` profile is meant to hold on Arch and on Ubuntu, only the directory the
+groups are read from changes.
+
+| Profile | For what | `system:` scopes | Extra modules |
 |---|---|---|---|
-| `minimal` | Server, VM, machine you pass through. Terminal and editor, no graphical session. | 61 | shell, git, nvim |
-| `desktop` | **Tower PC running dwm.** Like `laptop` without battery, backlight, touchpad, gestures or lid suspend. | 209 | + terminal, x11-dwm, desktop |
-| `laptop` | **Laptop running dwm**, the profile of this machine. | 224 | + laptop |
-| `full` | Everything: development, XFCE, Hyprland, security, virtualisation. | 385 | + dev |
+| `minimal` | Server, VM, machine you pass through. Terminal and editor, no graphical session. | none | shell, git, nvim |
+| `desktop` | **Tower running dwm.** Like `laptop` without battery, backlight, touchpad, gestures or lid suspend. | x11-dwm, peripherals | + terminal, x11-common, x11-dwm, desktop |
+| `laptop` | **Laptop running dwm**, the profile of this machine. | laptop, x11-dwm, peripherals | + laptop |
+| `full` | Everything: development, XFCE, Hyprland, security, virtualisation. | laptop, x11-dwm, peripherals | + dev |
+
+`common` and the detected distribution are always added to the `system:` line, so
+no profile has to repeat them.
+
+A profile may also carry `steps:`, the chain `dot bootstrap` runs. Without it the
+default chain applies, which compiles the suckless tools — hence `minimal` cutting
+`build-suckless` and `fonts` out of its own.
 
 `full` is not meant to be installed on a fresh machine. It is the safety net that
 guarantees nothing present here gets lost. For a real machine, take `desktop` or
@@ -74,9 +99,21 @@ Leave the module out and `dot adopt` asks, showing which profiles each module re
 A file lives in exactly one module, and the module is what decides which profiles carry
 it. To reach `minimal` as well as `laptop`, pick a module that both profiles list.
 
-`dot status` reports broken links, unlinked files, divergences between `system/` and
-the root filesystem, packages installed but not catalogued, and it **rejects any
-sensitive file** that reaches the index.
+`dot status` opens by stating what it takes the machine to be — host, distribution,
+chassis, and **where the profile comes from**, since everything below is scoped by
+it. A profile that was guessed rather than chosen is reported as such:
+
+```
+== machine =====================================================
+  host    archlinux, chassis laptop
+  distro  arch
+  profile laptop (from chassis)
+```
+
+It then reports broken links, unlinked files, divergences between `system/` and the
+root filesystem, packages installed but not catalogued, and it **rejects any
+sensitive file** that reaches the index. A divergence names both paths, the system
+one and the repository one, because several scopes deploy into the same tree.
 
 ### All the commands
 
@@ -88,7 +125,7 @@ sensitive file** that reaches the index.
 | `dot adopt <path> [module]` | Bring a file or a directory from `$HOME` into a module. Asks for the module if omitted. |
 | `dot status [profile]` | Full drift report. |
 | `dot sync` | Regenerate everything that is generated, then `git add -A`. |
-| `dot install [profile]` | `pacman -S --needed`, then `paru -S`, according to the profile. |
+| `dot install [profile]` | Install the profile packages with the package manager of the detected distribution (`pacman` then `paru` on Arch, `apt-get` on Ubuntu). |
 | `dot system-apply [profile]` | Copy the scopes of `system/` that the profile declares to the root filesystem (sudo). |
 | `dot system-pull [profile]` | Pull back into the repo whatever changed on the system. |
 | `dot build-suckless` | Build and install the five suckless projects. |
@@ -101,16 +138,22 @@ sensitive file** that reaches the index.
 
 ## Full reinstall
 
-Starting from a base Arch install, with a user created and the network working.
+Starting from a base install, with a user created and the network working.
 
 ### 1. Prerequisites
 
 ```sh
-sudo pacman -S --needed git base-devel
+sudo pacman -S --needed git base-devel     # Arch
+sudo apt install git build-essential       # Ubuntu
 ```
 
-Then the AUR helper and the tools outside pacman: see **[packages/manual.md](packages/manual.md)**.
-At minimum install `paru` before going further, otherwise `dot install` skips the 53 AUR packages.
+On Arch, then the AUR helper and the tools outside pacman: see
+**[packages/arch/manual.md](packages/arch/manual.md)**. At minimum install `paru`
+before going further, otherwise `dot install` skips the 53 AUR packages.
+
+On Ubuntu, `packages/ubuntu/` is still a skeleton: read
+[its README](packages/ubuntu/README.md) first, since `dot install` has nothing to
+install until the groups are filled in.
 
 ### 2. Clone and bootstrap
 
@@ -118,13 +161,20 @@ At minimum install `paru` before going further, otherwise `dot install` skips th
 git clone --recursive git@github.com:noforest/dotfiles.git \
     ~/Documents/programming/github-noforest/dotfiles
 cd ~/Documents/programming/github-noforest/dotfiles
-./dot bootstrap laptop
+./dot status             # check what it takes this machine to be, before writing anything
+./dot bootstrap
 ```
 
 `--recursive` matters, because the nvim `codediff` plugin is a submodule.
 If you forgot it: `git submodule update --init --recursive`.
 
-`bootstrap` chains `install`, `link`, `system-apply`, `fonts` and `build-suckless`.
+Run `dot status` first: it prints the distribution and the profile it inferred.
+`bootstrap` writes into `/etc` as root according to that profile, so it is worth
+one look — and `echo <profile> > machine.d/$(hostname).conf` settles it for good.
+
+By default `bootstrap` chains `install`, `link`, `system-apply`, `fonts`,
+`build-suckless` and `nvim-patch`. A profile carrying a `steps:` line runs that
+chain instead.
 
 ### 3. After the bootstrap
 
@@ -138,7 +188,8 @@ chsh -s /bin/zsh
 # Groups (docker, virtualbox and so on, compare with system/state.md)
 sudo usermod -aG docker,vboxusers "$USER"
 
-# System services
+# System services (ly and auto-cpufreq are Arch here; adapt the display manager
+# to the distribution, Ubuntu ships gdm3 or lightdm)
 sudo systemctl enable --now ly NetworkManager acpid docker cups auto-cpufreq
 
 # User services
@@ -155,7 +206,16 @@ nvim --headless "+Lazy! sync" +qa
 
 ### 4. Machine specific settings
 
-Three files to adapt. That is all that stays machine specific.
+Five files to adapt. That is all that stays machine specific.
+
+- **`machine.d/<hostname>.conf`**, one line: the profile this machine defaults to.
+  Optional — without it the profile is inferred from the chassis — but it is what
+  turns a guess into a decision. Not versioned, see
+  [`machine.d/README.md`](machine.d/README.md).
+
+- **`~/.dmrc`**, which session the display manager starts by default. Template:
+  [`examples/dmrc`](examples/dmrc). Machine specific by nature once several
+  graphical environments are installed side by side.
 
 - **`~/.gitconfig-local`**, the git identity (name, address) and per account routing.
   Template: [`examples/gitconfig-local`](examples/gitconfig-local). It sits outside the
@@ -198,6 +258,33 @@ refused by `NEVER_LINK` (xfconfd rewrites it and watches it through inotify, see
 stays in `modules/x11-dwm/` rather than in `x11-common`.
 
 ## Design choices
+
+**One repository, not one per machine.** `shell`, `git`, `nvim` and `terminal` —
+zsh, p10k, tmux, nvim — are identical everywhere and are most of the value here.
+Splitting them across two repositories would guarantee they drift apart, and would
+mean maintaining `dot` twice. What actually differs is narrow: package names, a
+handful of files under `/etc`.
+
+**`system/` is split by scope, not by distribution.** A scope is a *reason* to
+deploy a file: `common`, the distribution (`arch`, `ubuntu`), the hardware
+(`laptop`, `peripherals`), the graphical environment (`x11-dwm`, `hyprland`). The
+distribution is only one axis among them, and not the one that hurt first — a
+tower used to receive the touchpad, backlight and lid rules of a laptop because
+`system/root/` was deployed whole. Scope names are free: `dot` never enumerates
+them, so adding `sway` is a directory plus a line in a profile.
+
+**The machine is detected, the profile is declared.** The distribution comes from
+`/etc/os-release` and is never written in a profile: a machine knows what it runs,
+and a second source of truth would eventually disagree with the first. The profile
+is the opposite — it is a choice (`laptop`, `full`, `minimal`), so it is read from
+`machine.d/<hostname>.conf`, falls back to the chassis, and `dot status` always
+says which of the two it used.
+
+**Modules may not overlap.** Several graphical environments are linked side by
+side, so nothing structurally stops two of them from shipping the same
+`~/.something`. `dot link` refuses before writing anything and names both modules,
+because the alternative is linking the last one silently and reporting `link points
+elsewhere` forever afterwards.
 
 **Symlinks for `$HOME`, copies for the root filesystem.** `/etc/udev/rules.d` and
 `/etc/ly/config.ini` are read very early at boot, before `/home` is necessarily mounted,

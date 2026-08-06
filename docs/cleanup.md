@@ -5,6 +5,11 @@ The point is to avoid dragging onto future machines what already serves no purpo
 Run `dot audit` to regenerate the data. This document is the commented reading of it,
 done on 2026-08-04 against a history of 88,578 commands.
 
+**Scope:** a snapshot of the Arch laptop, kept as it was written. The package half
+is Arch only — `dot audit` needs `pacman -Ql` to map a package to the binaries it
+ships, and refuses to run elsewhere. The reasoning transfers to another
+distribution, the `pacman -Rsu` commands do not.
+
 ---
 
 ## How to read the audit (read this before deleting anything)
