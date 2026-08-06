@@ -375,7 +375,7 @@ cmd_status() {
     local psrc="named on the command line"
     [ $# -eq 0 ] && psrc="from $DEFAULT_PROFILE_SOURCE"
     info "  ${D}host    $(hostname), chassis $(hostnamectl chassis 2>/dev/null || echo unknown)${N}"
-    info "  ${D}distro  $(distro)${NOTE:-}${N}${D}${DOT_DISTRO:+ (forced by \$DOT_DISTRO)}${N}"
+    info "  ${D}distro  $(distro)${DOT_DISTRO:+ (forced by \$DOT_DISTRO)}${N}"
     if [ "$psrc" = "from fallback" ]; then
         warn "profile $profile ${D}($psrc: no machine.d/$(hostname).conf and no usable chassis)${N}"
     else
@@ -851,8 +851,10 @@ ${B}When to use what${N}
                                 Also repairs what status reports as missing or broken.
                                 Never needed right after an adopt.
 
-Profiles: $(ls "$PROFILES" 2>/dev/null | sed 's/\.conf//' | tr '\n' ' ')(default: $DEFAULT_PROFILE)
+Profiles: $(ls "$PROFILES" 2>/dev/null | sed 's/\.conf//' | tr '\n' ' ')(default: $DEFAULT_PROFILE, from $DEFAULT_PROFILE_SOURCE)
 Modules : $(ls "$MODULES" 2>/dev/null | tr '\n' ' ')
+Machine : $(hostname), $(distro), chassis $(hostnamectl chassis 2>/dev/null || echo unknown)
+Scopes  : $(ls -d "$REPO"/system/*/root 2>/dev/null | sed 's|.*/system/||;s|/root||' | tr '\n' ' ')
 EOF
 }
 
