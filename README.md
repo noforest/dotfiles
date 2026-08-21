@@ -11,11 +11,16 @@ dot sync                                    # regenerate, then git add -A
 dotgit commit -m "mpv: initial config"
 ```
 
-One repository, several machines. Three things are detected rather than declared:
-**the distribution** from `/etc/os-release`, which picks the package lists and one
-`system/` scope, **the machine** from its chassis, which picks the profile, and
-**the graphical environment**, a module plus a scope, so several can coexist and be
-chosen at login.
+One repository, several machines.
+
+Three things are detected rather than declared:
+
+- **the distribution**, read from `/etc/os-release`.
+  <br>It picks the package lists and one `system/` scope.
+- **the machine**, read from its chassis.
+  <br>It picks the profile.
+- **the graphical environment**, a module plus a scope.
+  <br>Several can coexist and be chosen at login.
 
 Tested on Arch with dwm. Ubuntu 26.04 LTS is supported, its package lists checked
 name by name against the official archive.
@@ -38,22 +43,36 @@ name by name against the official archive.
 
 Everything goes through the `dot` CLI, which deploys the repository in four ways.
 
-| Directory | Contents | Deployed as |
+| Directory | What it holds | Deployed as |
 |---|---|---|
-| `modules/` | What goes into `$HOME`. `modules/shell/.zshrc` maps to `~/.zshrc`. | symlinks |
-| `system/<scope>/root/` | What goes outside it. `system/common/root/etc/x` maps to `/etc/x`. | copies |
-| `packages/<distro>/` | Package lists per group. | installed |
-| `suckless/` | Patched sources of dwm, st, dmenu, slock, dwmblocks. | compiled in place |
+| `modules/` | What goes into `$HOME`.<br><br>`modules/shell/.zshrc` maps to `~/.zshrc`. | symlinks |
+| `system/<scope>/root/` | What goes outside `$HOME`.<br><br>`system/common/root/etc/x` maps to `/etc/x`. | copies |
+| `packages/<distro>/` | Package lists.<br><br>One file per group: `core.txt`, `dev.txt`. | installed |
+| `suckless/` | Patched sources.<br><br>dwm, st, dmenu, slock, dwmblocks. | compiled in place |
 
-Plus `profiles/` (which of the above go together), `machine.d/` (the profile a
-machine defaults to, not versioned), `examples/` (templates for local files that
-are never versioned) and `scripts/`.
+Four more directories carry the settings rather than the content:
 
-A **scope** is a reason to deploy a file: `common`, the distribution, the hardware,
-the graphical environment. Splitting them keeps a tower from receiving the touchpad
-and backlight rules of a laptop. A **profile** picks modules, scopes and package
-groups, and never names a distribution, so the same `laptop` profile holds on Arch
-and on Ubuntu.
+| Directory | What it holds |
+|---|---|
+| `profiles/` | Which of the four above go together. |
+| `machine.d/` | The profile a machine defaults to. Not versioned. |
+| `examples/` | Templates for local files that are never versioned. |
+| `scripts/` | One-off tools. |
+
+### Scopes
+
+A **scope** is a reason to deploy a file: `common`, the distribution, the
+hardware, the graphical environment.
+
+Splitting them is what keeps a tower from receiving the touchpad and backlight
+rules of a laptop.
+
+### Profiles
+
+A **profile** picks modules, scopes and package groups.
+
+It never names a distribution, so the same `laptop` profile holds on Arch and on
+Ubuntu. Only the directory the package lists are read from changes.
 
 | Profile | For what | `system:` scopes |
 |---|---|---|
@@ -62,9 +81,11 @@ and on Ubuntu.
 | `laptop` | Laptop running dwm. | laptop, x11-dwm, peripherals |
 | `full` | Everything: development, XFCE, Hyprland, virtualisation. | laptop, x11-dwm, peripherals |
 
-`common` and the detected distribution are always added. A profile may carry
-`steps:` to override the `dot bootstrap` chain, which is how `minimal` drops
-`build-suckless` and `fonts`.
+`common` and the detected distribution are always added, so no profile repeats
+them.
+
+A profile may also carry `steps:` to override the `dot bootstrap` chain. That is
+how `minimal` drops `build-suckless` and `fonts` from its own.
 
 ---
 
