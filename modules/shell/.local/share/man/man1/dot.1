@@ -1,0 +1,455 @@
+'\" t
+.TH DOT 1 "2026-08-21" "dotfiles" "User Commands"
+.SH NAME
+dot \- manage the dotfiles repository: links, system files, packages
+.SH SYNOPSIS
+.B dot
+.I command
+.RI [ profile ]
+.PP
+.B dot
+is not an installed binary. It is a shell alias to
+.IR $DOTFILES_DIR/dot ,
+defined in
+.IR .zshrc .
+Run it as
+.B ./dot
+from the repository if the alias is not loaded.
+.PP
+.BR Note :
+graphviz also ships a
+.BR dot (1).
+This page shadows it for the current user. Reach the other one with
+.BR "man -M /usr/share/man dot" .
+.SH DESCRIPTION
+One repository holds the whole environment and deploys it in four different ways.
+.PP
+.TS
+tab(@) allbox;
+lb lb lb
+l lx lb.
+Directory@What it holds@Deployed as
+modules/@T{
+Whatever belongs in $HOME. \fImodules/shell/.zshrc\fR maps to \fI~/.zshrc\fR. Editing the file in $HOME edits the repository.
+T}@symlinks
+system/<scope>/root/@T{
+Whatever belongs outside $HOME. \fIsystem/common/root/etc/x\fR maps to \fI/etc/x\fR. Copied, not linked, because these files are read at boot before /home is necessarily mounted.
+T}@copies
+packages/<distro>/@T{
+Package lists, one file per group.
+T}@installed
+suckless/@T{
+Patched sources of dwm, st, dmenu, slock, dwmblocks. Compiled in place, since \fBpatch\fR refuses to touch a symlink.
+T}@compiled
+.TE
+.PP
+A
+.B scope
+is a reason to deploy a file:
+.IR common ,
+the distribution
+.RI ( arch ,
+.IR ubuntu ),
+the hardware
+.RI ( laptop ,
+.IR peripherals ),
+the graphical environment
+.RI ( x11\-dwm ,
+.IR hyprland ).
+Splitting them keeps a tower from receiving the touchpad and backlight rules of a
+laptop.
+.PP
+A
+.B profile
+names which modules, which scopes and which package groups go together. It never
+names a distribution, since that is detected from
+.IR /etc/os\-release .
+The profile comes from
+.IR machine.d/<hostname>.conf ,
+falling back to the chassis type.
+.I common
+and the detected distribution are always added.
+.PP
+Every command takes an optional profile. Without one the detected profile is used,
+and
+.B dot status
+always says which it took and where that came from.
+.SH COMMANDS
+.TS
+tab(@) allbox;
+lb lb
+lb lx.
+Command@What it does
+dot link [prof]@T{
+Create the symlinks. Backs up anything in the way as \fI.bak-<date>\fR. Idempotent. The repair command for everything \fBdot status\fR flags.
+T}
+dot unlink [prof]@T{
+Remove the links this profile created, and only those. Keeps the backups.
+T}
+dot list [prof]@T{
+Print every path the profile manages, one per line.
+T}
+dot adopt <path>@T{
+Move a file or directory from $HOME into a module and leave a symlink behind.
+T}
+dot status [prof]@T{
+Full drift report, read only, never prompts. \fBdot st\fR is a synonym.
+T}
+dot audit [what]@T{
+What this machine actually uses, as opposed to what is installed. Arch only.
+T}
+dot state@T{
+Regenerate \fIsystem/state.md\fR: enabled units, groups, shell, locale, timezone.
+T}
+dot system-apply@T{
+Copy the profile scopes of \fIsystem/\fR onto the root filesystem. Needs sudo.
+T}
+dot system-pull@T{
+The other direction: copy the system version back into the repository if it differs.
+T}
+dot install [prof]@T{
+Install the package groups of the profile with the detected package manager.
+T}
+dot build-suckless@T{
+Build and install dwm, st, dmenu, slock and dwmblocks from \fIsuckless/\fR. Needs sudo.
+T}
+dot fonts@T{
+Install the fonts that no package provides.
+T}
+dot nvim-patch@T{
+Apply the patches that a plugin's own API cannot express.
+T}
+dot sync@T{
+Regenerate everything generated, then \fBgit add -A\fR. Does not commit.
+T}
+dot bootstrap [prof]@T{
+A bare machine to a full environment, in one chain. Asks before touching anything.
+T}
+.TE
+.PP
+The details that matter follow.
+.SS Links
+.TP
+.BI "dot link " [profile]
+Anything already sitting at a target path is renamed to
+.I <name>.bak\-<date>
+before the link is made, so nothing is ever destroyed. Rerun it freely. It refuses
+to do anything at all if two modules claim the same path.
+.IP
+.B Use it
+after a
+.BR "git pull" ,
+after adding a module to a profile, and to repair anything
+.B dot status
+reports as missing, blocked or broken. Never needed right after
+.BR "dot adopt" .
+.TP
+.BI "dot adopt " path " " [module]
+It
+.B moves
+the file into the module and leaves a symlink behind, so there is nothing to run
+afterwards. Given a directory, it adopts each file inside one at a time and leaves
+the directory itself real in
+.IR $HOME .
+.IP
+Without
+.IR module ,
+it asks, showing which profiles each module reaches. A file lives in exactly one
+module. It refuses a path that is already a symlink, a path outside
+.IR $HOME ,
+or a file the module already carries. Nested git repositories and daemon state are
+skipped and reported. Remember to commit afterwards.
+.SS Outside $HOME
+.TP
+.B dot system-apply
+Preserves each target's mode. Reload afterwards with
+.B udevadm control --reload
+and
+.BR "systemctl daemon-reload" .
+.TP
+.B dot system-pull
+Only touches files the repository already tracks. It never discovers new ones, so
+a genuinely new
+.I /etc
+file must be placed in
+.I system/<scope>/root/
+by hand once.
+.SS Packages and build
+.TP
+.B dot install
+On Arch, if the profile sets
+.IR "aur: yes" ,
+the AUR list is installed too with
+.B paru
+or
+.BR yay .
+Without either, the AUR step is skipped with a warning.
+.TP
+.B dot build-suckless
+For each of the five projects:
+.B make clean
+then
+.B sudo make install
+inside
+.IR dotfiles/suckless/<project> .
+The repository is the build tree, and the artefacts it produces are gitignored.
+Finishes by setting the setuid bit on
+.IR /usr/local/bin/slock ,
+which slock's own Makefile already does. Without that bit slock cannot read
+.I /etc/shadow
+and refuses to start, so a missing bit cannot lock you out.
+.IP
+Binaries go to
+.IR /usr/local/bin .
+A running dwm keeps the old one until the session restarts.
+.TP
+.B dot nvim-patch
+Applies the patches under
+.I modules/nvim/.config/nvim/patches/
+to the installed lazy.nvim plugins. Already applied patches are detected and
+skipped. If upstream moved and a patch no longer applies, it says so rather than
+forcing.
+.SS Everything at once
+.TP
+.B dot sync
+In order:
+.BR "dot system-pull" ,
+the Arch AUR list,
+.BR "dot state" ,
+then
+.BR "git add -A" .
+It stops there. The commit is yours to write.
+.TP
+.BI "dot bootstrap " [profile]
+Chains
+.BR install ", " link ", " system-apply ", " fonts ", " build-suckless " and " nvim-patch ,
+unless the profile overrides the chain with
+.IR steps: .
+Called without an argument it prints what it takes the machine to be and asks for
+confirmation, because a tower mistaken for a laptop would receive touchpad,
+backlight and lid rules.
+.SH READING DOT STATUS
+Each section prints a grey legend giving its direction of travel. The sections are
+independent: one can be red while the others are green.
+.SS links
+Compares
+.I dotfiles/modules/<module>/<path>
+with
+.IR ~/<path> .
+.PP
+.TS
+tab(@) allbox;
+lb lb lb
+lb lx lb.
+Verdict@What it means, and why@Fix
+linked@T{
+The link exists and points at the module.
+T}@nothing
+missing from ~@T{
+The module has the file, $HOME does not. A file reached the repository without passing through you, typically a \fBgit pull\fR, or a module was added to the profile.
+T}@dot link
+real file, not linked@T{
+A real file occupies the path where the link should be, counted as \fIblocked\fR. A tool rewrote it in place rather than through the link (\fBsed -i\fR and several editors replace the inode and destroy the symlink), you created it by hand, or a fresh install dropped its own default there.
+T}@dot link
+broken link@T{
+The link exists, its target does not. The file was renamed or deleted in the repository, or the repository moved.
+T}@dot link
+link points elsewhere@T{
+The link aims at something other than the module, counted as \fIblocked\fR. A leftover from an earlier installation.
+T}@dot link
+.TE
+.PP
+In short,
+.B dot link
+answers everything that is not
+.BR linked ,
+and it backs up before it replaces. If the version it backed up was the one you
+wanted, copy the contents of
+.I <name>.bak\-<date>
+into the module and rerun.
+.PP
+A separate error,
+.IR "claimed by several modules" ,
+means two modules ship the same path.
+.B dot link
+refuses entirely until one gives it up, usually by moving the shared file into a
+module both depend on, such as
+.IR x11\-common .
+.SS system/ vs the root filesystem
+Compares
+.I dotfiles/system/<scope>/root/<path>
+with
+.IR /<path> ,
+for the scopes the profile carries.
+.PP
+.TS
+tab(@) allbox;
+lb lb lb
+lbw(13) lx lbw(17).
+Verdict@What it means, and why@Fix
+identical@T{
+The two copies match.
+T}@nothing
+diverges@T{
+They differ. The report names both paths and says which copy is newer. When both directions appear at once it names them and lets you choose.
+T}@T{
+see the two rows below
+T}
+repo is newer@T{
+You edited the repository copy and never deployed it.
+T}@dot system-apply
+system is newer@T{
+Something edited the live file, or you did, and the repository has not caught up.
+T}@dot system-pull
+missing from the system@T{
+The repository has the file, the root filesystem does not.
+T}@dot system-apply
+cannot check without root@T{
+The file lives in a directory only root may traverse, such as \fI/etc/polkit-1/rules.d\fR. It is not missing, it is unverifiable. \fBdot status\fR never prompts for a password.
+T}@T{
+.nf
+sudo -v, rerun
+.fi
+T}
+.TE
+.SS packages, secrets, git
+.TS
+tab(@) allbox;
+lb lb lb
+lb lx lb.
+Section@What it checks@Fix
+packages@T{
+What is installed but absent from \fIdotfiles/packages/<distro>/*.txt\fR. The reverse case, catalogued but not installed, is not an error and is not reported.
+T}@dot sync
+secrets@T{
+Any sensitive file tracked by git: SSH and GPG keys, \fIrclone.conf\fR, \fIatuin/config.toml\fR, \fI.npmrc\fR, \fIgh/hosts.yml\fR, \fIsolaar/config.yaml\fR. A hit is serious.
+T}@T{
+.nf
+git rm --cached
+check .gitignore
+.fi
+T}
+git@T{
+The working tree of the repository itself, in the same three buckets as \fBgit status\fR, plus how far ahead or behind the upstream is. Uncommitted work is normal and never makes the command fail.
+T}@dotgit add, commit
+.TE
+.SH FILES
+.TS
+tab(@) allbox;
+lb lb
+lb lx.
+Path@What it is
+dot@T{
+The CLI. Everything goes through it.
+T}
+modules/<module>/@T{
+What goes into $HOME, by theme.
+T}
+system/<scope>/root/@T{
+What goes outside $HOME, by reason.
+T}
+packages/<distro>/@T{
+Package lists, one file per group.
+T}
+profiles/<name>.conf@T{
+Modules, scopes and package groups that go together.
+T}
+machine.d/<host>.conf@T{
+Which profile this machine defaults to. Not versioned.
+T}
+suckless/@T{
+Patched sources, and the build tree. No binaries are committed.
+T}
+examples/@T{
+Templates for the local files that are never versioned.
+T}
+system/state.md@T{
+Reference state of the machine, generated by \fBdot state\fR.
+T}
+.TE
+.SH EXAMPLES
+.TS
+tab(@) allbox;
+lb lb
+lw(30) lx.
+Situation@What to run
+T{
+Editing a file the repository already tracks. The path in $HOME is a link into the repository, so the editor writes straight into it.
+T}@T{
+.nf
+nothing, then
+dotgit commit
+.fi
+T}
+T{
+A new config file worth keeping.
+T}@T{
+.nf
+dot adopt <path> <module>
+dot sync
+dotgit commit -m "..."
+.fi
+T}
+T{
+Picking up what lives outside $HOME: /etc, the AUR list, the machine state.
+T}@T{
+.nf
+dot sync
+dotgit commit -m "..."
+.fi
+T}
+T{
+After pulling changes made on another machine.
+T}@T{
+.nf
+dotgit pull
+dot link
+dot system-apply
+.fi
+T}
+T{
+A bare machine, once.
+T}@T{
+.nf
+git clone --recursive <url>
+cd dotfiles
+\&./dot status
+\&./dot bootstrap
+.fi
+T}
+T{
+Something looks wrong and you want to know what.
+T}@T{
+.nf
+dot status
+man dot
+.fi
+T}
+.TE
+.SH ENVIRONMENT
+.TP
+.B DOTFILES_DIR
+Repository location, set in
+.IR .zshrc .
+The
+.B dot
+and
+.B dotgit
+aliases are built from it.
+.TP
+.B DOT_DISTRO
+Force the detected distribution instead of reading
+.IR /etc/os\-release .
+Useful for testing another distribution's lists.
+.SH EXIT STATUS
+.B dot status
+exits non zero when something is wrong: a broken or blocked link, a divergence
+with the root filesystem, or a sensitive file tracked by git. Uncommitted work
+does not count.
+.SH SEE ALSO
+.BR git (1),
+.BR stow (1),
+.BR man (1).
+.PP
+The repository README covers installing on a new machine, the five machine
+specific files, and the reasoning behind the design.

@@ -383,6 +383,7 @@ cmd_status() {
     fi
 
     head_ "links ($profile)"
+    info "  ${D}dotfiles/modules/<module>/<path>   -- symlink -->   ~/<path>${N}"
     local clash
     clash=$(module_conflicts "$profile")
     if [ -n "$clash" ]; then
@@ -406,11 +407,15 @@ cmd_status() {
             fi
         done < <(module_units "$mod")
     done < <(profile_modules "$profile")
-    ok "$linked linked, $missing missing, $foreign not linked, $broken broken"
+    ok "$linked linked, $missing missing from ~, $foreign blocked, $broken broken"
+    if [ $((missing + foreign + broken)) -gt 0 ]; then
+        info "  ${D}-> 'dot link' repairs all three, whatever it replaces is kept as .bak-<date>${N}"
+    fi
 
     head_ "system/ vs the root filesystem"
     local f target diverged=0 absent=0 same=0 unreadable=0
     local note side rstamp sstamp repo_newer=0 sys_newer=0
+    info "  ${D}dotfiles/system/<scope>/root/<path>   -- copy -->   /<path>${N}"
     info "  ${D}scopes: $(sys_scopes "$profile" | tr '\n' ' ')${N}"
     local conflicts
     conflicts=$(sys_conflicts "$profile")
@@ -474,6 +479,7 @@ cmd_status() {
     fi
 
     head_ "packages"
+    info "  ${D}installed on this machine   vs   dotfiles/packages/<distro>/*.txt${N}"
     local installed
     installed=$(pkg_installed)
     if [ -n "$installed" ]; then
@@ -489,6 +495,7 @@ cmd_status() {
     fi
 
     head_ "secrets"
+    info "  ${D}refuses any sensitive file tracked by git inside dotfiles/${N}"
     local leaked
     leaked=$(git -C "$REPO" ls-files 2>/dev/null | grep -E "$SECRET_PATTERNS")
     if [ -n "$leaked" ]; then
@@ -499,6 +506,7 @@ cmd_status() {
     else ok "no sensitive file is tracked"; fi
 
     head_ "git"
+    info "  ${D}working tree of the dotfiles/ repository itself${N}"
     # A summary only: uncommitted work is normal, so this section never sets rc.
     if git -C "$REPO" rev-parse --git-dir >/dev/null 2>&1; then
         local branch upstream ahead=0 behind=0 staged unstaged untracked
@@ -852,22 +860,8 @@ ${B}dot${N} - dotfiles management for dwm / Arch
   ${G}dot state${N}                Regenerate system/state.md
   ${G}dot bootstrap${N} [profile]  Chain everything: bare machine to full environment
 
-${B}When to use what${N}
-
-  ${G}dot adopt${N} then ${G}dot sync${N}       > The everyday pair. adopt moves a file from \$HOME into a
-                                module and links it back, so there is nothing to run after
-                                it. sync then picks up what lives outside \$HOME (/etc into
-                                system/<scope>/root/, the AUR list, system/state.md) and runs
-                                git add -A. It stops there: commit yourself.
-  ${G}dotgit${N}                        > Alias git -C "$REPO".
-                                Use when editing a file the repo already tracks: nothing to run
-  ${G}dot bootstrap${N}                 > A new machine, once. Chains install, link, system-apply,
-                                fonts, build-suckless and nvim-patch, so those five are
-                                rarely called by hand.
-  ${G}dot link${N}                      > When files reach the repo without passing through you:
-                                after a git pull, or after adding a module to a profile.
-                                Also repairs what status reports as missing or broken.
-                                Never needed right after an adopt.
+${D}See '${N}${G}man dot${N}${D}' for what each command does, when to use it, and how to read
+every line of 'dot status'. '${N}${G}dotgit${N}${D}' is an alias for git -C "$REPO".${N}
 
 Profiles: $(ls "$PROFILES" 2>/dev/null | sed 's/\.conf//' | tr '\n' ' ')(default: $DEFAULT_PROFILE, from $DEFAULT_PROFILE_SOURCE)
 Modules : $(ls "$MODULES" 2>/dev/null | tr '\n' ' ')

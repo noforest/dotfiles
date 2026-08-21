@@ -100,7 +100,8 @@ static const Rule rules[] = {
     { "Thunar",  	        NULL,       "File Operation Progress",0,1,             	-1,        -1,-1,-1,-1,      	 0 },
     { "Thunar",             NULL,       "Rename",   0,              1,              -1,        -1,-1,-1,-1,         0 },
     { "Swappy",             NULL,       NULL,       0,              1,              -1,        -1,-1,-1,-1,         0 },
-    { "okular",             NULL,       NULL,       1 << 2,         0,              -1,         -1,-1,-1,-1,         0 },
+    { "okular",             NULL,       NULL,       1 << 3,         0,              -1,         -1,-1,-1,-1,         0 },   // workspace 4
+    { "code",               NULL,       NULL,       1 << 2,         0,              -1,         -1,-1,-1,-1,         0 },   // workspace 3
 
     // { "alacritty",         NULL,       NULL,       1 << 1,         0,              -1,        50,50,500,500,       0},
 };
