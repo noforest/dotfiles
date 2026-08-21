@@ -46,9 +46,13 @@ DEFAULT_PROFILE_SOURCE="$(default_profile | cut -f2)"
 DEFAULT_PROFILE="$(default_profile | cut -f1)"
 
 # === Output ==================================================================
+# TTY is the terminal test taken once, before any pipeline: inside one, a
+# command's own stdout is a pipe and says nothing about where the output ends up.
 if [ -t 1 ]; then
+    TTY=1
     R=$'\e[31m'; G=$'\e[32m'; Y=$'\e[33m'; B=$'\e[34m'; D=$'\e[2m'; N=$'\e[0m'
 else
+    TTY=
     R=; G=; Y=; B=; D=; N=
 fi
 info() { printf '%s\n' "$*"; }
@@ -56,6 +60,16 @@ ok()   { printf '  %s✓%s %s\n' "$G" "$N" "$*"; }
 warn() { printf '  %s!%s %s\n' "$Y" "$N" "$*"; }
 err()  { printf '  %s✗%s %s\n' "$R" "$N" "$*" >&2; }
 head_() { printf '\n%s== %s %s%s\n' "$B" "$*" "$(printf '=%.0s' $(seq 1 $((60 - ${#1})))) " "$N"; }
+# A `label   value` line, dim. Long values are wrapped into the value column
+# instead of running under the label, so a profile carrying nine modules still
+# reads as one field.
+kv() {  # kv <label> <value>
+    local label="$1" line
+    while IFS= read -r line; do
+        printf '  %s%-9s%s%s\n' "$D" "$label" "$line" "$N"
+        label=""
+    done < <(printf '%s\n' "$2" | fold -s -w 60 | sed 's/[[:space:]]*$//')
+}
 die()  { err "$*"; exit 1; }
 
 # === Profiles and modules ====================================================
@@ -369,18 +383,35 @@ cmd_status() {
     local profile="${1:-$DEFAULT_PROFILE}" rc=0
     profile_check "$profile"
 
-    # What this machine is taken to be. A profile that was guessed rather than
-    # chosen is worth saying out loud: everything below is scoped by it.
+    # What this machine is taken to be, and what that selects. Two detections and
+    # one profile decide every section below: the distribution picks the package
+    # lists and one scope, the profile picks the modules, the other scopes and
+    # the package groups. Naming them here, with where each comes from, is what
+    # makes the rest of the report readable. A profile that was guessed rather
+    # than chosen is worth saying out loud, especially before system-apply
+    # writes into /etc as root.
     head_ "machine"
     local psrc="named on the command line"
     [ $# -eq 0 ] && psrc="from $DEFAULT_PROFILE_SOURCE"
-    info "  ${D}host    $(hostname), chassis $(hostnamectl chassis 2>/dev/null || echo unknown)${N}"
-    info "  ${D}distro  $(distro)${DOT_DISTRO:+ (forced by \$DOT_DISTRO)}${N}"
-    if [ "$psrc" = "from fallback" ]; then
-        warn "profile $profile ${D}($psrc: no machine.d/$(hostname).conf and no usable chassis)${N}"
+    kv "host" "$(hostname), chassis $(hostnamectl chassis 2>/dev/null || echo unknown)"
+    if [ -n "${DOT_DISTRO:-}" ]; then
+        kv "distro" "$(distro), forced by \$DOT_DISTRO"
     else
-        info "  ${D}profile $profile ($psrc)${N}"
+        kv "distro" "$(distro), from /etc/os-release"
     fi
+    if [ "$psrc" = "from fallback" ]; then
+        warn "profile $profile, $psrc (profiles/$profile.conf)"
+        kv "" "-> nothing chose it: no machine.d/$(hostname).conf, no chassis"
+    else
+        kv "profile" "$profile, $psrc (profiles/$profile.conf)"
+    fi
+    kv "modules" "$(profile_modules "$profile" | tr '\n' ' ')"
+    kv "scopes" "$(scopes_annotated "$profile")"
+    local empty
+    empty=$(scopes_empty "$profile")
+    [ -n "$empty" ] && kv "" "-> $empty: no system/<scope>/root/ directory, ships nothing"
+    kv "packages" "$(profile_setting "$profile" packages)"
+    [ -d "$(PKGDIR)" ] || kv "" "-> packages/$(distro)/ does not exist, nothing to compare with"
 
     head_ "links ($profile)"
     info "  ${D}dotfiles/modules/<module>/<path>   -- symlink -->   ~/<path>${N}"
@@ -416,7 +447,6 @@ cmd_status() {
     local f target diverged=0 absent=0 same=0 unreadable=0
     local note side rstamp sstamp repo_newer=0 sys_newer=0
     info "  ${D}dotfiles/system/<scope>/root/<path>   -- copy -->   /<path>${N}"
-    info "  ${D}scopes: $(sys_scopes "$profile" | tr '\n' ' ')${N}"
     local conflicts
     conflicts=$(sys_conflicts "$profile")
     if [ -n "$conflicts" ]; then
@@ -559,6 +589,43 @@ sys_scopes() {
     printf 'common\n'
     d=$(distro); [ -n "$d" ] && printf '%s\n' "$d"
     profile_setting "$p" system | tr ' ' '\n' | grep -v '^$'
+}
+
+# The active scopes, each tagged with the reason it is active. `common` is always
+# there, one scope is the distribution of this machine, the rest come from the
+# profile: three different reasons that the bare list does not distinguish.
+# One line per reason rather than one flat list, since the reason is the whole
+# point: read down the lines and the machine explains itself.
+scopes_annotated() {
+    local p="${1:-$DEFAULT_PROFILE}" s d tag prev="" group=""
+    d=$(distro)
+    while read -r s; do
+        [ -n "$s" ] || continue
+        case "$s" in
+            common) tag="always" ;;
+            "$d")   tag="distro" ;;
+            *)      tag="profile" ;;
+        esac
+        if [ -n "$prev" ] && [ "$tag" != "$prev" ]; then
+            printf '%s (%s)\n' "$group" "$prev"
+            group=""
+        fi
+        group="${group:+$group }$s"
+        prev="$tag"
+    done < <(sys_scopes "$p")
+    [ -n "$group" ] && printf '%s (%s)\n' "$group" "$prev"
+}
+
+# Active scopes with no system/<scope>/root/ directory. They are legal and
+# silent: a profile may name a scope before it exists, and a distribution
+# without a system/<distro>/ ships nothing there. Silence would read as a bug.
+scopes_empty() {
+    local p="${1:-$DEFAULT_PROFILE}" s out=""
+    while read -r s; do
+        [ -n "$s" ] || continue
+        [ -d "$REPO/system/$s/root" ] || out="${out:+$out }$s"
+    done < <(sys_scopes "$p")
+    printf '%s\n' "$out"
 }
 
 # Every file of every active scope. Two scopes may legitimately ship the same
@@ -837,6 +904,88 @@ cmd_bootstrap() {
 }
 
 # === help ====================================================================
+# The manual is the reference, but two of its sections answer the questions
+# actually asked while working: what a command does, and what a status line
+# means. Reaching them should not require knowing how to search a man page, nor
+# the manual being installed: the page is read from the repository.
+MANPAGE="$MODULES/shell/.local/share/man/man1/dot.1"
+
+# less is what colours the page: man ships bold and italic only, and the
+# LESS_TERMCAP_* entries decide what they look like. No less, no colour, so the
+# rendering follows the same test.
+pager_ok() { [ -n "$TTY" ] && command -v less >/dev/null; }
+
+# The manual rendered to plain text, keeping bold and italic as overstrike when
+# less will be there to interpret them. Overstrike rather than SGR: it is what
+# the LESS_TERMCAP_* entries act on.
+man_render() {
+    local width="${MANWIDTH:-}"
+    if [ -z "$width" ]; then
+        width=$(tput cols 2>/dev/null || echo 80)
+        # Text stops being readable long before a terminal stops being wide, and
+        # the tables of the page stretch with it. $MANWIDTH still has the last word.
+        [ "$width" -gt 100 ] 2>/dev/null && width=100
+    fi
+    if pager_ok; then
+        MANWIDTH="$width" MAN_KEEP_FORMATTING=1 GROFF_NO_SGR=1 man -l "$MANPAGE" 2>/dev/null
+    else
+        MANWIDTH="$width" man -l "$MANPAGE" 2>/dev/null
+    fi
+}
+
+# One section of the rendered manual, from its heading to the next one.
+# Headings are the only lines starting at column zero, which is what delimits
+# them here. Every line is compared stripped of its formatting, printed with it.
+#
+# Two things man cannot colour on its own are added: headings in blue, as in
+# dot status, and the rules of the tables in grey, so the text inside them
+# stands out rather than the boxes.
+man_section() {  # man_section <heading, as printed>
+    command -v man >/dev/null || die "man is not installed, read $MANPAGE"
+    [ -r "$MANPAGE" ] || die "manual not found: $MANPAGE"
+    man_render | awk -v h="$1" -v hd="${TTY:+$'\e[1;34m'}" -v gr="$D" -v n="$N" '
+        { plain = $0; gsub(/\033\[[0-9;]*m/, "", plain); gsub(/.\b/, "", plain) }
+        plain == h                           { on = 1 }
+        on && plain != h && plain ~ /^[A-Z]/ { exit }
+        on {
+            if (plain ~ /^[A-Z]/ || plain ~ /^   [^ ]/)  { print hd plain n; next }
+            line = $0
+            # Every rule of a table, horizontal and vertical alike. Dimming only
+            # the full width ones left the uprights bright, and a box drawn in
+            # two shades reads as a broken box.
+            if (plain !~ /[A-Za-z0-9]/ && plain ~ /─/) line = gr plain n
+            else gsub(/│/, gr "│" n, line)
+            print line
+        }
+    '
+}
+
+# Paged, and paged the way man pages are: the section leaves the screen as it
+# found it. Bold becomes green, what you type into a terminal, and italic
+# yellow, the files and paths dot acts on.
+pager_() {
+    pager_ok || { cat; return; }
+    local opts=(-R)
+    # Scrolling with the wheel, on the less versions that know how (551 and
+    # later). Selecting text with the mouse then needs shift, as in any program
+    # that takes the mouse over.
+    less --help 2>/dev/null | grep -q -- '--mouse' && opts+=(--mouse --wheel-lines=3)
+    LESS_TERMCAP_md=$'\e[1;32m' LESS_TERMCAP_me=$'\e[0m' \
+    LESS_TERMCAP_us=$'\e[33m'   LESS_TERMCAP_ue=$'\e[0m' \
+    LESS_TERMCAP_so=$'\e[7m'    LESS_TERMCAP_se=$'\e[0m' \
+        less "${opts[@]}"
+}
+
+cmd_help() {
+    case "${1:-}" in
+        "")               usage ;;
+        commands|command) man_section "COMMANDS" | pager_ ;;
+        status|st)        man_section "READING DOT STATUS" | pager_ ;;
+        examples|ex)      man_section "EXAMPLES" | pager_ ;;
+        *) die "usage: dot help [commands|status|examples]" ;;
+    esac
+}
+
 usage() {
     cat <<EOF
 ${B}dot${N} - dotfiles management for dwm / Arch
@@ -860,8 +1009,14 @@ ${B}dot${N} - dotfiles management for dwm / Arch
   ${G}dot state${N}                Regenerate system/state.md
   ${G}dot bootstrap${N} [profile]  Chain everything: bare machine to full environment
 
-${D}See '${N}${G}man dot${N}${D}' for what each command does, when to use it, and how to read
-every line of 'dot status'. '${N}${G}dotgit${N}${D}' is an alias for git -C "$REPO".${N}
+  ${R}dot help commands${N}        ${R}The manual on every command: what it does, when
+                           to use it, what it refuses to do${N}
+  ${R}dot help status${N}          ${R}The manual on every line 'dot status' prints:
+                           what each verdict means, and what repairs it${N}
+  ${R}dot help examples${N}        ${R}What to run, situation by situation${N}
+
+${D}All three are sections of '${N}${G}man dot${N}${D}', the full reference.
+'${N}${G}dotgit${N}${D}' is an alias for git -C "$REPO".${N}
 
 Profiles: $(ls "$PROFILES" 2>/dev/null | sed 's/\.conf//' | tr '\n' ' ')(default: $DEFAULT_PROFILE, from $DEFAULT_PROFILE_SOURCE)
 Modules : $(ls "$MODULES" 2>/dev/null | tr '\n' ' ')
@@ -889,6 +1044,6 @@ case "$cmd" in
     audit)          cmd_audit "$@" ;;
     state)          cmd_state "$@" ;;
     bootstrap)      cmd_bootstrap "$@" ;;
-    help|-h|--help) usage ;;
+    help|-h|--help) cmd_help "$@" ;;
     *)              err "unknown command: $cmd"; usage; exit 1 ;;
 esac

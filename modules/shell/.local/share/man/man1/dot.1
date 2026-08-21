@@ -125,6 +125,9 @@ T}
 dot bootstrap [prof]@T{
 A bare machine to a full environment, in one chain. Asks before touching anything.
 T}
+dot help [section]@T{
+The short command list. \fBdot help commands\fR prints this section instead, \fBdot help status\fR prints \fBREADING DOT STATUS\fR, \fBdot help examples\fR prints \fBEXAMPLES\fR: this page section by section, without leaving the terminal.
+T}
 .TE
 .PP
 The details that matter follow.
@@ -231,6 +234,38 @@ backlight and lid rules.
 .SH READING DOT STATUS
 Each section prints a grey legend giving its direction of travel. The sections are
 independent: one can be red while the others are green.
+.SS machine
+What the machine is taken to be, and what that selects. Everything below this
+section is scoped by these six lines.
+.PP
+.TS
+tab(@) allbox;
+lb lb
+lbw(10) lx.
+Line@What it says
+host@T{
+Hostname and chassis, as \fBhostnamectl chassis\fR reports it. The chassis is what picks the profile when no \fImachine.d/<hostname>.conf\fR exists.
+T}
+distro@T{
+The distribution, read from \fI/etc/os-release\fR, or forced by \fB$DOT_DISTRO\fR. It picks \fIpackages/<distro>/\fR and one scope, and is never declared in a profile.
+T}
+profile@T{
+The profile in force, where it came from, and the file it is read from. Three origins: \fImachine.d/<hostname>.conf\fR, the chassis, the fallback. A profile nobody chose is printed as a warning.
+T}
+modules@T{
+The modules this profile links into $HOME. The \fBlinks\fR section below compares exactly these.
+T}
+scopes@T{
+The active scopes of \fIsystem/\fR, one line per reason: \fIalways\fR for \fIcommon\fR, \fIdistro\fR for the detected distribution, \fIprofile\fR for what the profile declares. Order is the deployment order, the last scope wins. A scope with no \fIsystem/<scope>/root/\fR directory is named as shipping nothing, since a profile may declare a scope that does not exist yet.
+T}
+packages@T{
+The package groups the profile installs, read from \fIpackages/<distro>/<group>.txt\fR.
+T}
+.TE
+.PP
+A profile given on the command line replaces the detected one everywhere,
+which is how another machine's setup is inspected from here:
+.BR "dot status desktop" .
 .SS links
 Compares
 .I dotfiles/modules/<module>/<path>
@@ -422,7 +457,7 @@ Something looks wrong and you want to know what.
 T}@T{
 .nf
 dot status
-man dot
+dot help status
 .fi
 T}
 .TE

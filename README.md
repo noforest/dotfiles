@@ -26,7 +26,9 @@ Tested on Arch with dwm. Ubuntu 26.04 LTS is supported, its package lists checke
 name by name against the official archive.
 
 > **`man dot`** is the reference: every command, and how to read every line of
-> `dot status`. This README covers installing and the reasoning.
+> `dot status`. It is also printed section by section on demand, by
+> `dot help commands`, `dot help status` and `dot help examples`. This README
+> covers installing and the reasoning.
 
 **Contents** ·
 [How it works](#how-it-works) ·
