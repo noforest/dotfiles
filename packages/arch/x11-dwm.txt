@@ -39,6 +39,7 @@ scrot
 swappy
 # Terminal and display
 alacritty
+ghostty
 arandr
 lxappearance
 papirus-icon-theme
