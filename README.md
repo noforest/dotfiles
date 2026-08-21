@@ -70,18 +70,24 @@ and on Ubuntu.
 
 ## Everyday use
 
-| Situation | What to run |
-|---|---|
-| Editing a file the repo already tracks | **Nothing.** The path in `$HOME` is a link into the repo, so your editor writes straight into it. Commit when done. |
-| A new config file worth keeping | `dot adopt <path> [module]`. It moves the file into the module and links it back, so nothing else is needed. Without the module it asks. |
-| Picking up what lives outside `$HOME` | `dot sync`. Pulls `/etc` into `system/`, refreshes the AUR list and `system/state.md`, then `git add -A`. The commit stays yours. |
-| After a `git pull`, or anything `dot status` calls missing, blocked or broken | `dot link`. Backs up whatever it replaces as `.bak-<date>`. |
-| A brand new machine | `dot bootstrap`. See the install sections below. |
+Three commands cover almost everything.
+
+- **`dot adopt <path> [module]`** brings a new file under control. It moves the
+  file into the module and links it back, so there is nothing to run afterwards.
+  Without the module it asks.
+- **`dot sync`** picks up what lives outside `$HOME`, `/etc` into `system/`, the
+  AUR list, `system/state.md`, then `git add -A`. The commit stays yours.
+- **`dot link`** repairs. Run it after a `git pull` and for anything `dot status`
+  calls missing, blocked or broken. It backs up whatever it replaces.
+
+Editing a file the repo already tracks needs **no command at all**: the path in
+`$HOME` is a link into the repo, so your editor writes straight into it.
 
 `dot status` reports drift of links, `system/` against the root filesystem,
 uncatalogued packages, and it rejects any sensitive file that reaches the index.
-Each section prints the direction it compares in. `dot help` lists every command,
-`man dot` explains them and every verdict `dot status` can print.
+
+> **`man dot`**, section **EXAMPLES**, has the situation to command table.
+> Section **READING DOT STATUS** explains every verdict and its fix.
 
 ---
 
@@ -202,40 +208,54 @@ installs only partially there, silently.
 
 ## Machine specific settings
 
-Five files, and that is all that stays machine specific.
+Four files, and that is all that stays machine specific.
 
 | File | What it holds | Template |
 |---|---|---|
 | `machine.d/<hostname>.conf` | One line, the profile this machine defaults to. Optional, the chassis is used otherwise, but it turns a guess into a decision. Not versioned. | [`machine.d/README.md`](machine.d/README.md) |
-| `~/.dmrc` | Which session the display manager starts by default. | [`examples/dmrc`](examples/dmrc) |
 | `~/.gitconfig-local` | Git identity and per account routing. Without it git has no author and refuses to commit. | [`examples/gitconfig-local`](examples/gitconfig-local) |
 | `~/.zshrc.local` | Project paths and local variables. Sourced at the end of `.zshrc`. | [`examples/zshrc.local`](examples/zshrc.local) |
 | `modules/x11-dwm/.config/dwm/machine.d/<hostname>.sh` | xinput identifiers. Names like `"ELAN2204:00 04F3:3109 Touchpad"` hold for one laptop only. | copy `archlinux.sh`, then `xinput list` |
 
-The middle three live in `$HOME`, neither linked nor versioned. Without the xinput
-file nothing is loaded and the session still starts.
+The two `~/.*local` files live in `$HOME`, neither linked nor versioned. Without
+the xinput file nothing is loaded and the session still starts.
 
 ---
 
 ## Adding a graphical environment
 
-Nothing in `dot` knows the list of window managers, so adding sway, Hyprland or
-XFCE is data, not code:
+Several environments can be installed side by side and picked at login. `dot` has
+no built-in list of window managers, so adding one is a matter of creating
+directories, not of editing code.
 
-1. `modules/<wm>/` for what goes into `$HOME`.
-2. `system/<wm>/root/` if it needs anything outside it, such as a session entry in
-   `/usr/share/xsessions`. Optional.
-3. Name both in a profile: the module on its own line, the scope on `system:`.
+Adding sway, for example:
 
-Several environments can be installed side by side and picked at login, with
-`~/.dmrc` recording the default. Three traps:
+1. **`modules/sway/`** holds what goes into `$HOME`.
+   `modules/sway/.config/sway/config` will be linked to `~/.config/sway/config`.
+2. **`system/sway/root/`** holds what goes outside it, usually just a session
+   entry such as `/usr/share/wayland-sessions/sway.desktop` so the login screen
+   offers the choice. Skip this directory if the package already ships one.
+3. **Name both in a profile**: `sway` on a line of its own for the module, and
+   `sway` appended to the `system:` line for the scope.
 
-- Anything shared with another X11 environment (`.Xresources`, `.Xmodmap`,
-  `.xserverrc`) already lives in `modules/x11-common/`. Depend on it rather than
-  copying, or `dot link` refuses both modules for claiming the same path.
-- `.config/xfce4/xfconf/` is refused by `NEVER_LINK`, because xfconfd rewrites it
-  and watches it through inotify.
-- `.xinitrc` belongs to the environment it starts, so it stays in `modules/x11-dwm/`.
+Then `dot link` and `dot system-apply`. The login manager does the rest: ly scans
+`/usr/share/xsessions` and `/usr/share/wayland-sessions`, lists what it finds, and
+records your last choice in `/etc/ly/save.txt`. Nothing in this repository needs
+to know which one you picked.
+
+Three traps:
+
+- **Two modules may not claim the same path.** `.Xresources`, `.Xmodmap` and
+  `.xserverrc` are shared by every X11 environment, so they live in
+  `modules/x11-common/`, which both dwm and the newcomer list as a dependency.
+  Copy them into your new module instead and `dot link` refuses to run at all,
+  naming both culprits.
+- **`.xinitrc` belongs to one environment, not to all of them.** It ends with
+  `exec dwm`, so it stays in `modules/x11-dwm/`. A Wayland compositor never reads
+  it at all.
+- **XFCE cannot be fully versioned.** `.config/xfce4/xfconf/` is a store that
+  xfconfd rewrites and watches through inotify, so `NEVER_LINK` refuses it and
+  `dot link` says so rather than corrupting it.
 
 ---
 
