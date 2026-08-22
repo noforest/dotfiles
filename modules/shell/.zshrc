@@ -22,7 +22,8 @@ export LC_TIME=en_US.UTF-8
 export VIMPAGER_VIM=vim
 # export VIMPAGER_OPTIONS="--cmd 'set mouse=a'"
 export PAGER="vimpager"
-export MANPAGER="vimpager"
+# vim's :MANPAGER, replaced by modules/vim/.vim/plugin/manpager.vim
+export MANPAGER="vim +MANPAGER --not-a-term -"
 # export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
 export RAINFROG_CONFIG=~/.config/rainfrog
 

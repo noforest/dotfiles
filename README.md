@@ -284,8 +284,8 @@ Three traps:
 
 ## Design choices
 
-**One repository, not one per machine.** `shell`, `git`, `nvim` and `terminal` are
-identical everywhere and are most of the value here. Splitting them would guarantee
+**One repository, not one per machine.** `shell`, `git`, `nvim`, `vim` and
+`terminal` are identical everywhere and are most of the value here. Splitting them would guarantee
 they drift apart and mean maintaining `dot` twice.
 
 **`system/` is split by scope, not by distribution.** The distribution is one axis

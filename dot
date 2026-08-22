@@ -910,14 +910,25 @@ cmd_bootstrap() {
 # the manual being installed: the page is read from the repository.
 MANPAGE="$MODULES/shell/.local/share/man/man1/dot.1"
 
-# less is what colours the page: man ships bold and italic only, and the
-# LESS_TERMCAP_* entries decide what they look like. No less, no colour, so the
-# rendering follows the same test.
-pager_ok() { [ -n "$TTY" ] && command -v less >/dev/null; }
+# A section of the manual is a manual page, so it is read with whatever reads
+# them here: $MANPAGER, which .zshrc sets to vimpager. vim brings the syntax
+# highlighting man pages deserve, the C of a SYNOPSIS in particular, and visual
+# mode to select across the whole page rather than across one screen. Anything
+# else falls back to less, then to plain text.
+pager_ok() { [ -n "$TTY" ]; }
+pager_() {
+    local p="${MANPAGER:-${PAGER:-}}"
+    pager_ok || { cat; return; }
+    command -v "${p%% *}" >/dev/null 2>&1 || p=""
+    if   [ -n "$p" ]; then sh -c "$p"
+    elif command -v less >/dev/null; then less -R
+    else cat
+    fi
+}
 
-# The manual rendered to plain text, keeping bold and italic as overstrike when
-# less will be there to interpret them. Overstrike rather than SGR: it is what
-# the LESS_TERMCAP_* entries act on.
+# The manual rendered to plain text, formatting kept when a pager is there to
+# make sense of it. Kept exactly as man would hand it to that pager, so a
+# section reads like the page it comes from.
 man_render() {
     local width="${MANWIDTH:-}"
     if [ -z "$width" ]; then
@@ -927,7 +938,7 @@ man_render() {
         [ "$width" -gt 100 ] 2>/dev/null && width=100
     fi
     if pager_ok; then
-        MANWIDTH="$width" MAN_KEEP_FORMATTING=1 GROFF_NO_SGR=1 man -l "$MANPAGE" 2>/dev/null
+        MANWIDTH="$width" MAN_KEEP_FORMATTING=1 man -l "$MANPAGE" 2>/dev/null
     else
         MANWIDTH="$width" man -l "$MANPAGE" 2>/dev/null
     fi
@@ -936,54 +947,27 @@ man_render() {
 # One section of the rendered manual, from its heading to the next one.
 # Headings are the only lines starting at column zero, which is what delimits
 # them here. Every line is compared stripped of its formatting, printed with it.
-#
-# Two things man cannot colour on its own are added: headings in blue, as in
-# dot status, and the rules of the tables in grey, so the text inside them
-# stands out rather than the boxes.
 man_section() {  # man_section <heading, as printed>
     command -v man >/dev/null || die "man is not installed, read $MANPAGE"
     [ -r "$MANPAGE" ] || die "manual not found: $MANPAGE"
-    man_render | awk -v h="$1" -v hd="${TTY:+$'\e[1;34m'}" -v gr="$D" -v n="$N" '
+    man_render | awk -v h="$1" '
         { plain = $0; gsub(/\033\[[0-9;]*m/, "", plain); gsub(/.\b/, "", plain) }
         plain == h                           { on = 1 }
         on && plain != h && plain ~ /^[A-Z]/ { exit }
-        on {
-            if (plain ~ /^[A-Z]/ || plain ~ /^   [^ ]/)  { print hd plain n; next }
-            line = $0
-            # Every rule of a table, horizontal and vertical alike. Dimming only
-            # the full width ones left the uprights bright, and a box drawn in
-            # two shades reads as a broken box.
-            if (plain !~ /[A-Za-z0-9]/ && plain ~ /─/) line = gr plain n
-            else gsub(/│/, gr "│" n, line)
-            print line
-        }
+        on                                   { print }
     '
 }
 
-# Paged, and paged the way man pages are: the section leaves the screen as it
-# found it. Bold becomes green, what you type into a terminal, and italic
-# yellow, the files and paths dot acts on.
-pager_() {
-    pager_ok || { cat; return; }
-    local opts=(-R)
-    # Scrolling with the wheel, on the less versions that know how (551 and
-    # later). Selecting text with the mouse then needs shift, as in any program
-    # that takes the mouse over.
-    less --help 2>/dev/null | grep -q -- '--mouse' && opts+=(--mouse --wheel-lines=3)
-    LESS_TERMCAP_md=$'\e[1;32m' LESS_TERMCAP_me=$'\e[0m' \
-    LESS_TERMCAP_us=$'\e[33m'   LESS_TERMCAP_ue=$'\e[0m' \
-    LESS_TERMCAP_so=$'\e[7m'    LESS_TERMCAP_se=$'\e[0m' \
-        less "${opts[@]}"
-}
-
 cmd_help() {
+    local section
     case "${1:-}" in
-        "")               usage ;;
-        commands|command) man_section "COMMANDS" | pager_ ;;
-        status|st)        man_section "READING DOT STATUS" | pager_ ;;
-        examples|ex)      man_section "EXAMPLES" | pager_ ;;
+        "")               usage; return ;;
+        commands|command) section="COMMANDS" ;;
+        status|st)        section="READING DOT STATUS" ;;
+        examples|ex)      section="EXAMPLES" ;;
         *) die "usage: dot help [commands|status|examples]" ;;
     esac
+    man_section "$section" | pager_
 }
 
 usage() {

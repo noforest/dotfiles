@@ -126,7 +126,7 @@ dot bootstrap [prof]@T{
 A bare machine to a full environment, in one chain. Asks before touching anything.
 T}
 dot help [section]@T{
-The short command list. \fBdot help commands\fR prints this section instead, \fBdot help status\fR prints \fBREADING DOT STATUS\fR, \fBdot help examples\fR prints \fBEXAMPLES\fR: this page section by section, without leaving the terminal.
+The short command list. \fBdot help commands\fR opens this section instead, \fBdot help status\fR opens \fBREADING DOT STATUS\fR, \fBdot help examples\fR opens \fBEXAMPLES\fR: this page section by section, in \fB$MANPAGER\fR.
 T}
 .TE
 .PP
@@ -476,6 +476,30 @@ aliases are built from it.
 Force the detected distribution instead of reading
 .IR /etc/os\-release .
 Useful for testing another distribution's lists.
+.TP
+.B MANPAGER
+The pager the sections of
+.B dot help
+are read with, the one
+.B man
+itself uses.
+.I .zshrc
+sets it to
+.BR "vim +MANPAGER --not-a-term -" .
+The
+.B vim
+module replaces the manpager plugin vim ships with one that keeps the bold and
+the italic of a page instead of stripping them, so a path or a command name
+stays visible. Green and yellow, as in
+.BR "dot status" ;
+redefine
+.BR manBold ", " manItalic " and " manUnderline
+to change that.
+.TP
+.B MANWIDTH
+Width the manual is rendered at. Without it,
+.B dot help
+follows the terminal, capped at 100 columns.
 .SH EXIT STATUS
 .B dot status
 exits non zero when something is wrong: a broken or blocked link, a divergence
