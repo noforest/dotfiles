@@ -110,6 +110,10 @@ truncate_to_repo=true
 format = '[ \($virtualenv\) ](fg:color_gray90 bg:color_gray_background)'
 # format = '[  $virtualenv ](fg:color_gray90 bg:color_gray_background)'
 
+detect_extensions = []
+detect_files = []
+detect_folders = []
+
 [git_branch]
 symbol = " "
 style = "color_gray_background"
