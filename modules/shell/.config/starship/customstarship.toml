@@ -1,4 +1,5 @@
 format = """
+$python\
 [ ](bg:color_gray_background)\
 $os\
 $username\
@@ -101,6 +102,13 @@ format = "[ $path ]($style)[](fg:color_green_uniclo) "
 truncation_length = 8
 truncate_to_repo=true
 # truncation_symbol = "…/"
+
+# [python_simple]
+# format = '\($virtualenv\) '
+
+[python]
+format = '[ \($virtualenv\) ](fg:color_gray90 bg:color_gray_background)'
+# format = '[  $virtualenv ](fg:color_gray90 bg:color_gray_background)'
 
 [git_branch]
 symbol = " "
