@@ -296,3 +296,4 @@ set -o emacs
 # Voir examples/zshrc.local dans le dépôt pour un modèle.
 #################################################################
 [[ -r "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"
+export TMPDIR="/var/tmp"
