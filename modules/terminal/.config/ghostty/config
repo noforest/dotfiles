@@ -49,7 +49,9 @@ bold-is-bright=true
 cursor-style = block
 cursor-invert-fg-bg=true
 # adjust-cell-height = 35%
-background-opacity = 0.90
+# background-opacity = 0.90
+background-opacity = 1
+background-blur = false
 
 mouse-hide-while-typing = true
 
