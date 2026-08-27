@@ -154,6 +154,9 @@ keymap = [
     # Help
     { on = "~", run = "help", desc = "Open help" },
     { on = "<F1>", run = "help", desc = "Open help" },
+
+    # Refresh preview
+    { on = "<F5>", run = "peek --force", desc = "Forcer le re-rendu de la preview" },
 ]
 
 prepend_keymap = [
