@@ -520,7 +520,7 @@ cmd_status() {
             warn "$(printf '%s\n' "$uncat" | wc -l) package(s) installed but missing from the lists:"
             printf '%s\n' "$uncat" | head -15 | sed "s/^/      ${D}/;s/\$/${N}/"
             [ "$(printf '%s\n' "$uncat" | wc -l)" -gt 15 ] && info "      ${D}...${N}"
-            info "  ${D}-> 'dot sync' updates the lists${N}"
+            info "  ${D}-> AUR: 'dot sync'. Official packages: add them manually to packages/$(distro)/<group>.txt${N}"
         else ok "every list is up to date"; fi
     fi
 

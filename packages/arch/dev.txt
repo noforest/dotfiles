@@ -63,3 +63,4 @@ texlive-latexextra
 texlive-langfrench
 # Alternative editor
 emacs
+git-filter-repo

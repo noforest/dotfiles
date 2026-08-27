@@ -118,3 +118,4 @@ xorg-xwud
 xorg-sessreg
 xorg-smproxy
 xorg-xwayland
+socat
