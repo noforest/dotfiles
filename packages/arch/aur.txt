@@ -51,3 +51,4 @@ xfwm4-themes
 xidlehook
 yay
 zotero-bin
+opencode-bin
