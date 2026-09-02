@@ -27,6 +27,8 @@ ly
 # Session components (started by .xinitrc)
 picom
 dunst
+rofi
+jq
 feh
 numlockx
 xss-lock

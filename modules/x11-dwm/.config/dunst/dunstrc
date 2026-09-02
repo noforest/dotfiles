@@ -401,3 +401,12 @@ frame_color = "#2AABEE"
 [instagram]
 appname = instagram
 frame_color = "#E1306C"
+
+# Le calendrier de vap-clock est du texte à chasse fixe : chaque ligne compte.
+# Avec alignment = center, dunst ajoute « (Xm Ys old) » au-delà de
+# show_age_threshold, la dernière ligne devient la plus large et toutes les
+# autres se recentrent par rapport à elle — les colonnes de jours se décalent.
+# En left, les espaces de `cal` suffisent à aligner, et l'âge ne décale plus rien.
+[calendrier]
+summary = "This Month"
+alignment = left

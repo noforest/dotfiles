@@ -1,0 +1,106 @@
+/*
+ * Thème du notification center (voir /usr/local/bin/notification_center).
+ *
+ * Les couleurs, la police et le cadre viennent tels quels de
+ * ~/.config/dunst/dunstrc : background #131519, foreground #ffffff,
+ * frame_color #aaaaaa, frame_width 3, corner_radius 0.
+ *
+ * Trois écarts assumés :
+ *  - la largeur est 560px et non les 300px de dunst, illisible pour une liste
+ *  - dunst n'a pas de couleur de sélection : on prend le bleu #698dda, déjà
+ *    utilisé dans modules/desktop/.config/flameshot/flameshot.ini. Contraste
+ *    5.5:1 sur le fond #131519, au-dessus du seuil AA
+ *  - une ligne de séparation #3a4050 isole les deux actions de l'historique
+ */
+
+* {
+    bg:               #131519;
+    fg:               #ffffff;
+    frame:            #aaaaaa;
+    accent:           #698dda;
+    muted:            #888888;
+    rule:             #3a4050;
+    selbg:            #232833;
+
+    background-color: transparent;
+    text-color:       @fg;
+    font:             "LiterationMono Nerd Font Mono 10";
+}
+
+window {
+    background-color: @bg;
+    border:           3px;
+    border-color:     @frame;
+    border-radius:    0px;
+    width:            560px;
+    padding:          8px;
+}
+
+mainbox {
+    children: [ inputbar, message, listview ];
+    spacing:  6px;
+}
+
+inputbar {
+    children:     [ prompt, entry ];
+    spacing:      8px;
+    padding:      2px 2px 6px 2px;
+    border:       0 0 1px 0;
+    border-color: @frame;   /* dunstrc : separator_color = frame */
+}
+
+prompt {
+    text-color:       @accent;
+    horizontal-align: 0.0;
+}
+
+entry {
+    placeholder:       "search…";
+    placeholder-color: @muted;
+    horizontal-align:  0.0;
+}
+
+/* -mesg porte l'en-tête horloge + calendrier. La marge basse évite que la
+   dernière ligne de `cal` soit rognée par l'arrondi de hauteur du textbox. */
+message {
+    padding: 2px 2px 10px 2px;
+    border:  0;
+}
+
+/* Centré : toutes les lignes de `cal` font la même largeur, les colonnes de
+   jours restent donc alignées. La classe textbox couvre aussi le prompt, la
+   saisie et les lignes de liste, à qui on remet un alignement à gauche. */
+textbox {
+    text-color:       @fg;
+    horizontal-align: 0.5;
+}
+
+listview {
+    /* -eh 2 : chaque entrée occupe deux lignes, donc 8 entrées = 16 lignes */
+    lines:        8;
+    scrollbar:    false;
+    fixed-height: false;
+    dynamic:      true;
+}
+
+/* 3px de padding gauche en plus, pour compenser la bordure de la ligne
+   sélectionnée et éviter que le texte saute d'un cran au survol. */
+element { padding: 4px 6px 4px 9px; }
+
+element-text {
+    background-color: transparent;
+    text-color:       inherit;
+    horizontal-align: 0.0;
+}
+
+/* Surlignage sombre + barre d'accent à gauche, et non un aplat @accent : le
+   markup des deux actions force déjà leur texte en @accent, qui deviendrait
+   invisible sur un fond de la même couleur. Contrastes sur #232833 : 14.8:1
+   pour le texte blanc, 4.5:1 pour l'accent, tous deux au-dessus du seuil AA. */
+element selected {
+    background-color: @selbg;
+    text-color:       @fg;
+    border:           0 0 0 3px;
+    border-color:     @accent;
+    padding:          4px 6px 4px 6px;
+}

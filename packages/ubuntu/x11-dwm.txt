@@ -10,6 +10,8 @@ xserver-xorg-video-amdgpu
 xserver-xorg-video-vesa
 picom
 dunst
+rofi
+jq
 feh
 numlockx
 xss-lock

@@ -14,8 +14,7 @@ esac
 
 if [[ -f $CACHE && $(find "$CACHE" -mmin -30) ]]; then
     # echo " $ICON $(cat $CACHE)⠀ "
-    # echo " $ICON $(cat $CACHE) "
-    echo " $ICON 1 "
+    echo " $ICON $(cat $CACHE) "
 else
     if [ -f $CACHE ]; then
         # echo " $ICON $(cat $CACHE)  "

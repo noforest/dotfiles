@@ -1,0 +1,108 @@
+#!/bin/sh
+#
+# The rofi notification centre for dunst. Not a dwmblocks block of its own:
+# clock-notif-center-rofi owns the bar entry and calls this script, which may
+# read NC_HEADER for markup to place above the list.
+#
+#   type       : filters the history live through rofi's search bar
+#   Enter      : pops the selected notification back on screen
+#   Alt+d      : removes it from the history
+#   entry 1    : mutes / unmutes dunst
+#   entry 2    : clears the whole history
+#
+# Entries are rendered on two rows, like dunst draws them: bold summary on top,
+# body underneath. That needs three things together — a separator that is not a
+# newline (-sep), two text rows per element (-eh 2) and Pango markup
+# (-markup-rows) — otherwise rofi splits every body into its own entry.
+#
+# The popup is anchored top right, right under the bar.
+#
+# dunst only keeps `history_length` notifications (dunstrc), so this shows the
+# tail of the session, not all of it. Raise that value to see further back.
+#
+# Note: rofi grabs the keyboard while open, so dwm never sees MODKEY+Shift+s and
+# a screenshot cannot be triggered from here. Use `flameshot gui --delay 3000`
+# from a terminal and open the centre during the delay.
+#
+
+# Calibration: dwm bar height, so the popup hangs just below it. Bump it if the
+# bar font changes.
+BAR_HEIGHT=24
+
+THEME="$HOME/.config/rofi/notification-center.rasi"
+
+# Kept in step with notification-center.rasi: Pango markup cannot read the
+# theme, so the two colours used inline live here as well.
+ACCENT="#698dda"
+RULE="#3a4050"
+SEP=$(printf '\037')   # unit separator: entries may then contain newlines
+
+# A real newline. "\n" inside double quotes is two literal characters in sh, so
+# building the two-row entries with it would print a visible backslash-n.
+NL='
+'
+
+
+paused() { [ "$(dunstctl is-paused)" = true ]; }
+
+open_center() {
+    # One dunstctl call: the same JSON feeds the list and the id lookup, so the
+    # indices rofi hands back cannot drift against a history that changed.
+    hist=$(dunstctl history)
+
+    # The two actions are tinted with the accent colour and followed by a rule,
+    # so they read as controls rather than as the two newest notifications.
+    if paused; then
+        toggle="<b><span foreground=\"$ACCENT\">UNMUTE notifications</span></b>${NL}notifications are muted"
+    else
+        toggle="<b><span foreground=\"$ACCENT\">MUTE notifications</span></b>${NL}silence dunst until toggled back"
+    fi
+    wipe="<b><span foreground=\"$ACCENT\">CLEAR history</span></b>${NL}drop every notification below"
+    rule="<span foreground=\"$RULE\">──────────────  history  ──────────────</span>${NL} "
+
+    # Bodies carry dunst markup (<b>, <tt>…) and newlines. Strip the tags, keep
+    # one line, then escape so Pango reads the text as text and not as markup.
+    entries=$(printf '%s' "$hist" | jq -j --arg sep "$SEP" '
+        .data[0][]
+        | ( .summary.data | gsub("<[^>]*>"; "") | @html ) as $s
+        | ( .body.data    | gsub("<[^>]*>"; "") | gsub("\\s+"; " ") | @html ) as $b
+        | $sep + "<b>" + $s + "</b>\n" + $b')
+
+    menu="$toggle$SEP$wipe$SEP$rule$entries"
+
+    hint='<span foreground="#888888">Enter: show again    Alt+d: delete</span>'
+    if [ -n "$NC_HEADER" ]; then
+        mesg="$NC_HEADER${NL}${hint}"
+    else
+        mesg="$hint"
+    fi
+
+    # -format i returns the index of the picked entry, which keeps ids out of the
+    # visible text. Alt+d is kb-custom-1 and exits with code 10; plain Delete
+    # cannot be used, rofi binds it to kb-remove-char-forward.
+    sel=$(printf '%s' "$menu" | rofi -dmenu -i -format i \
+        -sep "$SEP" -eh 2 -markup-rows \
+        -p "Notifications" \
+        -mesg "$mesg" \
+        -theme "$THEME" \
+        -location 3 -yoffset "$BAR_HEIGHT" -xoffset -4 \
+        -kb-custom-1 "Alt+d")
+    code=$?
+    [ -n "$sel" ] || return
+
+    case "$sel" in
+        0) dunstctl set-paused toggle ;;
+        1) dunstctl history-clear ;;
+        2) ;;   # the rule: decorative, selecting it does nothing
+        *)
+            id=$(printf '%s' "$hist" | jq -r ".data[0][$((sel - 3))].id.data")
+            if [ "$code" -eq 10 ]; then
+                dunstctl history-rm "$id"
+            else
+                dunstctl history-pop "$id"
+            fi
+            ;;
+    esac
+}
+
+open_center
