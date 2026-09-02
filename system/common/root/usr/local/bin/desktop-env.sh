@@ -23,3 +23,9 @@ USER_HOME=$(getent passwd "$DESKTOP_USER" | cut -d: -f6)
 export DESKTOP_USER USER_HOME
 export DISPLAY="${DISPLAY:-:0}"
 export XAUTHORITY="${XAUTHORITY:-$USER_HOME/.Xauthority}"
+
+# Fichier d'état du mode d'inactivité, écrit par /usr/local/bin/idle_mode et lu
+# par xidlehook-start.sh. Il vit dans /run/user, donc il disparaît à la
+# déconnexion : chaque démarrage repart forcément en mode « default ».
+IDLE_MODE_FILE="/run/user/$(id -u "$DESKTOP_USER")/idle_mode"
+export IDLE_MODE_FILE

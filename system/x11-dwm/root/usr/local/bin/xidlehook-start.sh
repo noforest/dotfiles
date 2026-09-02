@@ -9,6 +9,10 @@
 export PULSE_RUNTIME_PATH=/run/user/$(id -u for)/pulse
 export PULSE_SERVER=unix:${PULSE_RUNTIME_PATH}/native
 
+# Mode caffeine (voir /usr/local/bin/idle_mode) : rien ne doit éteindre l'écran
+# ni suspendre. acpid rappelle ce script à chaque branchement, d'où ce garde-fou.
+[ "$(cat "$IDLE_MODE_FILE" 2>/dev/null)" = caffeine ] && exit 0
+
 # Tuer uniquement les xidlehook qui N'ONT PAS "timer 20" dans leur ligne de commande
 # INDISPENSABLE: si on veut avoir un ecran noir au bout de 20s d'inactivité pendant que slock est actif
 # J'en ai besoin quand je branche débranche prise, il faut supprimer l'ancien

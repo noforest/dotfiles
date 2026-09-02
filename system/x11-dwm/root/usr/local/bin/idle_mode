@@ -1,0 +1,60 @@
+#!/bin/sh
+#
+# dwmblocks block + dmenu picker (left click) switching between:
+#   - default  : normal behaviour, the one xidlehook-start.sh sets up
+#   - caffeine : the screen never blanks and the machine never suspends
+#
+# The chosen mode applies right away and is remembered in $IDLE_MODE_FILE, which
+# xidlehook-start.sh reads back: acpid re-runs it on every plug/unplug and must
+# not resurrect the timers while caffeine is on.
+#
+
+. /usr/local/bin/desktop-env.sh   # sets DESKTOP_USER, USER_HOME, DISPLAY, XAUTHORITY, IDLE_MODE_FILE
+
+icon_default="󰾪   "
+icon_caffeine="󰅶   "
+
+apply() {
+    # Closing the lid is logind's business, not xidlehook's: a block inhibitor is
+    # the only way to neutralise HandleLidSwitch without editing logind.conf and
+    # restarting the daemon. Drop any previous one first, so repeated switches
+    # never stack inhibitors.
+    pkill -f 'systemd-inhibit.*--who=idle_mode' 2>/dev/null
+
+    case "$1" in
+        caffeine)
+            # xidlehook-start.sh's timers are the only thing blanking the screen
+            # or suspending on idle, so killing them is enough.
+            pkill -f 'xidlehook.*timer (1200|1800)' 2>/dev/null
+            xset -dpms   # no DPMS blanking
+            xset s off   # no X screensaver, hence no slock through xss-lock
+            systemd-inhibit --what=handle-lid-switch:sleep --who=idle_mode \
+                --why="stay awake mode" sleep infinity >/dev/null 2>&1 &
+            notify-send "Stay awake" \
+                "No suspend, no screen blanking, closing the lid does nothing."
+            ;;
+        *)
+            /usr/local/bin/xidlehook-start.sh >/dev/null 2>&1 &
+            notify-send "Back to default" \
+                "Suspend, screen blanking and the lid switch are back on."
+            ;;
+    esac
+}
+
+case "$BUTTON" in
+    1)
+        choice=$(printf 'default\ncaffeine\n' | dmenu -i -p "Idle mode")
+        case "$choice" in
+            default|caffeine)
+                echo "$choice" > "$IDLE_MODE_FILE"
+                apply "$choice"
+                ;;
+        esac
+        ;;
+esac
+
+if [ "$(cat "$IDLE_MODE_FILE" 2>/dev/null)" = caffeine ]; then
+    echo " $icon_caffeine"
+else
+    echo " $icon_default"
+fi

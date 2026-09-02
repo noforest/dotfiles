@@ -3,6 +3,7 @@
 static const Block blocks[] = {
     /*Icon*/	/*Command*/		/*Update Interval*/	/*Update Signal*/
     {"",		"clipboard_history",		0,			17},
+    {"",		"idle_mode",			0,			18},
     {"",		"vap-battery",		5,			0},
     /*{"",		"vap-bluetooth",	40,			6},*/
     {"",		"vap-internet",		25,			3},
