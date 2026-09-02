@@ -14,7 +14,7 @@ esac
 
 # icon="󱉨   "
 # icon="󱉨   "
-icon="󱉨 "
+icon="󱉨  "
 
 
 echo " $icon"

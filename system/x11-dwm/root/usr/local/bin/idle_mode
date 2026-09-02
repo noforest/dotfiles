@@ -13,8 +13,8 @@
 
 # icon_default="󰾪   "
 # icon_caffeine="󰅶   "
-icon_default="󰾪 "
-icon_caffeine="󰅶 "
+icon_default="󰾪  "
+icon_caffeine="󰅶  "
 
 apply() {
     # Closing the lid is logind's business, not xidlehook's: a block inhibitor is
