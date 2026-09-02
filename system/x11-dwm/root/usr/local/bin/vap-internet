@@ -42,18 +42,23 @@ if [ -e "/sys/class/net/$interface/operstate" ]; then
         
         # Définir les icônes en fonction du pourcentage de signal
         if [ "$wifi_percentage" -ge 80 ]; then
-            wifi_icon="󰢾  " # Wi-Fi plein
+            # wifi_icon="󰢾  " # Wi-Fi plein
+            wifi_icon="󰢾 " # Wi-Fi plein
             # wifi_icon="󰤨  " # Wi-Fi plein
         elif [ "$wifi_percentage" -ge 40 ]; then
-            wifi_icon="󰢽  "    # Wi-Fi moitié
+            # wifi_icon="󰢽  "    # Wi-Fi moitié
+            wifi_icon="󰢽 "    # Wi-Fi moitié
             # wifi_icon="󰤢  "    # Wi-Fi moitié
         else
-            wifi_icon="󰢼  "  # Wi-Fi vide (pour un signal faible)
+            # wifi_icon="󰢼  "  # Wi-Fi vide (pour un signal faible)
+            wifi_icon="󰢼 "  # Wi-Fi vide (pour un signal faible)
             # wifi_icon="󰤟  "  # Wi-Fi vide (pour un signal faible)
         fi
-        wifi_status="$wifi_icon${wifi_percentage}% "
+        # wifi_status="$wifi_icon${wifi_percentage}% "
+        wifi_status="$wifi_icon${wifi_percentage}%"
     else
-        wifi_status=" "
+        # wifi_status=" "
+        wifi_status=""
         # wifi_status="󰤮 "
     fi
 else

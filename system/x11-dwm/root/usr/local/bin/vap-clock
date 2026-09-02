@@ -15,5 +15,7 @@ case $BUTTON in
 esac
 
 clock2=$(date "+%a, %H:%M")
-echo "$clock2"
+# echo "$clock2"
+# marge uniforme dwmblocks : 1 espace a gauche, rien a droite
+echo " $clock2"
 

@@ -13,12 +13,15 @@ case $BUTTON in
 esac
 
 if [[ -f $CACHE && $(find "$CACHE" -mmin -30) ]]; then
-    echo " $ICON $(cat $CACHE)⠀ "
+    # echo " $ICON $(cat $CACHE)⠀ "
+    echo " $ICON $(cat $CACHE)"
 else
     if [ -f $CACHE ]; then
-        echo " $ICON $(cat $CACHE)  "
+        # echo " $ICON $(cat $CACHE)  "
+        echo " $ICON $(cat $CACHE)"
     else
-        echo " $ICON ... "
+        # echo " $ICON ... "
+        echo " $ICON ..."
     fi
     (
         COUNT=$(checkupdates | wc -l)

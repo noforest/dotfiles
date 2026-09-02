@@ -39,5 +39,7 @@ esac
 
 # echo " $icon$vol%   "
 # echo " $icon$vol%     "
-echo " $icon$vol%  │ "
+# echo " $icon$vol%  │ "
+# marge uniforme dwmblocks : 1 espace a gauche, rien a droite
+echo " $icon$vol%  │"
 
