@@ -56,7 +56,7 @@ fi
 # Afficher l'icône de batterie suivie du pourcentage
 # echo " $icon $battery_percent% "
 # marge uniforme dwmblocks : 1 espace a gauche, rien a droite
-echo " $icon $battery_percent%"
+echo " $icon $battery_percent% "
 
 echo "count_10=$count_10" > "$count_file"
 echo "count_5=$count_5" >> "$count_file"

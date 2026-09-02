@@ -79,6 +79,6 @@ fi
 # fi
 
 # Afficher l'icône Wi-Fi
-echo " $wifi_status$ethernet_status"
+echo " $wifi_status$ethernet_status "
 # printf "%s%s\u200A\n" " $wifi_status" "$ethernet_status"
 
