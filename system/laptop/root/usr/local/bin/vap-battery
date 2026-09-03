@@ -37,19 +37,19 @@ else
 
   if [ "$battery_percent" -ge 91 ]; then
     # icon=" "
-    icon=""
+    icon=" "
   elif [ "$battery_percent" -ge 63 ]; then
     # icon=" "
-    icon=""
+    icon=" "
   elif [ "$battery_percent" -ge 37 ]; then
     # icon=" "
-    icon=""
+    icon=" "
   elif [ "$battery_percent" -ge 11 ]; then
     # icon=" "
-    icon=""
+    icon=" "
   else
     # icon=" "
-    icon=""
+    icon=" "
   fi
 fi
 
