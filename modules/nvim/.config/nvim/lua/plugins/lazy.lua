@@ -1573,6 +1573,7 @@ require("lazy").setup({
     -- },
 
     {
+        -- ùll
         -- IMPORTANT: faire: ':h vimtex' et aller dans default mapping
         -- --------------------------------------------------------------------- ~
        --  LHS              RHS                                          MODE ~

@@ -154,6 +154,7 @@ keymap = [
     # Help
     { on = "~", run = "help", desc = "Open help" },
     { on = "<F1>", run = "help", desc = "Open help" },
+    { on = ["g", "?"] , run = "help", desc = "Open help"},
 
     # Refresh preview
     { on = "<F5>", run = "peek --force", desc = "Forcer le re-rendu de la preview" },
@@ -191,6 +192,7 @@ keymap = [
     # Help
     { on = "~", run = "help", desc = "Open help" },
     { on = "<F1>", run = "help", desc = "Open help" },
+    { on = ["g", "?"] , run = "help", desc = "Open help"},
 ]
 
 [spot]
@@ -217,6 +219,7 @@ keymap = [
     # Help
     { on = "~", run = "help", desc = "Open help" },
     { on = "<F1>", run = "help", desc = "Open help" },
+    { on = ["g", "?"] , run = "help", desc = "Open help"},
 ]
 
 [pick]
@@ -236,6 +239,7 @@ keymap = [
     # Help
     { on = "~", run = "help", desc = "Open help" },
     { on = "<F1>", run = "help", desc = "Open help" },
+    { on = ["g", "?"] , run = "help", desc = "Open help"},
 ]
 
 [input]
@@ -306,6 +310,7 @@ keymap = [
     # Help
     { on = "~", run = "help", desc = "Open help" },
     { on = "<F1>", run = "help", desc = "Open help" },
+    { on = ["g", "?"] , run = "help", desc = "Open help"},
 ]
 
 [confirm]
@@ -328,6 +333,7 @@ keymap = [
     # Help
     { on = "~", run = "help", desc = "Open help" },
     { on = "<F1>", run = "help", desc = "Open help" },
+    { on = ["g", "?"] , run = "help", desc = "Open help"},
 ]
 
 [completion]
@@ -349,6 +355,7 @@ keymap = [
     # Help
     { on = "~", run = "help", desc = "Open help" },
     { on = "<F1>", run = "help", desc = "Open help" },
+    { on = ["g", "?"] , run = "help", desc = "Open help"},
 ]
 
 [help]
