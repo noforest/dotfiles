@@ -8,9 +8,6 @@ set selection-clipboard clipboard
 # enable incremental search
 set incremental-search true
 
-# zoom
-map <C-i> zoom in
-map <C-o> zoom out
 
 set window-title-basename true
 set window-title-home-tilde true
