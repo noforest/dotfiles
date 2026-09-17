@@ -253,7 +253,9 @@ fi
 function y() {
     local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
     yazi "$@" --cwd-file="$tmp"
-    if cwd="$(command cat -- "$tmp")" && [ -n "$cwd" ] && [ "$cwd" != "$PWD" ]; then
+    # yazi writes a VFS url (trash:///, remote://...) when you quit from one,
+    # and those are not directories the shell can cd into
+    if cwd="$(command cat -- "$tmp")" && [ -d "$cwd" ] && [ "$cwd" != "$PWD" ]; then
         builtin cd -- "$cwd"
     fi
     rm -f -- "$tmp"
@@ -264,11 +266,13 @@ image() {
 }
 
 # images (any format ImageMagick can read) -> a single PDF
-# jpg/png are embedded as-is by img2pdf, everything else is transcoded once
 # the trailing .pdf is optional: without it, the first input name is reused
+# knobs: IMAGETOPDF_MAXPX (long edge cap), _QUALITY, _PAGESIZE
 imagetopdf() {
     local usage="usage: imagetopdf <images...> [output.pdf]"
     (( $# < 1 )) && { echo "$usage" >&2; return 1; }
+    local maxpx=${IMAGETOPDF_MAXPX:-2200} q=${IMAGETOPDF_QUALITY:-88}
+    local page=${IMAGETOPDF_PAGESIZE:-A4}
     local out tmp i=0 f dst
     if [[ "${@[-1]:l}" == *.pdf ]]; then
         out="${@[-1]}"
@@ -281,21 +285,23 @@ imagetopdf() {
     fi
     tmp=$(mktemp -d)
     for f; do
-        case "${f:l}" in
-            *.jpg|*.jpeg|*.png)
-                cp "$f" "$tmp/$(printf %04d $i).${f:e}" ;;
-            *)
-                if [[ $(magick "$f" -format %A info: 2>/dev/null) == (True|Blend) ]]; then
-                    dst="$tmp/$(printf %04d $i).png"          # transparency -> lossless
-                    magick "$f" -auto-orient "$dst"
-                else
-                    dst="$tmp/$(printf %04d $i).jpg"          # photo -> jpeg q95
-                    magick "$f" -auto-orient -quality 95 "$dst"
-                fi || { rm -rf "$tmp"; return 1 } ;;
-        esac
+        # already a jpg/png within the cap: embed it untouched, no re-encoding
+        if [[ "${f:l}" == (*.jpg|*.jpeg|*.png) ]] &&
+           (( $(magick identify -format '%[fx:max(w,h)]' "$f" 2>/dev/null || echo 0) <= maxpx )); then
+            cp "$f" "$tmp/$(printf %04d $i).${f:e}"
+        elif [[ $(magick "$f" -format %A info: 2>/dev/null) == (True|Blend) ]]; then
+            dst="$tmp/$(printf %04d $i).png"          # transparency -> lossless
+            magick "$f" -auto-orient -resize "${maxpx}x${maxpx}>" "$dst" \
+                || { rm -rf "$tmp"; return 1 }
+        else
+            dst="$tmp/$(printf %04d $i).jpg"
+            magick "$f" -auto-orient -resize "${maxpx}x${maxpx}>" -quality $q "$dst" \
+                || { rm -rf "$tmp"; return 1 }
+        fi
         (( i++ ))
     done
-    command img2pdf "$tmp"/* -o "$out" && rm -rf "$tmp"
+    # without --pagesize, img2pdf maps 1px to 1pt and yields a 42-inch page
+    command img2pdf --fit into --pagesize "$page" "$tmp"/* -o "$out" && rm -rf "$tmp"
 }
 
 # shadow img2pdf in favour of imagetopdf (which calls it via "command img2pdf")
