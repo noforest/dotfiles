@@ -48,3 +48,7 @@ require("custom-shell"):setup({
     history_path = "default",
     save_history = true,
 })
+
+-- undo.yazi records file operations from yazi's own DDS events. Without this
+-- call nothing is recorded and `u` has an empty journal to work from.
+require("undo"):setup()

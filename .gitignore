@@ -87,12 +87,11 @@ machine.d/*.conf
 
 # yazi plugins are vendored by `ya pkg`, which pins each one by rev and hash in
 # modules/desktop/.config/yazi/package.toml. That manifest is the source of truth
-# and `ya pkg install` restores them. The three below are written here, not
+# and `ya pkg install` restores them. The two below are written here, not
 # vendored, so they stay tracked.
 modules/desktop/.config/yazi/plugins/*
 !modules/desktop/.config/yazi/plugins/spot-copied.yazi/
 !modules/desktop/.config/yazi/plugins/spot-rich.yazi/
-!modules/desktop/.config/yazi/plugins/undo-delete.yazi/
 modules/desktop/.config/yazi/flavors/
 
 # backups left by `dot link`
