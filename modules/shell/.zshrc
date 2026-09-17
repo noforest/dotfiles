@@ -265,10 +265,22 @@ image() {
 
 # images (any format ImageMagick can read) -> a single PDF
 # jpg/png are embedded as-is by img2pdf, everything else is transcoded once
+# the trailing .pdf is optional: without it, the first input name is reused
 imagetopdf() {
-    (( $# < 2 )) && { echo "usage: imagetopdf <images...> <output.pdf>" >&2; return 1; }
-    local out="${@[-1]}" tmp=$(mktemp -d) i=0 f dst
-    for f in "${@[1,-2]}"; do
+    local usage="usage: imagetopdf <images...> [output.pdf]"
+    (( $# < 1 )) && { echo "$usage" >&2; return 1; }
+    local out tmp i=0 f dst
+    if [[ "${@[-1]:l}" == *.pdf ]]; then
+        out="${@[-1]}"
+        set -- "${@[1,-2]}"
+        (( $# < 1 )) && { echo "$usage" >&2; return 1; }
+    else
+        out="${1:r}.pdf"
+        # img2pdf overwrites without asking, and this name was never typed
+        [[ -e "$out" ]] && { echo "imagetopdf: $out already exists, name the output explicitly" >&2; return 1; }
+    fi
+    tmp=$(mktemp -d)
+    for f; do
         case "${f:l}" in
             *.jpg|*.jpeg|*.png)
                 cp "$f" "$tmp/$(printf %04d $i).${f:e}" ;;
