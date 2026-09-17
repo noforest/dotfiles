@@ -45,7 +45,7 @@ keymap = [
     # Toggle
     { on = "<Space>", run = ["toggle", "arrow 1"], desc = "Toggle the current selection state" },
     { on = "<C-a>", run = "toggle_all --state=on", desc = "Select all files" },
-    { on = "<C-r>", run = "toggle_all", desc = "Invert selection of all files" },
+    { on = "<C-t>", run = "toggle_all", desc = "Invert selection of all files" },
 
     # Visual mode
     { on = "v", run = "visual_mode", desc = "Enter visual mode (selection mode)" },
@@ -61,7 +61,6 @@ keymap = [
     # Operation
     { on = "o", run = "open", desc = "Open selected files" },
     { on = "O", run = "open --interactive", desc = "Open selected files interactively" },
-    { on = "<Enter>", run = "open", desc = "Open selected files" },
     { on = "<S-Enter>", run = "open --interactive", desc = "Open selected files interactively" },
     { on = "y", run = "yank", desc = "Yank selected files (copy)" },
     { on = "x", run = "yank --cut", desc = "Yank selected files (cut)" },
@@ -77,6 +76,7 @@ keymap = [
     { on = [ "g", "t" ], run = "plugin trash", desc = "Go to trash bin" },
     # undo the last delete from anywhere; inside trash:// it restores the selection
     { on = "u", run = "plugin undo", desc = "Undo the last file operation" },
+    { on = "<C-r>", run = "plugin undo -- redo", desc = "Redo the last undone operation" },
     { on = "a", run = "create", desc = "Create a file (ends with / for directories)" },
     { on = "r", run = "rename --cursor=before_ext", desc = "Rename selected file(s)" },
     { on = ";", run = "shell --interactive", desc = "Run a shell command" },
@@ -168,7 +168,7 @@ prepend_keymap = [
     { on = "<Enter>", run = "plugin smart-enter", desc = "Enter the child directory, or open the file" },
     { on = "<A-p>", run = "plugin toggle-pane min-preview", desc = "Hide or show preview" },
     { on = "M", run = "plugin toggle-pane max-preview", desc = "Maximize or restore preview" },
-    { on = "f", run = "plugin jump-to-char", desc = "Jump to char" },
+    { on = "<C-g>", run = "plugin jump-to-char", desc = "Jump to char" },
     { on = [ "c", "p" ], run = "plugin command", desc = "Yazi command prompt" },
     { on = [ ":" ], run = "plugin custom-shell -- zsh --wait", desc = "custom-shell as default" },
 ]

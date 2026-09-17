@@ -50,8 +50,8 @@ hash = "7a4b4237223aaa94e589d1c01a23542a"
 
 [[plugin.deps]]
 use = "typefor56/undo"
-rev = "4db886b"
-hash = "ba84a134a5a00229e8f0df8ce5d893c8"
+rev = "6cd739b"
+hash = "2c98a60dcb401dec21efa59e69cd4fad"
 
 [[plugin.deps]]
 use = "AnirudhG07/rich-preview"
