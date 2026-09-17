@@ -263,6 +263,37 @@ image() {
     qimgv "$@" > /dev/null 2>&1 &
 }
 
+# images (any format ImageMagick can read) -> a single PDF
+# jpg/png are embedded as-is by img2pdf, everything else is transcoded once
+imagetopdf() {
+    (( $# < 2 )) && { echo "usage: imagetopdf <images...> <output.pdf>" >&2; return 1; }
+    local out="${@[-1]}" tmp=$(mktemp -d) i=0 f dst
+    for f in "${@[1,-2]}"; do
+        case "${f:l}" in
+            *.jpg|*.jpeg|*.png)
+                cp "$f" "$tmp/$(printf %04d $i).${f:e}" ;;
+            *)
+                if [[ $(magick "$f" -format %A info: 2>/dev/null) == (True|Blend) ]]; then
+                    dst="$tmp/$(printf %04d $i).png"          # transparency -> lossless
+                    magick "$f" -auto-orient "$dst"
+                else
+                    dst="$tmp/$(printf %04d $i).jpg"          # photo -> jpeg q95
+                    magick "$f" -auto-orient -quality 95 "$dst"
+                fi || { rm -rf "$tmp"; return 1 } ;;
+        esac
+        (( i++ ))
+    done
+    command img2pdf "$tmp"/* -o "$out" && rm -rf "$tmp"
+}
+
+# shadow img2pdf in favour of imagetopdf (which calls it via "command img2pdf")
+img2pdf() {
+    print -u2 "img2pdf is shadowed: use \"imagetopdf <images...> <output.pdf>\"."
+    print -u2 "It also handles heic/webp/avif/raw, and leaves jpg/png untouched."
+    print -u2 "For the raw tool anyway: command img2pdf $*"
+    return 1
+}
+
 #################################################################
 # config pour tmux
 
