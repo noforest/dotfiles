@@ -51,6 +51,7 @@ common_mode() {
 case "$1" in
     monitor)
         xrandr --output "$HDMI" --auto --primary --output "$LAPTOP" --off
+        feh --bg-fill "$WALLPAPER" > /dev/null 2>&1
         ;;
     laptop)
         xrandr --output "$LAPTOP" --auto --primary --output "$HDMI" --off
