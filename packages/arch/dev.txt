@@ -54,6 +54,7 @@ gobject-introspection
 # Documentation and diagrams
 plantuml
 mermaid-cli
+vhs
 pdfgrep
 tesseract-data-eng
 tesseract-data-fra
