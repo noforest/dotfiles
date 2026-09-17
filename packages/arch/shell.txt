@@ -41,3 +41,4 @@ yt-dlp
 mediainfo
 chafa
 ueberzugpp
+yazi

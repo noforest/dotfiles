@@ -25,6 +25,7 @@ llvm14
 llvm14-libs
 llvm16
 llvm16-libs
+localsend-bin
 masterpdfeditor-free
 neofetch
 neohtop
@@ -32,9 +33,11 @@ nerd-fonts-noto-sans-mono
 nodejs-vite
 nusmv
 oh-my-posh
+opencode-bin
 paru
 paru-debug
 positron-ide-bin
+python-pywal
 python-xyzservices
 qimgv
 snake
@@ -51,4 +54,3 @@ xfwm4-themes
 xidlehook
 yay
 zotero-bin
-opencode-bin

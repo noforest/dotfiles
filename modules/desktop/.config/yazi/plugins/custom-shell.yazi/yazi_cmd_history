@@ -1,3 +1,0 @@
-zsh -ic 'du -sh Documents;exit'
-zsh -ic 'du -sh Documents;read'
-zsh -ic 'q;read'

@@ -149,7 +149,7 @@ module_units() {
 # xfconfd rewrites its XML atomically and watches it through inotify. Linking
 # those files into the repo made it loop, which saturated the session D-Bus and
 # froze thunar and flameshot. This is state, not configuration.
-NEVER_LINK='/\.config/systemd/|/\.config/xfce4/xfconf/|/\.config/dconf/|/\.config/pulse/|/\.local/state/|\.lock$|/savedState\.|/recently-used'
+NEVER_LINK='/\.config/systemd/|/\.config/xfce4/xfconf/|/\.config/dconf/|/\.config/pulse/|/\.local/state/|\.lock$|/savedState\.|/recently-used|\.bak-[0-9]'
 
 cmd_check_never_link() {  # cmd_check_never_link <relative-path> -> 0 if forbidden
     printf '%s\n' "/$1" | grep -qE "$NEVER_LINK"
@@ -825,6 +825,23 @@ cmd_fonts() {
 # === nvim ====================================================================
 # One single change cannot be expressed as configuration. The patch header
 # explains which one. Everything else lives in lazy.lua.
+# yazi plugins and flavors are not tracked: package.toml pins each one by rev and
+# hash, and this restores them from it. Keeping the vendored trees out of the repo
+# is what lets `ya pkg upgrade` own that directory without fighting `dot link`.
+cmd_yazi_plugins() {
+    head_ "yazi plugins"
+    if ! command -v ya >/dev/null; then
+        warn "ya not installed, skipping (install the 'yazi' package first)"
+        return 0
+    fi
+    local manifest="$MODULES/desktop/.config/yazi/package.toml"
+    if [ ! -e "$manifest" ]; then
+        warn "no package.toml, nothing to restore"
+        return 0
+    fi
+    ya pkg install && ok "plugins and flavors restored from package.toml"
+}
+
 cmd_nvim_patch() {
     local mode="${1:-apply}" dir="$MODULES/nvim/.config/nvim/patches" lazy="$HOME/.local/share/nvim/lazy"
     head_ "nvim-patch ($mode)"
@@ -858,7 +875,7 @@ cmd_audit() {
 # st, dmenu, slock and dwmblocks, which is pointless on a profile that runs none
 # of them. A profile overrides the chain with a `steps:` line rather than this
 # script testing for a module by name.
-BOOTSTRAP_STEPS="install link system-apply fonts build-suckless nvim-patch"
+BOOTSTRAP_STEPS="install link system-apply fonts build-suckless nvim-patch yazi-plugins"
 
 cmd_bootstrap() {
     local profile="${1:-$DEFAULT_PROFILE}"
@@ -987,6 +1004,7 @@ ${B}dot${N} - dotfiles management for dwm / Arch
   ${G}dot system-apply${N} [profile] Copy the profile scopes of system/ to / (sudo)
   ${G}dot system-pull${N} [profile]  Pull /etc and /usr/local/bin back into the repo
   ${G}dot nvim-patch${N}           Apply the snacks patch that config cannot express
+  ${G}dot yazi-plugins${N}         Restore yazi plugins and flavors from package.toml
   ${G}dot build-suckless${N}       Build and install dwm, st, dmenu, slock, dwmblocks
   ${G}dot fonts${N}                Install the fonts that are not packaged
   ${G}dot audit${N} [what]         What this machine really uses: packages, scripts, or all
@@ -1025,6 +1043,7 @@ case "$cmd" in
     build-suckless) cmd_build_suckless "$@" ;;
     fonts)          cmd_fonts "$@" ;;
     nvim-patch)     cmd_nvim_patch "$@" ;;
+    yazi-plugins)   cmd_yazi_plugins "$@" ;;
     audit)          cmd_audit "$@" ;;
     state)          cmd_state "$@" ;;
     bootstrap)      cmd_bootstrap "$@" ;;
