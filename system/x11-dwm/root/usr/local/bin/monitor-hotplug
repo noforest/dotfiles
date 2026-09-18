@@ -10,11 +10,13 @@
 
 LAPTOP="eDP"
 
-# How long an external screen is allowed to be gone before we call it a real
-# unplug. A screen we left without signal goes into standby and drops its HPD,
-# which reads exactly like an unplug, but it comes back within a second.
-# ponytail: measured under 1s on this monitor, raise it if a slower one flaps.
-STANDBY_GRACE=5
+# How long an external output has to stay away before we call it an unplug. A
+# screen drops its HPD both when it goes into standby and when it wakes up and
+# renegotiates its mode, and xrandr reports either as "disconnected", exactly
+# like a cable being pulled. Only a lasting absence is a real unplug.
+# ponytail: both bounces measured under a second here, a real unplug costs this
+# long in the dark. Raise it if a slower screen still flaps.
+STANDBY_GRACE=2
 
 # udev runs us as root. Anything touching the user's X session or their files
 # under /run/user has to run as the user: a state file left owned by root can no
@@ -39,26 +41,27 @@ lit() {
         $1 == o && /[0-9]+x[0-9]+\+[0-9]+\+[0-9]+/ {found=1} END {exit !found}'
 }
 
+# Already laid out the way that mode wants. Screens bounce their HPD on every
+# standby and every wake-up, and re-running xrandr and feh on each bounce is
+# what made a switch look like it happened in two or three steps.
+already() {
+    case "$1" in
+        laptop)  lit "$LAPTOP" && ! lit "$EXTERNAL" ;;
+        monitor) lit "$EXTERNAL" && ! lit "$LAPTOP" ;;
+        *)       lit "$LAPTOP" && lit "$EXTERNAL" ;;
+    esac
+}
+
 EXTERNAL=$(external)
 mode=$(cat "$SCREEN_MODE_FILE" 2>/dev/null)
 
 if [ -n "$EXTERNAL" ]; then
     [ -n "$mode" ] || mode=monitor
-    # In laptop mode the layout already is what we want. The screen we left
-    # without signal keeps dropping and re-asserting its HPD every few seconds,
-    # and re-running xrandr and feh on every bounce would only churn.
-    if [ "$mode" = laptop ] && ! lit "$EXTERNAL"; then
-        exit 0
-    fi
+    already "$mode" && exit 0
     as_user /usr/local/bin/screen_mode "$mode"
 else
-    # No external output at all. In laptop mode that is expected rather than an
-    # unplug: we switched it off ourselves and it dropped its HPD going into
-    # standby. Let it come back before concluding the cable is really out.
-    if [ "$mode" = laptop ]; then
-        sleep "$STANDBY_GRACE"
-        [ -n "$(external)" ] && exit 0
-    fi
+    sleep "$STANDBY_GRACE"
+    [ -n "$(external)" ] && exit 0
     # Real unplug: forget the manual choice so that plugging back in starts over
     # on the monitor. The removal comes last, screen_mode rewrites the file.
     as_user /usr/local/bin/screen_mode laptop
