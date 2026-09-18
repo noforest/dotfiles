@@ -1,15 +1,16 @@
 #!/bin/sh
-# Détermine la session graphique courante sans coder en dur ni l'utilisateur ni son $HOME.
+# Works out the current graphical session without hardcoding either the user or
+# their $HOME.
 #
-# Sourcé par les scripts appelés depuis udev, acpid ou systemd — c'est-à-dire par root,
-# dans un environnement où DISPLAY, XAUTHORITY et HOME ne sont pas ceux de l'utilisateur.
+# Sourced by scripts started from udev, acpid or systemd, that is by root, in an
+# environment where DISPLAY, XAUTHORITY and HOME are not the user's own.
 #
-# Utilisation :
+# Usage:
 #     . /usr/local/bin/desktop-env.sh
-#     # DESKTOP_USER, USER_HOME, DISPLAY et XAUTHORITY sont alors définis
+#     # DESKTOP_USER, USER_HOME, DISPLAY and XAUTHORITY are set from here on
 
-# 1) l'utilisateur d'une session graphique active, 2) le propriétaire de /run/user/1000,
-# 3) à défaut, l'utilisateur courant.
+# 1) the user of an active graphical session, 2) the owner of /run/user/1000,
+# 3) failing that, the current user.
 DESKTOP_USER="${DESKTOP_USER:-$(
     loginctl list-sessions --no-legend 2>/dev/null \
         | awk '$3 != "" && $3 != "root" {print $3; exit}'
@@ -24,8 +25,15 @@ export DESKTOP_USER USER_HOME
 export DISPLAY="${DISPLAY:-:0}"
 export XAUTHORITY="${XAUTHORITY:-$USER_HOME/.Xauthority}"
 
-# Fichier d'état du mode d'inactivité, écrit par /usr/local/bin/idle_mode et lu
-# par xidlehook-start.sh. Il vit dans /run/user, donc il disparaît à la
-# déconnexion : chaque démarrage repart forcément en mode « default ».
+# State file for the idle mode, written by /usr/local/bin/idle_mode and read
+# back by xidlehook-start.sh. It lives in /run/user, so it goes away on logout:
+# every startup necessarily begins in "default" mode.
 IDLE_MODE_FILE="/run/user/$(id -u "$DESKTOP_USER")/idle_mode"
 export IDLE_MODE_FILE
+
+# Display mode picked by hand in screen_menu, written by screen_mode and read
+# back by monitor-hotplug: udev raises a DRM event whenever an output is
+# switched off, and without this guard the monitor mode would overwrite the
+# manual choice. In /run/user, so every session starts over on autodetection.
+SCREEN_MODE_FILE="/run/user/$(id -u "$DESKTOP_USER")/screen_mode"
+export SCREEN_MODE_FILE

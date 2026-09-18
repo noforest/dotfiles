@@ -1,34 +1,25 @@
-#!/bin/sh
-
-# HDMI="HDMI-A-0"
-# LAPTOP="eDP"
+#!/bin/bash
 #
-# case "$1" in
-#     monitor)
-#         xrandr --output "$HDMI" --auto --primary --output "$LAPTOP" --off
-#         ;;
-#     laptop)
-#         xrandr --output "$LAPTOP" --auto --primary --output "$HDMI" --off
-#         ;;
-#     mirror)
-#         xrandr --output "$LAPTOP" --mode 1920x1080 \
-#             --output "$HDMI" --mode 1920x1080 --same-as "$LAPTOP"
-#         ;;
-#     extend)
-#         xrandr --output "$LAPTOP" --auto --primary \
-#             --output "$HDMI" --auto --right-of "$LAPTOP"
-#
-#         feh --bg-fill "$WALLPAPER" > /dev/null 2>&1
-#         ;;
-# esac
+# Applies a display layout and remembers it in $SCREEN_MODE_FILE.
+# monitor-hotplug reads that file back: without it, the slightest DRM event
+# (switching an output off raises one) would flip everything back to the
+# external monitor.
 
+. /usr/local/bin/desktop-env.sh   # sets DESKTOP_USER, USER_HOME, DISPLAY, XAUTHORITY, SCREEN_MODE_FILE
 
-
-
-HDMI="HDMI-A-0"
 LAPTOP="eDP"
+# First connected output that is not the internal panel: HDMI, but just as well
+# DisplayPort-0/1 on a dock.
+EXTERNAL=$(xrandr --query | awk -v l="$LAPTOP" '$2 == "connected" && $1 != l {print $1; exit}')
 
-# Liste les résolutions (ex: 1920x1080) supportées par une sortie donnée
+# Nothing plugged in: only the laptop panel makes sense, whatever was asked for.
+if [ -z "$EXTERNAL" ]; then
+    xrandr --output "$LAPTOP" --auto --primary
+    /usr/local/bin/reset_wallpaper
+    exit 0
+fi
+
+# Lists the resolutions (e.g. 1920x1080) a given output supports
 get_modes() {
     xrandr --query | awk -v out="$1" '
         $0 ~ "^"out" (connected|disconnected)" {flag=1; next}
@@ -37,40 +28,62 @@ get_modes() {
     '
 }
 
-# Trouve la plus grande résolution commune entre laptop et écran externe
+# Largest resolution both the laptop panel and the external screen support
 common_mode() {
     comm -12 \
         <(get_modes "$LAPTOP" | sort -u) \
-        <(get_modes "$HDMI" | sort -u) \
+        <(get_modes "$EXTERNAL" | sort -u) \
         | awk -Fx '{print $1*$2, $0}' \
         | sort -rn \
         | head -1 \
         | awk '{print $2}'
 }
 
+# Records the choice for monitor-hotplug. Written aside then moved into place:
+# the move is atomic, so a monitor-hotplug firing at the same time never reads a
+# half-written or briefly missing file and never falls back to the wrong mode.
+# It also replaces a file left behind by an older version running as root, which
+# a plain redirection could not overwrite.
+remember() {
+    echo "$1" > "$SCREEN_MODE_FILE.$$" \
+        && mv -f "$SCREEN_MODE_FILE.$$" "$SCREEN_MODE_FILE"
+}
+
 case "$1" in
     monitor)
-        xrandr --output "$HDMI" --auto --primary --output "$LAPTOP" --off
-        feh --bg-fill "$WALLPAPER" > /dev/null 2>&1
+        remember "$1"
+        xrandr --output "$EXTERNAL" --auto --primary --output "$LAPTOP" --off
         ;;
     laptop)
-        xrandr --output "$LAPTOP" --auto --primary --output "$HDMI" --off
+        remember "$1"
+        xrandr --output "$LAPTOP" --auto --primary --output "$EXTERNAL" --off
         ;;
     mirror)
-        xrandr --output "$LAPTOP" --auto --output "$HDMI" --auto --same-as "$LAPTOP"
+        remember "$1"
+        xrandr --output "$LAPTOP" --auto --primary \
+               --output "$EXTERNAL" --auto --same-as "$LAPTOP"
         ;;
     mirror-fit)
         MODE=$(common_mode)
         if [ -z "$MODE" ]; then
-            notify-send "screen_mode" "Aucune résolution commune trouvée entre $LAPTOP et $HDMI" 2>/dev/null
+            notify-send "screen_mode" "No resolution shared by $LAPTOP and $EXTERNAL" 2>/dev/null
             exit 1
         fi
+        remember "$1"
         xrandr --output "$LAPTOP" --mode "$MODE" --primary \
-               --output "$HDMI" --mode "$MODE" --same-as "$LAPTOP"
+               --output "$EXTERNAL" --mode "$MODE" --same-as "$LAPTOP"
         ;;
     extend)
+        remember "$1"
         xrandr --output "$LAPTOP" --auto --primary \
-            --output "$HDMI" --auto --right-of "$LAPTOP"
-        feh --bg-fill "$WALLPAPER" > /dev/null 2>&1
+               --output "$EXTERNAL" --auto --right-of "$LAPTOP"
+        ;;
+    *)
+        exit 0
         ;;
 esac
+
+# The resolution just changed, so feh has to re-fit the wallpaper.
+# reset_wallpaper resolves WALLPAPER on its own, hence it also works as root
+# from udev, where the variable exported by .xinitrc does not exist.
+/usr/local/bin/reset_wallpaper

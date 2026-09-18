@@ -1,2 +1,5 @@
 #ACTION=="change", SUBSYSTEM=="drm", RUN+="/usr/local/bin/monitor-hotplug"
-ACTION=="change", SUBSYSTEM=="drm", KERNEL=="card*", ENV{HOTPLUG}=="1", RUN+="/usr/local/bin/monitor-hotplug"
+# systemd-run --no-block detaches the script: udev kills whatever RUN+= leaves
+# behind once the event is handled, which would take down the feh that
+# reset_wallpaper starts in the background.
+ACTION=="change", SUBSYSTEM=="drm", KERNEL=="card*", ENV{HOTPLUG}=="1", RUN+="/usr/bin/systemd-run --no-block /usr/local/bin/monitor-hotplug"
