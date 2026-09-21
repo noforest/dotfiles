@@ -1585,6 +1585,11 @@ require("lazy").setup({
        --  <localleader>lq  |<plug>(vimtex-log)|                            `n`
        --  <localleader>lv  |<plug>(vimtex-view)|                           `n`
        --  <localleader>lr  |<plug>(vimtex-reverse-search)|                 `n`
+       --
+       --  Custom mappings (defined below in init):
+       --  <localleader>ll  compile, PDF folder and name read from the .tex  `n`
+       --  <localleader>ls  compile, asks for the folder then the PDF name   `n`
+       --                   (replaces vimtex-toggle-main, still :VimtexToggleMain)
 
         "lervag/vimtex",
         lazy = false, -- on ne veut pas charger VimTeX en lazy
@@ -1615,6 +1620,101 @@ require("lazy").setup({
                     '-synctex=1',
                 },
             }
+
+            -- The .tex decides where its PDF goes and what it is called,
+            -- through two magic comments read again on every ùll:
+            --   % !TeX outdir = my_cv/_latex_output
+            --   % !TeX jobname = Jane_Doe_CV
+            -- outdir is relative to the main file, jobname has no spaces.
+            -- The aux folder follows: _latex_aux is created next to the
+            -- output folder.
+            local function tex_magic(key)
+                for _, line in ipairs(vim.fn.readfile(vim.b.vimtex.tex, '', 20)) do
+                    local value = line:match('^%s*%%%s*!TeX%s+' .. key .. '%s*=%s*(%S+)%s*$')
+                    if value then return value end
+                end
+            end
+
+            -- Completes the names of the PDFs already in the target folder,
+            -- shown by blink's menu in the file name prompt of ùls
+            -- (customlist: the function has to filter on what is typed)
+            vim.cmd([[
+                function! VimtexPdfNames(A, L, P) abort
+                  let l:names = map(glob(get(g:, 'vimtex_pdf_dir', '') . '/*.pdf', 0, 1), {_, f -> fnamemodify(f, ':t:r')})
+                  return filter(l:names, {_, n -> stridx(n, a:A) == 0})
+                endfunction
+            ]])
+
+            -- By default VimTeX mirrors the source tree inside the build
+            -- folders (an \input from a subfolder leaves empty copies of that
+            -- subfolder in there). Only the requested folder is created here.
+            vim.g.vimtex_mkdir_simple = function(path)
+                if path == nil or path == '' then return end
+                if path:sub(1, 1) ~= '/' then path = vim.b.vimtex.root .. '/' .. path end
+                vim.fn.mkdir(path, 'p')
+            end
+
+            -- b:vimtex is only a copy on the Lua side, hence the :let / :call
+            local function set_target(out_dir, jobname)
+                local parent = vim.fn.fnamemodify(out_dir, ':h')
+                local aux_dir = (parent == '.' and '' or parent .. '/') .. '_latex_aux'
+                vim.cmd('let b:vimtex.compiler._create_build_dir = g:vimtex_mkdir_simple')
+                vim.cmd('let b:vimtex.compiler.out_dir = ' .. vim.fn.string(out_dir))
+                vim.cmd('let b:vimtex.compiler.aux_dir = ' .. vim.fn.string(aux_dir))
+                vim.cmd([[call filter(b:vimtex.compiler.options, {_, o -> o !~# '^-jobname='})]])
+                if jobname then
+                    vim.cmd('call add(b:vimtex.compiler.options, '
+                        .. vim.fn.string('-jobname=' .. jobname) .. ')')
+                end
+            end
+
+            -- ùll: compile where the .tex asks for it
+            local function compile_from_tex()
+                set_target(tex_magic('outdir') or '_latex_output', tex_magic('jobname'))
+                vim.cmd('VimtexCompile')
+            end
+
+            -- ùls: compile somewhere else, folder first, then the PDF name
+            local function compile_elsewhere()
+                local default = vim.b.vimtex.compiler.out_dir
+                if default:sub(1, 1) ~= '/' then
+                    default = vim.b.vimtex.root .. '/' .. default
+                end
+                -- suggest the folder that CONTAINS _latex_output, not _latex_output itself
+                local folder = vim.fn.input({
+                    prompt = 'Folder (PDF goes in folder/_latex_output): ',
+                    default = vim.fn.fnamemodify(default, ':h'), completion = 'dir' })
+                if folder == '' then return end
+
+                -- :p makes it absolute without touching the last part, even if it does not exist yet
+                folder = vim.fn.fnamemodify(vim.fn.expand(folder), ':p'):gsub('/$', '')
+                local out_dir = folder .. '/_latex_output'
+
+                vim.g.vimtex_pdf_dir = out_dir -- read by VimtexPdfNames
+                local name = vim.fn.input({
+                    prompt = 'File name: ',
+                    default = vim.b.vimtex.compiler.file_info.jobname,
+                    completion = 'customlist,VimtexPdfNames' })
+                name = name:gsub('%.pdf$', ''):gsub('%s+', '_')
+                if name == '' then return end
+
+                set_target(out_dir, name)
+
+                if vim.fn.eval('b:vimtex.compiler.is_running()') == 1 then
+                    vim.cmd('VimtexStop')
+                end
+                vim.cmd('redraw | VimtexCompile')
+            end
+
+            vim.api.nvim_create_autocmd('User', {
+                pattern = 'VimtexEventInitPost',
+                callback = function()
+                    vim.keymap.set('n', '<localleader>ll', compile_from_tex,
+                        { buffer = true, desc = 'VimTeX: compile, folder and PDF name from the .tex' })
+                    vim.keymap.set('n', '<localleader>ls', compile_elsewhere,
+                        { buffer = true, desc = 'VimTeX: compile, ask folder then PDF name' })
+                end,
+            })
         end
     },
     {
