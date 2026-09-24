@@ -29,6 +29,7 @@ ristretto
 obsidian
 mousepad
 bitwarden
+seahorse
 discord
 qbittorrent
 filezilla

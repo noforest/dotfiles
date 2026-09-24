@@ -4,6 +4,7 @@ blesh-git
 cglm
 clang14
 clang16
+claude-desktop
 clipster
 compiler-rt14
 compiler-rt16
@@ -32,6 +33,7 @@ neohtop
 nerd-fonts-noto-sans-mono
 nodejs-vite
 nusmv
+ocrmypdf
 oh-my-posh
 opencode-bin
 paru
