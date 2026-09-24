@@ -52,10 +52,14 @@ export PATH="$HOME/.pyenv/shims/auto-cpufreq:$PATH"
 export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/ssh-agent.socket"
 eval "$(pyenv init --path)"
 eval "$(pyenv init -)"
+# AUR python packages must build against the system python, not pyenv's
+alias paru='PATH=/usr/bin:$PATH paru'
+alias yay='PATH=/usr/bin:$PATH yay'
 
 
 alias vlc="vlc-resume"
 alias pdftoimage="pdftoppm"
+alias pdf2ocr="ocrmypdf -l fra+eng"
 alias okular="pdf"  # NOTE: script localisé à /usr/local/bin/pdf
 alias handbrake="ghb"
 alias sudo='sudo '
