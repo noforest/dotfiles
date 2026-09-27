@@ -2,18 +2,26 @@
 #
 # The rofi notification centre for dunst. Not a dwmblocks block of its own:
 # clock-notif-center-rofi owns the bar entry and calls this script, which may
-# read NC_HEADER for markup to place above the list.
+# run NC_HEADER_CMD for markup to place above the list. That command gets the
+# month offset as its argument, and ◀ today ▶ change that offset.
 #
 #   type       : filters the history live through rofi's search bar
 #   Enter      : pops the selected notification back on screen
 #   Alt+d      : removes it from the history
 #   entry 1    : mutes / unmutes dunst
 #   entry 2    : clears the whole history
+#   Alt+Left, Alt+Home, Alt+Right (or the ◀ today ▶ buttons of the theme) :
+#                previous month, current month, next month
+#
+# This is a rofi script mode, not dmenu: rofi runs this same file again after
+# every action, with ROFI_RETV saying which one, and redraws the window from
+# what it prints. So the window stays open while the calendar pages or an entry
+# is deleted. Launched without ROFI_RETV, the script starts rofi on itself.
 #
 # Entries are rendered on two rows, like dunst draws them: bold summary on top,
-# body underneath. That needs three things together — a separator that is not a
-# newline (-sep), two text rows per element (-eh 2) and Pango markup
-# (-markup-rows) — otherwise rofi splits every body into its own entry.
+# body underneath. Script mode splits rows on newlines, so the line break inside
+# an entry, and inside the message, is written as the Pango entity &#10;, and
+# -eh 2 gives every element two text rows.
 #
 # The popup is anchored top right, right under the bar.
 #
@@ -35,74 +43,84 @@ THEME="$HOME/.config/rofi/notification-center.rasi"
 # theme, so the two colours used inline live here as well.
 ACCENT="#698dda"
 RULE="#3a4050"
-SEP=$(printf '\037')   # unit separator: entries may then contain newlines
 
-# A real newline. "\n" inside double quotes is two literal characters in sh, so
-# building the two-row entries with it would print a visible backslash-n.
-NL='
-'
-
-
-paused() { [ "$(dunstctl is-paused)" = true ]; }
-
-open_center() {
-    # One dunstctl call: the same JSON feeds the list and the id lookup, so the
-    # indices rofi hands back cannot drift against a history that changed.
-    hist=$(dunstctl history)
-
-    # The two actions are tinted with the accent colour and followed by a rule,
-    # so they read as controls rather than as the two newest notifications.
-    if paused; then
-        toggle="<b><span foreground=\"$ACCENT\">UNMUTE notifications</span></b>${NL}notifications are muted"
-    else
-        toggle="<b><span foreground=\"$ACCENT\">MUTE notifications</span></b>${NL}silence dunst until toggled back"
-    fi
-    wipe="<b><span foreground=\"$ACCENT\">CLEAR history</span></b>${NL}drop every notification below"
-    rule="<span foreground=\"$RULE\">──────────────  history  ──────────────</span>${NL} "
-
-    # Bodies carry dunst markup (<b>, <tt>…) and newlines. Strip the tags, keep
-    # one line, then escape so Pango reads the text as text and not as markup.
-    entries=$(printf '%s' "$hist" | jq -j --arg sep "$SEP" '
-        .data[0][]
-        | ( .summary.data | gsub("<[^>]*>"; "") | @html ) as $s
-        | ( .body.data    | gsub("<[^>]*>"; "") | gsub("\\s+"; " ") | @html ) as $b
-        | $sep + "<b>" + $s + "</b>\n" + $b')
-
-    menu="$toggle$SEP$wipe$SEP$rule$entries"
-
-    hint='<span foreground="#888888">Enter: show again    Alt+d: delete</span>'
-    if [ -n "$NC_HEADER" ]; then
-        mesg="$NC_HEADER${NL}${hint}"
-    else
-        mesg="$hint"
-    fi
-
-    # -format i returns the index of the picked entry, which keeps ids out of the
-    # visible text. Alt+d is kb-custom-1 and exits with code 10; plain Delete
-    # cannot be used, rofi binds it to kb-remove-char-forward.
-    sel=$(printf '%s' "$menu" | rofi -dmenu -i -format i \
-        -sep "$SEP" -eh 2 -markup-rows \
-        -p "Notifications" \
-        -mesg "$mesg" \
+if [ -z "$ROFI_RETV" ]; then
+    # Alt+d is kb-custom-1: plain Delete cannot be used, rofi binds it to
+    # kb-remove-char-forward. kb-custom-2 to 4 are also the buttons' actions.
+    exec rofi -show nc -modes "nc:$0" \
+        -eh 2 \
         -theme "$THEME" \
         -location 3 -yoffset "$BAR_HEIGHT" -xoffset -4 \
-        -kb-custom-1 "Alt+d")
-    code=$?
-    [ -n "$sel" ] || return
+        -kb-custom-1 "Alt+d" \
+        -kb-custom-2 "Alt+Left" -kb-custom-3 "Alt+Home" -kb-custom-4 "Alt+Right"
+fi
 
-    case "$sel" in
-        0) dunstctl set-paused toggle ;;
-        1) dunstctl history-clear ;;
-        2) ;;   # the rule: decorative, selecting it does nothing
-        *)
-            id=$(printf '%s' "$hist" | jq -r ".data[0][$((sel - 3))].id.data")
-            if [ "$code" -eq 10 ]; then
-                dunstctl history-rm "$id"
-            else
-                dunstctl history-pop "$id"
-            fi
-            ;;
-    esac
-}
+# Rofi hands back what the previous run stored with the data option.
+offset=${ROFI_DATA:-0}
 
-open_center
+# Row options follow a NUL, fields are split by the unit separator \037.
+option() { printf '\000%s\037%s\n' "$1" "$2"; }
+
+case "$ROFI_RETV" in
+    1)
+        case "$ROFI_INFO" in
+            mute)  dunstctl set-paused toggle ;;
+            clear) dunstctl history-clear ;;
+            *)
+                # Printing no rows closes rofi, out of the way of the popup.
+                dunstctl history-pop "$ROFI_INFO"
+                exit 0
+                ;;
+        esac
+        ;;
+    10)
+        case "$ROFI_INFO" in
+            mute|clear) ;;
+            *) dunstctl history-rm "$ROFI_INFO" ;;
+        esac
+        ;;
+    11) offset=$((offset - 1)) ;;
+    12) offset=0 ;;
+    13) offset=$((offset + 1)) ;;
+esac
+
+hint='<span foreground="#888888">Enter: show again    Alt+d: delete</span>'
+if [ -n "$NC_HEADER_CMD" ]; then
+    # One line for rofi: the header's newlines become &#10;.
+    header=$($NC_HEADER_CMD "$offset" | awk '{ printf "%s&#10;", $0 }')
+    mesg="$header$hint"
+else
+    mesg="$hint"
+fi
+
+option prompt "Notifications"
+option message "$mesg"
+option markup-rows true
+# No no-custom: in rofi 2.0 it silently disables use-hot-keys.
+option use-hot-keys true
+option data "$offset"
+# After the first draw, keep the cursor and the search where they were.
+[ "$ROFI_RETV" -ne 0 ] && option keep-selection true && option keep-filter true
+
+# The two actions are tinted with the accent colour and followed by a rule,
+# so they read as controls rather than as the two newest notifications.
+if [ "$(dunstctl is-paused)" = true ]; then
+    toggle="<b><span foreground=\"$ACCENT\">UNMUTE notifications</span></b>&#10;notifications are muted"
+else
+    toggle="<b><span foreground=\"$ACCENT\">MUTE notifications</span></b>&#10;silence dunst until toggled back"
+fi
+wipe="<b><span foreground=\"$ACCENT\">CLEAR history</span></b>&#10;drop every notification below"
+rule="<span foreground=\"$RULE\">──────────────  history  ──────────────</span>&#10; "
+
+printf '%s\000info\037mute\n' "$toggle"
+printf '%s\000info\037clear\n' "$wipe"
+printf '%s\000nonselectable\037true\n' "$rule"
+
+# Bodies carry dunst markup (<b>, <tt>…) and newlines. Strip the tags, keep
+# one line, then escape so Pango reads the text as text and not as markup.
+# The dunst id rides along as the row's info, so it never shows.
+dunstctl history | jq -j '
+    .data[0][]
+    | ( .summary.data | gsub("<[^>]*>"; "") | gsub("\\s+"; " ") | @html ) as $s
+    | ( .body.data    | gsub("<[^>]*>"; "") | gsub("\\s+"; " ") | @html ) as $b
+    | "<b>" + $s + "</b>&#10;" + $b + "\u0000info\u001f" + (.id.data | tostring) + "\n"'

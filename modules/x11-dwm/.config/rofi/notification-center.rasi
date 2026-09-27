@@ -37,7 +37,7 @@ window {
 }
 
 mainbox {
-    children: [ inputbar, message, listview ];
+    children: [ inputbar, calnav, message, listview ];
     spacing:  6px;
 }
 
@@ -58,6 +58,39 @@ entry {
     placeholder:       "search…";
     placeholder-color: @muted;
     horizontal-align:  0.0;
+}
+
+/* ◀ today ▶ au-dessus du calendrier. Chaque bouton déclenche le même
+   raccourci que Alt+Left, Alt+Home, Alt+Right : rofi relance alors
+   notification_center, qui redessine le calendrier sans fermer la fenêtre. */
+calnav {
+    orientation: horizontal;
+    expand:      false;
+    children:    [ button-prev, button-today, button-next ];
+}
+
+button-prev, button-today, button-next {
+    expand:     false;
+    padding:    2px 10px;
+    text-color: @accent;
+    cursor:     pointer;
+}
+
+button-prev {
+    content: "◀";
+    action:  "kb-custom-2";
+}
+
+button-today {
+    content: "today";
+    action:  "kb-custom-3";
+    expand:  true;
+    horizontal-align: 0.5;
+}
+
+button-next {
+    content: "▶";
+    action:  "kb-custom-4";
 }
 
 /* -mesg porte l'en-tête horloge + calendrier. La marge basse évite que la

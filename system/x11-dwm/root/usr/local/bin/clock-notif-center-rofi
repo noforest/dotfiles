@@ -5,7 +5,8 @@
 # In the bar : the same "day, time" vap-clock printed.
 # On left click, one rofi window holding, top to bottom:
 #   - that same day and time
-#   - the month calendar, today in red, as vap-clock's notification used to show
+#   - the month calendar, today in red, as vap-clock's notification used to show,
+#     with ◀ today ▶ to page through the months
 #   - the notification centre, with every one of its features
 #
 # The list and its keys live in notification_center; this script only builds the
@@ -15,27 +16,40 @@
 # Same red as urgency_critical's frame_color in dunstrc.
 TODAY_COLOR="#e02f2f"
 
-open_window() {
+# `clock-notif-center-rofi --header N` prints the header for the month N months
+# away from the current one. notification_center runs it again on every ◀ today ▶.
+print_header() {
+    # The 15th keeps `date` from skipping a month from a 31st.
+    set -- $(date -d "$(date +%Y-%m-15) $1 month" '+%m %Y') "$1"
+
     # `date +%e` pads single digits with a space, hence the trim. \b keeps the
     # substitution off the year: \b20\b cannot match inside "2026".
+    # Today is only marked on the current month.
     # The awk drops the blank lines `cal` pads its output with, as vap-clock did.
-    today=$(date +%e | tr -d ' ')
-    calendar=$(cal -m \
+    if [ "$3" -eq 0 ]; then
+        today=$(date +%e | tr -d ' ')
+    else
+        today=NONE
+    fi
+    calendar=$(cal -m "$1" "$2" \
         | sed "s/\b$today\b/<b><span color='$TODAY_COLOR'>&<\/span><\/b>/" \
         | awk '{ lines[NR] = $0 }
                END { for (i = 1; i <= NR; i++) if (lines[i] ~ /[^[:space:]]/) last = i
                      for (i = 1; i <= last; i++) print lines[i] }')
 
-    # A real newline: "\n" in double quotes is two literal characters in sh.
-    NL='
-'
-    NC_HEADER="<b>$(date '+%a, %H:%M')</b>$NL$NL<tt>$calendar</tt>"
-    export NC_HEADER
-    /usr/local/bin/notification_center
+    printf '<b>%s</b>\n\n<tt>%s</tt>\n' "$(date '+%a, %H:%M')" "$calendar"
 }
 
+# Checked before $BUTTON: notification_center inherits BUTTON=1 from the click,
+# and would otherwise open a second window from here.
+if [ "$1" = --header ]; then
+    print_header "$2"
+    exit
+fi
+
 case "$BUTTON" in
-    1) open_window ;;
+    1) NC_HEADER_CMD="/usr/local/bin/clock-notif-center-rofi --header" \
+           /usr/local/bin/notification_center ;;
 esac
 
 # The muted bell used to be its own block; kept here so a silenced dunst still
