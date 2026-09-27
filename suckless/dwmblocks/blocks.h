@@ -5,7 +5,7 @@ static const Block blocks[] = {
     {"",		"clipboard_history",		0,			17},
     {"",		"idle_mode",			0,			18},
     {"",		"checkupdates.sh",		300,			2},
-    {"",		"vap-battery",		5,			0},
+    {"",		"vap-battery",		5,			5},
     /*{"",		"vap-bluetooth",	40,			6},*/
     {"",		"vap-internet",		25,			3},
     {"",		"vap-volume",		0,			10},

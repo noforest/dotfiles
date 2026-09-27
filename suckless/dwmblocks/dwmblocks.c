@@ -105,7 +105,10 @@ void getsigcmds(unsigned int signal)
 
 void setupsignals()
 {
-	struct sigaction sa = { .sa_sigaction = sighandler, .sa_flags = SA_SIGINFO };
+	/* SA_RESTART: without it, a signal landing while the main loop reads another
+	 * block's command makes that fgets fail, and the block goes blank until its
+	 * next update. The charger udev rule sends several signals in a row. */
+	struct sigaction sa = { .sa_sigaction = sighandler, .sa_flags = SA_SIGINFO | SA_RESTART };
 #ifndef __OpenBSD__
 	    /* initialize all real time signals with dummy handler */
     for (int i = SIGRTMIN; i <= SIGRTMAX; i++) {

@@ -87,7 +87,9 @@ case "$pick:$ROFI_RETV" in
     *:14) pick=$(( (now + offset) / 12 )) ;;
     *:1)
         case "$ROFI_INFO" in
-            mute)  dunstctl set-paused toggle ;;
+            # The signal redraws the clock block (signal 1 in blocks.h) at
+            # once, so the muted bell shows up without waiting for its tick.
+            mute)  dunstctl set-paused toggle; pkill -RTMIN+1 dwmblocks ;;
             clear) dunstctl history-clear ;;
             *)
                 # Printing no rows closes rofi, out of the way of the popup.

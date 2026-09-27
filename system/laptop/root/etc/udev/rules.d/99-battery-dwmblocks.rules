@@ -1,0 +1,4 @@
+# Plugging or unplugging the charger, or the battery reporting a new state,
+# refreshes the battery block of dwmblocks (signal 5 in blocks.h) at once,
+# instead of on its next 5 s tick. AC* and BAT* leave out the mouse battery.
+SUBSYSTEM=="power_supply", ACTION=="change", KERNEL=="AC*|BAT*", RUN+="/usr/bin/pkill -RTMIN+5 dwmblocks"
