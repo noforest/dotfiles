@@ -116,6 +116,9 @@ T}
 dot fonts@T{
 Install the fonts that no package provides.
 T}
+dot services [prof]@T{
+Enable the systemd units the profile lists on its \fIservices:\fR line. Needs sudo.
+T}
 dot nvim-patch@T{
 Apply the patches that a plugin's own API cannot express.
 T}
@@ -187,6 +190,10 @@ the AUR list is installed too with
 or
 .BR yay .
 Without either, the AUR step is skipped with a warning.
+.IP
+A name the official repositories do not know is reported and set aside rather
+than failing the whole pacman transaction. AUR packages go one at a time for the
+same reason, and the failures are listed at the end.
 .TP
 .B dot build-suckless
 For each of the five projects:
@@ -206,8 +213,21 @@ Binaries go to
 .IR /usr/local/bin .
 A running dwm keeps the old one until the session restarts.
 .TP
+.BI "dot services " [profile]
+Enables, one at a time, the units listed on the
+.I services:
+line of the profile, after a
+.BR "systemctl daemon-reload" .
+A unit that is not installed is skipped with a warning, because systemctl enables
+nothing at all when one unit of the list is missing, and because a profile is
+distribution neutral:
+.I ly@tty2
+does not exist on Ubuntu. Does not start them, the reboot does.
+.TP
 .B dot nvim-patch
-Applies the patches under
+When the plugins are not installed yet, runs
+.B nvim --headless "+Lazy! sync"
+first. Then applies the patches under
 .I modules/nvim/.config/nvim/patches/
 to the installed lazy.nvim plugins. Already applied patches are detected and
 skipped. If upstream moved and a patch no longer applies, it says so rather than
@@ -225,7 +245,7 @@ It stops there. The commit is yours to write.
 .TP
 .BI "dot bootstrap " [profile]
 Chains
-.BR install ", " link ", " system-apply ", " fonts ", " build-suckless " and " nvim-patch ,
+.BR install ", " link ", " system-apply ", " services ", " fonts ", " build-suckless ", " nvim-patch " and " yazi-plugins ,
 unless the profile overrides the chain with
 .IR steps: .
 Called without an argument it prints what it takes the machine to be and asks for

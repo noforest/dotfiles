@@ -90,7 +90,7 @@ profile_modules() {
 
 # The other half of the same grammar: the value of a `key: value` line.
 # Empty when the key is absent, so a profile written before the key existed keeps
-# working. Used for `system:` and `steps:`.
+# working. Used for `system:`, `steps:` and `services:`.
 profile_setting() {  # profile_setting <profile> <key>
     local f="$PROFILES/${1:-$DEFAULT_PROFILE}.conf"
     [ -f "$f" ] || return 0
@@ -707,7 +707,8 @@ pkg_wanted() {
 pkg_installed() {
     case "$(distro)" in
         arch)   command -v pacman >/dev/null || return 0
-                pacman -Qqen 2>/dev/null | sort -u; pacman -Qqem 2>/dev/null | sort -u ;;
+                # -debug: split debug packages left by local builds, never listed.
+                pacman -Qqen 2>/dev/null | sort -u; pacman -Qqem 2>/dev/null | grep -v -- "-debug$" | sort -u ;;
         ubuntu|debian)
                 command -v apt-mark >/dev/null || return 0
                 apt-mark showmanual 2>/dev/null | sort -u ;;
@@ -725,6 +726,15 @@ cmd_install() {
     info "  Official packages: $(printf '%s\n' "$native" | wc -l)"
     case "$(distro)" in
         arch)
+            # pacman refuses the whole transaction over one unknown name, so a
+            # package renamed or moved to the AUR would leave a new machine with
+            # nothing installed. Unknown names are reported and set aside instead.
+            local unknown
+            unknown=$(comm -23 <(printf '%s\n' "$native") <({ pacman -Slq; pacman -Sg | cut -d" " -f1; } | sort -u))
+            if [ -n "$unknown" ]; then
+                warn "not in the official repositories, skipped: $(printf '%s ' $unknown)"
+                native=$(comm -13 <(printf '%s\n' "$unknown") <(printf '%s\n' "$native"))
+            fi
             sudo pacman -S --needed --noconfirm $native || warn "some packages failed"
             # The AUR has no equivalent elsewhere: the setting is simply ignored.
             if grep -qE '^\s*aur:\s*yes' "$PROFILES/$profile.conf"; then
@@ -732,7 +742,14 @@ cmd_install() {
                     || { warn "neither paru nor yay, AUR skipped (see packages/arch/manual.md)"; return 0; }
                 aur=$(grep -vE '^\s*(#|$)' "$(PKGDIR)/aur.txt" | sort -u)
                 info "  AUR packages: $(printf '%s\n' "$aur" | wc -l)"
-                "$helper" -S --needed --noconfirm $aur || warn "some AUR packages failed"
+                # One at a time: paru and yay also abort everything over a single
+                # package that left the AUR, and aur.txt mirrors what is installed
+                # here, including packages the AUR has since dropped.
+                local p failed=""
+                for p in $aur; do
+                    "$helper" -S --needed --noconfirm "$p" || failed="$failed $p"
+                done
+                [ -z "$failed" ] || warn "AUR packages that failed:$failed"
             fi ;;
         ubuntu|debian)
             sudo apt-get install -y $native || warn "some packages failed" ;;
@@ -766,7 +783,7 @@ cmd_sync() {
     # foreign packages. apt has no such notion, so nothing to sync there.
     if [ "$(distro)" = arch ] && command -v pacman >/dev/null; then
         local aurlist="$(PKGDIR)/aur.txt"
-        pacman -Qqem | sort > "$aurlist.new"
+        pacman -Qqem | grep -v -- '-debug$' | sort > "$aurlist.new"
         if ! cmp -s "$aurlist.new" "$aurlist"; then
             mv "$aurlist.new" "$aurlist"; ok "packages/arch/aur.txt updated"
         else rm -f "$aurlist.new"; fi
@@ -846,6 +863,11 @@ cmd_nvim_patch() {
     local mode="${1:-apply}" dir="$MODULES/nvim/.config/nvim/patches" lazy="$HOME/.local/share/nvim/lazy"
     head_ "nvim-patch ($mode)"
     [ -d "$dir" ] || { warn "no patch"; return 0; }
+    # On a new machine the plugins are not there yet, and a patch needs them.
+    if [ ! -d "$lazy" ] && command -v nvim >/dev/null; then
+        info "  ${D}installing the plugins first: nvim --headless +Lazy! sync${N}"
+        nvim --headless "+Lazy! sync" +qa >/dev/null 2>&1 && ok "plugins installed"
+    fi
     local p name plug rc=0
     for p in "$dir"/*.patch; do
         [ -e "$p" ] || { warn "no patch"; return 0; }
@@ -865,6 +887,30 @@ cmd_nvim_patch() {
     return $rc
 }
 
+# === services ================================================================
+# The units a profile needs running, from its `services:` line. Enabled one by
+# one: systemctl enables nothing at all when a single unit is missing, and a
+# profile is distribution neutral, so ly for instance does not exist on Ubuntu.
+# Without this step a new machine reboots to a console with no network.
+cmd_services() {
+    local profile="${1:-$DEFAULT_PROFILE}" u
+    profile_check "$profile"
+    head_ "services ($profile, sudo)"
+    local units
+    units=$(profile_setting "$profile" services)
+    [ -n "$units" ] || { ok "the profile declares no service"; return 0; }
+    sudo systemctl daemon-reload
+    for u in $units; do
+        if ! systemctl cat "$u" >/dev/null 2>&1; then
+            warn "$u: not installed, skipped"
+        elif sudo systemctl enable "$u" >/dev/null 2>&1; then
+            ok "$u enabled"
+        else
+            err "$u: could not be enabled, try sudo systemctl enable $u"
+        fi
+    done
+}
+
 # === usage audit =============================================================
 cmd_audit() {
     bash "$REPO/scripts/audit-usage.sh" "${1:-all}"
@@ -875,7 +921,7 @@ cmd_audit() {
 # st, dmenu, slock and dwmblocks, which is pointless on a profile that runs none
 # of them. A profile overrides the chain with a `steps:` line rather than this
 # script testing for a module by name.
-BOOTSTRAP_STEPS="install link system-apply fonts build-suckless nvim-patch yazi-plugins"
+BOOTSTRAP_STEPS="install link system-apply services fonts build-suckless nvim-patch yazi-plugins"
 
 cmd_bootstrap() {
     local profile="${1:-$DEFAULT_PROFILE}"
@@ -911,7 +957,7 @@ cmd_bootstrap() {
         case "$step" in
             # Only these take a profile; passing one to the others would be read
             # as their own argument (nvim-patch --save, audit <what>).
-            install|link|system-apply|system-pull) "$0" "$step" "$profile" ;;
+            install|link|system-apply|system-pull|services) "$0" "$step" "$profile" ;;
             *) "$0" "$step" ;;
         esac
     done
@@ -1003,6 +1049,7 @@ ${B}dot${N} - dotfiles management for dwm / Arch
   ${G}dot install${N} [profile]    Install the packages of the profile
   ${G}dot system-apply${N} [profile] Copy the profile scopes of system/ to / (sudo)
   ${G}dot system-pull${N} [profile]  Pull /etc and /usr/local/bin back into the repo
+  ${G}dot services${N} [profile]   Enable the systemd units of the profile (sudo)
   ${G}dot nvim-patch${N}           Apply the snacks patch that config cannot express
   ${G}dot yazi-plugins${N}         Restore yazi plugins and flavors from package.toml
   ${G}dot build-suckless${N}       Build and install dwm, st, dmenu, slock, dwmblocks
@@ -1042,6 +1089,7 @@ case "$cmd" in
     system-pull)    cmd_system_pull "$@" ;;
     build-suckless) cmd_build_suckless "$@" ;;
     fonts)          cmd_fonts "$@" ;;
+    services)       cmd_services "$@" ;;
     nvim-patch)     cmd_nvim_patch "$@" ;;
     yazi-plugins)   cmd_yazi_plugins "$@" ;;
     audit)          cmd_audit "$@" ;;
