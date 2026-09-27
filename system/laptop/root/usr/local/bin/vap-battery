@@ -26,12 +26,12 @@ if [[ "$charging_status" == "Charging" ]] || [[ "$charging_status" == "Full" ]] 
 else
 
   if [[ "$battery_percent" -eq 10 ]] && [[ $count_10 -eq 0 ]]; then
-    notify-send -u low "Batterie faible" "Charge restante: 10%"
+    notify-send -u low "Low battery" "Remaining charge: 10%"
     count_10=1
   fi
 
   if [[ "$battery_percent" -eq 5 ]] && [[ $count_5 -eq 0 ]]; then
-    notify-send -u critical "Batterie très faible" "Charge restante: 5%"
+    notify-send -u critical "Very low battery" "Remaining charge: 5%"
     count_5=1 
   fi
 

@@ -205,7 +205,7 @@ end
 -- ─────────────────────────────────────────────────────────────────────────────
 function M._write_clangd(root, chosen_flags, chosen_defines)
     local lines = {
-        "# .clangd - genere automatiquement par Neovim",
+        "# .clangd - generated automatically by Neovim",
         "CompileFlags:",
         "  Add:",
     }
@@ -237,8 +237,8 @@ function M._write_clangd(root, chosen_flags, chosen_defines)
     -- Always write, even when empty (to wipe the old content)
     if #lines == 3 then
         -- Empty file: just the header without macros
-        vim.fn.writefile({ "# .clangd - genere automatiquement par Neovim" }, path)
-        vim.notify(".clangd vide genere (aucune macro) -> " .. path, vim.log.levels.INFO)
+        vim.fn.writefile({ "# .clangd - generated automatically by Neovim" }, path)
+        vim.notify("empty .clangd generated (no macros) -> " .. path, vim.log.levels.INFO)
     else
         vim.fn.writefile(lines, path)
 
@@ -253,7 +253,7 @@ function M._write_clangd(root, chosen_flags, chosen_defines)
         end
 
         vim.notify(
-            string.format(".clangd genere (%d macros) :\n%s\n-> %s",
+            string.format(".clangd generated (%d macros):\n%s\n-> %s",
                 #all, table.concat(all, "\n"), path),
             vim.log.levels.INFO
         )
@@ -294,14 +294,14 @@ function M._do_generate(root)
                 type   = "optional_group",
                 macros = all_optional,
                 prompt = string.format(
-                    "Macros #ifdef / #if defined() (%d) : %s",
+                    "#ifdef / #if defined() macros (%d): %s",
                     #all_optional,
                     table.concat(all_optional, ", ")
                 ),
                 choices = {
-                    "Tout activer    (definir toutes → blocs #ifdef actifs)",
-                    "Rien activer    (ne rien definir → blocs #else actifs)",
-                    "Choisir une par une",
+                    "Enable all    (define every one → #ifdef blocks active)",
+                    "Enable none   (define nothing → #else blocks active)",
+                    "Choose one by one",
                 },
             })
         end
@@ -315,7 +315,7 @@ function M._do_generate(root)
                 type         = "group",
                 macro        = macro,
                 choices_data = choices,
-                prompt       = string.format("Branche active pour %s ?", macro),
+                prompt       = string.format("Active branch for %s?", macro),
                 choices      = labels,
             })
         end
@@ -359,12 +359,12 @@ function M._do_generate(root)
                             vim.ui.select(
                                 {
                                     string.format(
-                                        "Oui  → -D%s=1  (active #ifdef/%s)",
+                                        "Yes  → -D%s=1  (enables #ifdef/%s)",
                                         name, name),
                                     string.format(
-                                        "Non  → non defini  (active #else)"),
+                                        "No   → not defined  (enables #else)"),
                                 },
-                                { prompt = string.format("Activer %s ?", name) },
+                                { prompt = string.format("Enable %s?", name) },
                                 function(_, j)
                                     if j == 1 then
                                         chosen_flags[name] = true
@@ -412,17 +412,17 @@ function M.generate()
     }, { upward = true })[1])
 
     if not root then
-        vim.notify("Racine du projet introuvable", vim.log.levels.ERROR)
+        vim.notify("Project root not found", vim.log.levels.ERROR)
         return
     end
 
     local clangd_path = root .. "/.clangd"
     if vim.fn.filereadable(clangd_path) == 1 then
         vim.ui.select(
-            { "Oui, ecraser", "Non, annuler" },
-            { prompt = ".clangd existe deja, ecraser ?" },
+            { "Yes, overwrite", "No, cancel" },
+            { prompt = ".clangd already exists, overwrite?" },
             function(choice)
-                if choice == "Oui, ecraser" then M._do_generate(root) end
+                if choice == "Yes, overwrite" then M._do_generate(root) end
             end
         )
     else
@@ -436,13 +436,13 @@ end
 function M.setup()
     vim.api.nvim_create_user_command("ClangdGen", function()
         M.generate()
-    end, { desc = "Generer .clangd depuis les macros du projet" })
+    end, { desc = "Generate .clangd from the project macros" })
 
     vim.api.nvim_create_autocmd("BufWritePost", {
         pattern = "*/.clangd",
         callback = function()
             vim.notify(
-                "Restart clangd apres modification du .clangd",
+                "Restart clangd after .clangd changes",
                 vim.log.levels.INFO
             )
             restart_clangd()
@@ -463,7 +463,7 @@ function M.setup()
                     or line:match("^%s*#ifdef")
                     or line:match("^%s*#ifndef") then
                     vim.notify(
-                        "Macros preprocesseur detectees -> :ClangdGen",
+                        "Preprocessor macros detected -> :ClangdGen",
                         vim.log.levels.WARN
                     )
                     return

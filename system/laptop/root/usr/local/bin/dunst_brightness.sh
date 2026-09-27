@@ -24,4 +24,4 @@ dunstify -t $notification_timeout \
     -h string:x-dunst-stack-tag:brightness \
     -h int:value:$percent \
     -h string:hlcolor:$bar_color \
-    "Luminosité: $percent%"
+    "Brightness: $percent%"

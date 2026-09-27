@@ -106,7 +106,7 @@ local function ensure_hook()
     vim.api.nvim_create_autocmd("ColorScheme", {
         group = vim.api.nvim_create_augroup("AnsiArtHighlights", { clear = true }),
         callback = reapply,
-        desc = "Réapplique les couleurs de l'art ANSI après un changement de thème",
+        desc = "Applies the ANSI art colours again after a theme change",
     })
 end
 
@@ -307,7 +307,7 @@ end
 function M.read(path)
     local fd = io.open(path, "r")
     if not fd then
-        return nil, "fichier introuvable : " .. path
+        return nil, "file not found: " .. path
     end
     local raw = fd:read("*a")
     fd:close()

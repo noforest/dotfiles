@@ -160,7 +160,7 @@ keymap = [
     { on = ["g", "?"] , run = "help", desc = "Open help"},
 
     # Refresh preview
-    { on = "<F5>", run = "peek --force", desc = "Forcer le re-rendu de la preview" },
+    { on = "<F5>", run = "peek --force", desc = "Force the preview to render again" },
 ]
 
 prepend_keymap = [

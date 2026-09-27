@@ -62,7 +62,7 @@ if [ -e "/sys/class/net/$interface/operstate" ]; then
         # wifi_status="󰤮 "
     fi
 else
-    wifi_status="Interface Wi-Fi non trouvée"
+    wifi_status="Wi-Fi interface not found"
 fi
 
 # Check the state of the Ethernet connection

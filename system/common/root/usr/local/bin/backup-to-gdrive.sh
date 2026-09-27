@@ -17,8 +17,8 @@ HOST="$(hostname)"                                # machine name
 DEST="$BASE_REMOTE/$HOST"                         # main remote folder
 
 if [ ! -r "$FILTERS" ]; then
-    echo "backup-to-gdrive: fichier de filtres manquant : $FILTERS" >&2
-    echo "  copiez examples/backup-to-gdrive.filters du dépôt et adaptez-le." >&2
+    echo "backup-to-gdrive: missing filters file: $FILTERS" >&2
+    echo "  copy examples/backup-to-gdrive.filters from the repository and adapt it." >&2
     exit 1
 fi
 

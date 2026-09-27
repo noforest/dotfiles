@@ -102,14 +102,14 @@ function M.load(path, opts)
 
     local fd = io.open(path, "r")
     if not fd then
-        return nil, "fichier introuvable : " .. path
+        return nil, "file not found: " .. path
     end
     local raw = fd:read("*a")
     fd:close()
 
     local frames = split_frames(raw)
     if #frames == 0 then
-        return nil, "aucune image dans " .. path
+        return nil, "no frame in " .. path
     end
 
     local quantize = (opts and opts.quantize) or 8
