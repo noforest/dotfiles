@@ -15,7 +15,3 @@ ethtool
 libinput-gestures
 gestures
 touchegg
-# Logitech and SteelSeries wireless devices
-solaar
-# Backup (backup-to-gdrive.sh plus a systemd timer)
-rclone

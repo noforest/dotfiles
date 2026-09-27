@@ -8,8 +8,6 @@ xautolock
 fprintd
 s-tui
 ethtool
-solaar
-rclone
 #
 # No equivalent in the archive, see packages/ubuntu/manual.md:
 #   acpilight          -> brightnessctl above covers the same need

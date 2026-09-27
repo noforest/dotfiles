@@ -14,3 +14,7 @@ dmidecode
 bluez
 blueman
 # bluez-utils is part of bluez here, there is no separate package
+# Logitech and SteelSeries wireless devices
+solaar
+# Backup (backup-to-gdrive.sh plus a systemd timer)
+rclone
