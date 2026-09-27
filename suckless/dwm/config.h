@@ -104,7 +104,7 @@ static const Rule rules[] = {
     { "Swappy",             NULL,       NULL,       0,              1,              -1,        -1,-1,-1,-1,         0 },
     { "okular",             NULL,       NULL,       1 << 3,         0,              -1,         -1,-1,-1,-1,         0 },   // workspace 4
     { "code",               NULL,       NULL,       1 << 2,         0,              -1,         -1,-1,-1,-1,         0 },   // workspace 3
-    { "Org.localsend.localsend_app", NULL, NULL, 0,             1,              -1,         -2,-2,1190,752,      0 },   // floating, centered on the current monitor
+    { "Org.localsend.localsend_app", NULL, NULL, 0,          1,              -1,         -2,-2,900,720 ,      0 },
     // matched on the instance, the class casing of these two isn't reliable
     { NULL,                 "protonvpn-app", NULL, 1 << 7,      0,              -1,         -1,-1,-1,-1,         0 },   // workspace 8
     { NULL,                 "teams-for-linux", NULL, 1 << 8,    0,              -1,         -1,-1,-1,-1,         0 },   // workspace 9
