@@ -90,7 +90,9 @@ static const Rule rules[] = {
  //  // { "alacritty",         NULL,       NULL,       1 << 1,         0,              -1,        50,50,500,500,       0},
 
     { "Gimp",     		    NULL,       NULL,       0,            	0,             	-1,        50,50,500,500,        5 },
-    { "Firefox",  		    NULL,       NULL,       1 << 8,       	0,             	-1,        50,50,500,500,        5 },
+    // WM_CLASS is "firefox" in lowercase, and the match is case-sensitive
+    { "firefox",  		    NULL,       NULL,       1 << 0,       	0,             	-1,        50,50,500,500,        5 },   // workspace 1
+    { "vlc",                NULL,       NULL,       1 << 4,         0,              -1,         -1,-1,-1,-1,         0 },   // workspace 5
     { "pavucontrol",  	    NULL,       NULL,       0,       	    1,             	-1,        6000,22,500,-1,      0 },
     { "st",  		        NULL,       "nmtui",    0,       	    1,             	-1,        6000,22,700,800,      0 },
     { "Blueman-manager",  	NULL,       NULL,       0,       	    1,             	-1,        5900,22,500,-1,      0 },

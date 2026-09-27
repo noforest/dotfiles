@@ -61,7 +61,6 @@ alias vlc="vlc-resume"
 alias pdftoimage="pdftoppm"
 alias pdf2ocr="ocrmypdf -l fra+eng"
 alias okular="pdf"  # NOTE: script located at /usr/local/bin/pdf
-alias handbrake="ghb"
 alias sudo='sudo '
 alias nv='nvim'
 alias sn='shutdown now'

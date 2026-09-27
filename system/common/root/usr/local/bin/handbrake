@@ -1,0 +1,4 @@
+#!/bin/sh
+# HandBrake's binary is called ghb. dmenu only lists executables in PATH, not
+# shell aliases or .desktop files, so this name makes it show up there.
+exec ghb "$@"
