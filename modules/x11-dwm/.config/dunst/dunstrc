@@ -410,3 +410,19 @@ frame_color = "#E1306C"
 [calendrier]
 summary = "This Month"
 alignment = left
+
+# Thunar envoie ses notifs d'éjection/démontage en urgency low (cadre jaune).
+# Changer l'urgency ne réapplique pas les couleurs, on force celles de normal.
+[thunar]
+appname = thunar
+msg_urgency = low
+frame_color = "#aaaaaa"
+timeout = 15
+
+# Solaar notifie chaque changement de batterie de la souris : silence.
+[souris_batterie]
+appname = solaar
+summary = "V450 Nano*"
+body = "*discharging*"
+skip_display = true
+history_ignore = true
