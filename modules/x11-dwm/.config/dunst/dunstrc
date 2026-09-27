@@ -426,3 +426,9 @@ summary = "V450 Nano*"
 body = "*discharging*"
 skip_display = true
 history_ignore = true
+
+# Volume notifications (dunst_vol.sh) stay out of the history: the last one
+# of a series used to land there when it timed out.
+[volume]
+stack_tag = volume
+history_ignore = true

@@ -4,6 +4,8 @@
 #include<unistd.h>
 #include<signal.h>
 #include<sys/wait.h>
+#include<sys/select.h>
+#include<time.h>
 #ifndef NO_X
 #include<X11/Xlib.h>
 #endif
@@ -30,6 +32,7 @@ void dummysighandler(int num);
 #endif
 void getcmds(int time);
 void getsigcmds(unsigned int signal);
+void runpending();
 void setupsignals();
 void sighandler(int signum, siginfo_t *si, void *ucontext);
 int getstatus(char *str, char *last);
@@ -55,6 +58,11 @@ static char statusbar[LENGTH(blocks)][CMDLENGTH] = {0};
 static char statusstr[2][STATUSLENGTH];
 static int statusContinue = 1;
 static int returnStatus = 0;
+/* Block signals received but not handled yet, one bit per signal number. The
+ * block signals stay blocked outside the pselect in statusloop, so the handler
+ * only ever runs there and this needs no further locking. */
+static volatile sig_atomic_t pendingsigs = 0;
+static sigset_t origmask;
 
 //opens process *cmd and stores output in *output
 void getcmd(const Block *block, char *output)
@@ -117,11 +125,25 @@ void setupsignals()
 	}
 #endif
 
+	sigset_t blocksigs;
+	sigemptyset(&blocksigs);
 	for (unsigned int i = 0; i < LENGTH(blocks); i++) {
-		if (blocks[i].signal > 0)
+		if (blocks[i].signal > 0) {
 			sigaction(SIGMINUS+blocks[i].signal, &sa, NULL);
+			sigaddset(&blocksigs, SIGMINUS+blocks[i].signal);
+		}
 	}
+	sigprocmask(SIG_BLOCK, &blocksigs, &origmask);
+}
 
+void runpending()
+{
+	unsigned int sigs = pendingsigs;
+	pendingsigs = 0;
+	for (unsigned int signal = 0; sigs; signal++, sigs >>= 1)
+		if (sigs & 1)
+			getsigcmds(signal);
+	writestatus();
 }
 
 int getstatus(char *str, char *last)
@@ -175,7 +197,27 @@ void statusloop()
 		writestatus();
 		if (!statusContinue)
 			break;
-		sleep(1.0);
+		/* Wait out the second, refreshing signalled blocks as they come in.
+		 * The handler used to refresh them itself, at any point of the loop:
+		 * while another block was half written, which blanked it in the bar
+		 * whenever signals came in bursts (a held volume key, the charger).
+		 * pselect unblocks the signals only while waiting, and a burst ends
+		 * up as one refresh. */
+		struct timespec now, end, left;
+		clock_gettime(CLOCK_MONOTONIC, &end);
+		end.tv_sec++;
+		while (statusContinue) {
+			clock_gettime(CLOCK_MONOTONIC, &now);
+			left.tv_sec = end.tv_sec - now.tv_sec;
+			left.tv_nsec = end.tv_nsec - now.tv_nsec;
+			if (left.tv_nsec < 0) {
+				left.tv_sec--;
+				left.tv_nsec += 1000000000L;
+			}
+			if (left.tv_sec < 0 || pselect(0, NULL, NULL, NULL, &left, &origmask) == 0)
+				break;
+			runpending();
+		}
 	}
 }
 
@@ -205,13 +247,15 @@ void sighandler(int signum, siginfo_t *si, void *ucontext)
 			char button[2] = { '0' + si->si_value.sival_int, '\0' };
 			setenv("BUTTON", button, 1);
 			setsid();
+			/* The block signals are blocked outside pselect; the command
+			 * should not inherit that. */
+			sigprocmask(SIG_SETMASK, &origmask, NULL);
 			execvp(cmd[0], cmd);
 			perror(cmd[0]);
 			exit(EXIT_SUCCESS);
 		}
 	} else {
-		getsigcmds(signum-SIGPLUS);
-		writestatus();
+		pendingsigs |= 1 << (signum-SIGPLUS);
 	}
 }
 
