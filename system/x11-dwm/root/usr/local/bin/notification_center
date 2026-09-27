@@ -10,8 +10,13 @@
 #   Alt+d      : removes it from the history
 #   entry 1    : mutes / unmutes dunst
 #   entry 2    : clears the whole history
-#   Alt+Left, Alt+Home, Alt+Right (or the ◀ today ▶ buttons of the theme) :
-#                previous month, current month, next month
+#   Left, Alt+Home, Right (or the ◀ today ▶ buttons of the theme) :
+#                previous month, current month, next month. Alt+Left and
+#                Alt+Right do the same. The arrows no longer move the cursor in
+#                the search bar, Control+b and Control+f still do.
+#   Alt+Down (or the ▾ button) : swaps the list for the twelve months of the
+#                shown year, ◀ ▶ then change the year and Enter opens a month.
+#                ▾ again, or today, goes back to the notifications.
 #
 # This is a rofi script mode, not dmenu: rofi runs this same file again after
 # every action, with ROFI_RETV saying which one, and redraws the window from
@@ -46,23 +51,40 @@ RULE="#3a4050"
 
 if [ -z "$ROFI_RETV" ]; then
     # Alt+d is kb-custom-1: plain Delete cannot be used, rofi binds it to
-    # kb-remove-char-forward. kb-custom-2 to 4 are also the buttons' actions.
+    # kb-remove-char-forward. kb-custom-2 to 5 are also the buttons' actions.
+    # Left and Right are taken off the search bar's cursor first: rofi refuses
+    # a key bound to two actions.
     exec rofi -show nc -modes "nc:$0" \
         -eh 2 \
         -theme "$THEME" \
         -location 3 -yoffset "$BAR_HEIGHT" -xoffset -4 \
         -kb-custom-1 "Alt+d" \
-        -kb-custom-2 "Alt+Left" -kb-custom-3 "Alt+Home" -kb-custom-4 "Alt+Right"
+        -kb-move-char-back "Control+b" -kb-move-char-forward "Control+f" \
+        -kb-custom-2 "Left,Alt+Left" -kb-custom-3 "Alt+Home" -kb-custom-4 "Right,Alt+Right" \
+        -kb-custom-5 "Alt+Down"
 fi
 
-# Rofi hands back what the previous run stored with the data option.
-offset=${ROFI_DATA:-0}
+# Rofi hands back what the previous run stored with the data option:
+# "offset" in the notification list, "offset year" in the month picker.
+# Months are counted as year * 12 + month - 1, which makes the offset between
+# two of them a plain subtraction.
+set -- ${ROFI_DATA:-0}
+offset=$1
+pick=$2
+now=$(( $(date +%Y) * 12 + $(date +%-m) - 1 ))
 
 # Row options follow a NUL, fields are split by the unit separator \037.
 option() { printf '\000%s\037%s\n' "$1" "$2"; }
 
-case "$ROFI_RETV" in
-    1)
+case "$pick:$ROFI_RETV" in
+    *:12) offset=0 pick= ;;
+    ?*:1) offset=$(( ${ROFI_INFO#month:} - now )) pick= ;;
+    ?*:11) pick=$((pick - 1)) ;;
+    ?*:13) pick=$((pick + 1)) ;;
+    ?*:14) pick= ;;
+    ?*:*) ;;
+    *:14) pick=$(( (now + offset) / 12 )) ;;
+    *:1)
         case "$ROFI_INFO" in
             mute)  dunstctl set-paused toggle ;;
             clear) dunstctl history-clear ;;
@@ -73,18 +95,21 @@ case "$ROFI_RETV" in
                 ;;
         esac
         ;;
-    10)
+    *:10)
         case "$ROFI_INFO" in
             mute|clear) ;;
             *) dunstctl history-rm "$ROFI_INFO" ;;
         esac
         ;;
-    11) offset=$((offset - 1)) ;;
-    12) offset=0 ;;
-    13) offset=$((offset + 1)) ;;
+    *:11) offset=$((offset - 1)) ;;
+    *:13) offset=$((offset + 1)) ;;
 esac
 
-hint='<span foreground="#888888">Enter: show again    Alt+d: delete</span>'
+if [ -n "$pick" ]; then
+    hint='<span foreground="#888888">Enter: open month    ◀ ▶: year</span>'
+else
+    hint='<span foreground="#888888">Enter: show again    Alt+d: delete</span>'
+fi
 if [ -n "$NC_HEADER_CMD" ]; then
     # One line for rofi: the header's newlines become &#10;.
     header=$($NC_HEADER_CMD "$offset" | awk '{ printf "%s&#10;", $0 }')
@@ -98,9 +123,21 @@ option message "$mesg"
 option markup-rows true
 # No no-custom: in rofi 2.0 it silently disables use-hot-keys.
 option use-hot-keys true
-option data "$offset"
-# After the first draw, keep the cursor and the search where they were.
-[ "$ROFI_RETV" -ne 0 ] && option keep-selection true && option keep-filter true
+option data "$offset $pick"
+
+if [ -n "$pick" ]; then
+    # Start on the shown month when it is in the picked year.
+    shown=$((now + offset))
+    [ $((shown / 12)) -eq "$pick" ] && option keep-selection true && option new-selection $((shown % 12))
+    # `locale mon` lists the month names of the same locale `cal` uses.
+    locale mon | tr ';' '\n' | awk -v y="$pick" '
+        { printf "<b>%s %d</b>&#10; \000info\037month:%d\n", $0, y, y * 12 + NR - 1 }'
+    exit 0
+fi
+
+# After the first draw, keep the cursor and the search where they were. Not
+# when leaving the month picker: its filter would hide the notifications.
+case "$ROFI_RETV" in 0|1|12|14) ;; *) option keep-selection true; option keep-filter true ;; esac
 
 # The two actions are tinted with the accent colour and followed by a rule,
 # so they read as controls rather than as the two newest notifications.

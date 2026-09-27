@@ -37,7 +37,9 @@ print_header() {
                END { for (i = 1; i <= NR; i++) if (lines[i] ~ /[^[:space:]]/) last = i
                      for (i = 1; i <= last; i++) print lines[i] }')
 
-    printf '<b>%s</b>\n\n<tt>%s</tt>\n' "$(date '+%a, %H:%M')" "$calendar"
+    # No <tt>: the theme font is already monospace, and <tt> swaps in a taller
+    # one, which rofi does not account for and the last line gets cut off.
+    printf '<b>%s</b>\n\n%s\n' "$(date '+%a, %H:%M')" "$calendar"
 }
 
 # Checked before $BUTTON: notification_center inherits BUTTON=1 from the click,
