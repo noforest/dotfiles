@@ -1,0 +1,11 @@
+# Template for ~/.config/atuin/config.toml, never versioned: the real file can
+# carry a sync address and key paths. Only what differs from atuin's defaults.
+# Copy it to ~/.config/atuin/config.toml, atuin fills in the rest.
+
+enter_accept = true
+
+[keys]
+scroll_exits = false
+
+[sync]
+records = true

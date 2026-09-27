@@ -231,13 +231,14 @@ installs only partially there, silently.
 
 ## Machine specific settings
 
-Four files, and that is all that stays machine specific.
+Five files, and that is all that stays machine specific.
 
 | File | What it holds | Template |
 |---|---|---|
 | `machine.d/<hostname>.conf` | One line, the profile this machine defaults to. Optional, the chassis is used otherwise, but it turns a guess into a decision. Not versioned. | [`machine.d/README.md`](machine.d/README.md) |
 | `~/.gitconfig-local` | Git identity and per account routing. Without it git has no author and refuses to commit. | [`examples/gitconfig-local`](examples/gitconfig-local) |
 | `~/.zshrc.local` | Project paths and local variables. Sourced at the end of `.zshrc`. | [`examples/zshrc.local`](examples/zshrc.local) |
+| `~/.config/atuin/config.toml` | Shell history settings. Kept out of git because it can hold sync credentials. | [`examples/atuin-config.toml`](examples/atuin-config.toml) |
 | `modules/x11-dwm/.config/dwm/machine.d/<hostname>.sh` | xinput identifiers. Names like `"ELAN2204:00 04F3:3109 Touchpad"` hold for one laptop only. | copy `archlinux.sh`, then `xinput list` |
 
 The two `~/.*local` files live in `$HOME`, neither linked nor versioned. Without
