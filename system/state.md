@@ -28,7 +28,6 @@ remote-fs.target                   enabled enabled
 ## systemd services (user)
 ```
 UNIT FILE                   STATE   PRESET
-lock.service                enabled enabled
 pipewire-pulse.service      enabled enabled
 pipewire.service            enabled enabled
 wireplumber.service         enabled enabled

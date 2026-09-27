@@ -153,7 +153,7 @@ sudo usermod -aG docker,vboxusers "$USER"          # groups, compare with system
 
 sudo systemctl enable --now ly NetworkManager acpid docker cups auto-cpufreq
 systemctl --user enable --now pipewire pipewire-pulse wireplumber \
-                              ssh-agent.socket lock.service backup_gdrive.timer
+                              ssh-agent.socket backup_gdrive.timer
 
 sudo udevadm control --reload && sudo udevadm trigger   # reload what system-apply installed
 sudo systemctl daemon-reload
