@@ -1,0 +1,15 @@
+# Keeps the USB Ethernet adapter and the hub it sits on out of USB autosuspend.
+# The Realtek r8153 (driver r8152) is known to drop its link when the port under
+# it goes to sleep, and the Genesys hub of the dock was seen disconnecting every
+# device at once. Costs a little power, which only matters on battery.
+
+ACTION!="add", GOTO="usb_ethernet_end"
+SUBSYSTEM!="usb", GOTO="usb_ethernet_end"
+
+# Realtek RTL8153 Gigabit Ethernet
+ATTR{idVendor}=="0bda", ATTR{idProduct}=="8153", TEST=="power/control", ATTR{power/control}="on"
+# Genesys Logic hubs of the dock, USB 2 and USB 3 halves
+ATTR{idVendor}=="05e3", ATTR{idProduct}=="0610", TEST=="power/control", ATTR{power/control}="on"
+ATTR{idVendor}=="05e3", ATTR{idProduct}=="0626", TEST=="power/control", ATTR{power/control}="on"
+
+LABEL="usb_ethernet_end"
