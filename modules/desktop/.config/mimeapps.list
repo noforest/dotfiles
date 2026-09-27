@@ -7,6 +7,7 @@ application/x-shellscript=nvim.desktop;
 text/markdown=nvim.desktop;
 video/mpeg=vlc.desktop;
 video/x-matroska=vlc.desktop;
+video/mp4=vlc.desktop;
 
 [Default Applications]
 text/html=firefox-15.desktop;
@@ -20,3 +21,4 @@ text/markdown=nvim.desktop
 video/mpeg=vlc.desktop
 video/x-matroska=vlc.desktop
 x-scheme-handler/claude=com.anthropic.Claude.desktop
+video/mp4=vlc.desktop
