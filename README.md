@@ -152,6 +152,7 @@ chsh -s /bin/zsh                                   # default shell
 sudo usermod -aG docker,vboxusers "$USER"          # groups, compare with system/state.md
 
 sudo systemctl enable --now ly NetworkManager acpid docker cups auto-cpufreq
+rclone config                                      # create the gdrive: remote, backup_gdrive.timer needs it
 systemctl --user enable --now pipewire pipewire-pulse wireplumber \
                               ssh-agent.socket backup_gdrive.timer
 
