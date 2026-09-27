@@ -358,6 +358,9 @@ applyrules(Client *c)
 				if (r->floaty >= 0) c->y = c->mon->my + r->floaty;
 				if (r->floatw >= 0) c->w = r->floatw;
 				if (r->floath >= 0) c->h = r->floath;
+				/* -2 as float x or y centers the window on its monitor */
+				if (r->floatx == -2) c->x = c->mon->mx + (c->mon->mw - c->w) / 2;
+				if (r->floaty == -2) c->y = c->mon->my + (c->mon->mh - c->h) / 2;
 			}
 			for (m = mons; m && m->num != r->monitor; m = m->next);
 			if (m)
