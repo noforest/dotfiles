@@ -1,16 +1,16 @@
 /*
- * Thème du notification center (voir /usr/local/bin/notification_center).
+ * Theme of the notification centre (see /usr/local/bin/notification_center).
  *
- * Les couleurs, la police et le cadre viennent tels quels de
+ * The colours, the font and the frame come as they are from
  * ~/.config/dunst/dunstrc : background #131519, foreground #ffffff,
  * frame_color #aaaaaa, frame_width 3, corner_radius 0.
  *
- * Trois écarts assumés :
- *  - la largeur est 560px et non les 300px de dunst, illisible pour une liste
- *  - dunst n'a pas de couleur de sélection : on prend le bleu #698dda, déjà
- *    utilisé dans modules/desktop/.config/flameshot/flameshot.ini. Contraste
- *    5.5:1 sur le fond #131519, au-dessus du seuil AA
- *  - une ligne de séparation #3a4050 isole les deux actions de l'historique
+ * Three deliberate differences:
+ *  - the width is 560px and not dunst's 300px, unreadable for a list
+ *  - dunst has no selection colour: this takes the blue #698dda, already
+ *    used in modules/desktop/.config/flameshot/flameshot.ini. Contrast
+ *    5.5:1 on the #131519 background, above the AA threshold
+ *  - a #3a4050 separator line sets the two actions apart from the history
  */
 
 * {
@@ -46,7 +46,7 @@ inputbar {
     spacing:      8px;
     padding:      2px 2px 6px 2px;
     border:       0 0 1px 0;
-    border-color: @frame;   /* dunstrc : separator_color = frame */
+    border-color: @frame;   /* dunstrc: separator_color = frame */
 }
 
 prompt {
@@ -60,9 +60,9 @@ entry {
     horizontal-align:  0.0;
 }
 
-/* ◀ today ▶ au-dessus du calendrier. Chaque bouton déclenche le même
-   raccourci que Left, Alt+Home, Right : rofi relance alors
-   notification_center, qui redessine le calendrier sans fermer la fenêtre. */
+/* ◀ today ▶ above the calendar. Each button triggers the same
+   shortcut as Left, Alt+Home, Right: rofi then runs
+   notification_center again, which redraws the calendar without closing the window. */
 calnav {
     orientation: horizontal;
     expand:      false;
@@ -87,8 +87,8 @@ button-today {
     padding: 2px 2px 2px 10px;
 }
 
-/* ▾ ouvre le choix du mois dans l'année (Alt+Down). Les deux dummy qui
-   s'étirent de part et d'autre gardent today et ▾ ensemble au centre. */
+/* ▾ opens the month picker for the year (Alt+Down). The two dummies
+   stretching on either side keep today and ▾ together in the middle. */
 button-pick {
     content: "▾";
     action:  "kb-custom-5";
@@ -100,31 +100,31 @@ button-next {
     action:  "kb-custom-4";
 }
 
-/* -mesg porte l'en-tête horloge + calendrier. La marge basse évite que la
-   dernière ligne de `cal` soit rognée par l'arrondi de hauteur du textbox. */
+/* -mesg carries the clock + calendar header. The bottom margin keeps the
+   last line of `cal` from being clipped by the textbox height rounding. */
 message {
     padding: 2px 2px 10px 2px;
     border:  0;
 }
 
-/* Centré : toutes les lignes de `cal` font la même largeur, les colonnes de
-   jours restent donc alignées. La classe textbox couvre aussi le prompt, la
-   saisie et les lignes de liste, à qui on remet un alignement à gauche. */
+/* Centred: every line of `cal` has the same width, so the day
+   columns stay aligned. The textbox class also covers the prompt, the
+   input and the list rows, which are set back to left alignment. */
 textbox {
     text-color:       @fg;
     horizontal-align: 0.5;
 }
 
 listview {
-    /* -eh 2 : chaque entrée occupe deux lignes, donc 8 entrées = 16 lignes */
+    /* -eh 2: each entry takes two lines, so 8 entries = 16 lines */
     lines:        8;
     scrollbar:    false;
     fixed-height: false;
     dynamic:      true;
 }
 
-/* 3px de padding gauche en plus, pour compenser la bordure de la ligne
-   sélectionnée et éviter que le texte saute d'un cran au survol. */
+/* 3px of extra left padding, to make up for the border of the selected
+   row and keep the text from jumping by one step on hover. */
 element { padding: 4px 6px 4px 9px; }
 
 element-text {
@@ -133,10 +133,10 @@ element-text {
     horizontal-align: 0.0;
 }
 
-/* Surlignage sombre + barre d'accent à gauche, et non un aplat @accent : le
-   markup des deux actions force déjà leur texte en @accent, qui deviendrait
-   invisible sur un fond de la même couleur. Contrastes sur #232833 : 14.8:1
-   pour le texte blanc, 4.5:1 pour l'accent, tous deux au-dessus du seuil AA. */
+/* Dark highlight + accent bar on the left, and not a solid @accent: the
+   markup of the two actions already forces their text to @accent, which would become
+   invisible on a background of the same colour. Contrasts on #232833: 14.8:1
+   for the white text, 4.5:1 for the accent, both above the AA threshold. */
 element selected {
     background-color: @selbg;
     text-color:       @fg;

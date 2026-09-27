@@ -1,42 +1,42 @@
--- Convertit un fichier d'art ANSI (sortie de chafa) en texte coloré statique
--- pour une section `text` du dashboard de snacks.
+-- Converts an ANSI art file (chafa's output) into static coloured text
+-- for a `text` section of the snacks dashboard.
 --
--- POURQUOI : une section `section = "terminal"` est détruite et recréée à chaque
--- appel de dashboard:update(), c'est-à-dire à chaque WinResized — donc à chaque
--- ouverture de l'explorer. D'où le clignotement, et l'art qui se replie quand la
--- fenêtre flottante du terminal n'a pas la même largeur qu'au rendu précédent.
+-- WHY: a `section = "terminal"` section is destroyed and recreated on every
+-- call to dashboard:update(), that is on every WinResized, so every time
+-- the explorer opens. Hence the flicker, and the art wrapping when the
+-- terminal's floating window is not as wide as on the previous render.
 --
--- Un texte statique fait partie du buffer du dashboard : il n'est jamais relancé,
--- jamais reflowé, et suit la mise en page sans se déformer.
+-- Static text is part of the dashboard buffer: it is never rerun,
+-- never reflowed, and follows the layout without getting distorted.
 
 local M = {}
 
-local hl_cache = {}   ---@type table<string, string>          clé "fg/bg" -> nom du groupe
-local hl_defs = {}    ---@type table<string, vim.api.keyset.highlight>  nom -> définition
+local hl_cache = {}   ---@type table<string, string>          "fg/bg" key -> group name
+local hl_defs = {}    ---@type table<string, vim.api.keyset.highlight>  name -> definition
 local hl_count = 0
 local hooked = false
 
----Plafond de sécurité. nvim s'arrête à 20000 groupes de surbrillance et de
----syntaxe confondus (E849), après quoi plus AUCUN groupe ne peut être créé —
----y compris ceux de treesitter et des LSP. On s'arrête bien avant, quitte à
----rendre la fin d'un dessin monochrome, plutôt que de casser l'éditeur.
+---Safety cap. nvim stops at 20000 highlight and syntax groups
+---combined (E849), after which NO group at all can be created,
+---treesitter's and the LSPs' included. This stops well before, even if it
+---makes the end of a drawing monochrome, rather than breaking the editor.
 local HL_BUDGET = 12000
 local warned = false
 
----Couleurs de `Normal`, lues au moment de l'APPLICATION.
----Indispensable : la config est chargée par lazy AVANT que le colorscheme ne soit
----appliqué, et le Normal par défaut de nvim a pour fond #14161b. Figer cette valeur
----au parsing peignait les cellules inversées en #14161b au lieu de #1e1e2e — un fond
----légèrement plus sombre que celui du dashboard, visible comme une ombre.
+---Colours of `Normal`, read when they are APPLIED.
+---Required: lazy loads the config BEFORE the colorscheme is
+---applied, and nvim's default Normal has a #14161b background. Freezing that value
+---at parse time painted the inverted cells #14161b instead of #1e1e2e, a background
+---slightly darker than the dashboard's, visible as a shadow.
 local function normal_colors()
     local n = vim.api.nvim_get_hl(0, { name = "Normal", link = false })
     return n.fg and ("#%06x"):format(n.fg) or "#cdd6f4",
            n.bg and ("#%06x"):format(n.bg) or "#1e1e2e"
 end
 
----Assombrit une couleur d'un pourcentage.
+---Darkens a colour by a percentage.
 ---@param hex string "#rrggbb"
----@param amount number 0 à 1
+---@param amount number 0 to 1
 ---@return string
 local function darken(hex, amount)
     local r, g, b = hex:match("^#(%x%x)(%x%x)(%x%x)$")
@@ -50,20 +50,20 @@ local function darken(hex, amount)
         math.floor(tonumber(b, 16) * f))
 end
 
----OMBRES — `vim.g.ansi_art_shadow`
+---SHADOWS: `vim.g.ansi_art_shadow`
 ---
----Les cellules en vidéo inversée sans arrière-plan explicite peignent leur glyphe
----avec le fond du buffer, donc invisible. En l'assombrissant légèrement on obtient
----un effet d'ombre portée sur les contours du dessin.
+---Reverse video cells with no explicit background paint their glyph
+---with the buffer background, so it is invisible. Darkening it slightly gives
+---a drop shadow effect on the outlines of the drawing.
 ---
----  vim.g.ansi_art_shadow = nil ou false  -- pas d'ombre (défaut)
----  vim.g.ansi_art_shadow = true          -- ombre auto : fond du thème assombri de 35 %
----  vim.g.ansi_art_shadow = 0.5           -- ombre plus marquée (0 à 1)
----  vim.g.ansi_art_shadow = "#14161b"     -- couleur imposée
+---  vim.g.ansi_art_shadow = nil or false  -- no shadow (default)
+---  vim.g.ansi_art_shadow = true          -- automatic shadow: theme background darkened by 35 %
+---  vim.g.ansi_art_shadow = 0.5           -- stronger shadow (0 to 1)
+---  vim.g.ansi_art_shadow = "#14161b"     -- fixed colour
 ---
----Prise en compte immédiate : `:lua vim.g.ansi_art_shadow = true` puis
+---To apply it right away: `:lua vim.g.ansi_art_shadow = true` then
 ---`:lua require("ansi_art").refresh()`.
----@param nbg string fond courant de Normal
+---@param nbg string current Normal background
 ---@return string
 local function shadow_color(nbg)
     local s = vim.g.ansi_art_shadow
@@ -76,22 +76,22 @@ local function shadow_color(nbg)
     return darken(nbg, type(s) == "number" and s or 0.35)
 end
 
----Remplace les marqueurs par les couleurs courantes de Normal.
----@param def table définition pouvant contenir "NORMAL_FG" / "NORMAL_BG"
+---Replaces the markers with the current Normal colours.
+---@param def table definition that may contain "NORMAL_FG" / "NORMAL_BG"
 ---@return vim.api.keyset.highlight
 local function resolve(def)
     local nfg, nbg = normal_colors()
     local out = { bold = def.bold }
-    -- NORMAL_BG en avant-plan = glyphe d'une cellule inversée : c'est lui qui porte
-    -- l'ombre éventuelle. En arrière-plan il reste le fond réel.
+    -- NORMAL_BG as foreground = glyph of an inverted cell: it is what carries
+    -- the shadow, if any. As background it stays the real background.
     out.fg = def.fg == "NORMAL_FG" and nfg or (def.fg == "NORMAL_BG" and shadow_color(nbg) or def.fg)
     out.bg = def.bg == "NORMAL_FG" and nfg or (def.bg == "NORMAL_BG" and nbg or def.bg)
     return out
 end
 
----Réapplique tous les groupes créés jusqu'ici, avec les couleurs du thème courant.
----Nécessaire parce qu'un `:colorscheme` fait `:highlight clear` et efface les
----groupes de l'art — c'est ce qui rendait le dashboard monochrome.
+---Applies again every group created so far, with the current theme colours.
+---Needed because a `:colorscheme` runs `:highlight clear` and wipes the
+---art's groups, which is what made the dashboard monochrome.
 local function reapply()
     for name, def in pairs(hl_defs) do
         vim.api.nvim_set_hl(0, name, resolve(def))
@@ -110,15 +110,15 @@ local function ensure_hook()
     })
 end
 
----Crée (ou réutilise) un groupe de surbrillance.
+---Creates (or reuses) a highlight group.
 ---@param fg string|nil  "#rrggbb"
 ---@param bg string|nil  "#rrggbb"
 ---@param bold boolean|nil
 ---@return string|nil
 local function hl_group(fg, bg, bold, reverse)
     if reverse then
-        -- Marqueurs plutôt que couleurs : elles seront résolues à l'application,
-        -- quand le colorscheme aura été chargé (voir resolve/reapply).
+        -- Markers rather than colours: they are resolved when applied,
+        -- once the colorscheme has loaded (see resolve/reapply).
         fg, bg = bg or "NORMAL_BG", fg or "NORMAL_FG"
     end
     if not fg and not bg and not bold then
@@ -147,9 +147,9 @@ local function hl_group(fg, bg, bold, reverse)
     return name
 end
 
----Couleur d'un des 16 codes ANSI de base, prise dans la palette du colorscheme.
----catppuccin (comme la plupart) renseigne vim.g.terminal_color_0..15, ce qui garde
----le rendu cohérent avec le thème plutôt que d'imposer des rouges et verts fixes.
+---Colour of one of the 16 basic ANSI codes, taken from the colorscheme palette.
+---catppuccin (like most) sets vim.g.terminal_color_0..15, which keeps
+---the rendering consistent with the theme rather than forcing fixed reds and greens.
 ---@param idx integer 0..15
 ---@return string|nil
 local function palette(idx)
@@ -157,7 +157,7 @@ local function palette(idx)
     if type(v) == "string" and v:match("^#%x%x%x%x%x%x$") then
         return v
     end
-    -- repli : couleurs ANSI classiques, si le thème ne définit pas sa palette
+    -- fallback: classic ANSI colours, if the theme does not define its palette
     local fallback = {
         [0] = "#45475a", [1] = "#f38ba8", [2] = "#a6e3a1", [3] = "#f9e2af",
         [4] = "#89b4fa", [5] = "#f5c2e7", [6] = "#94e2d5", [7] = "#bac2de",
@@ -167,13 +167,13 @@ local function palette(idx)
     return fallback[idx]
 end
 
----Arrondit une composante RVB à un pas donné.
+---Rounds an RGB component to a given step.
 ---
----POURQUOI : chaque couple (avant-plan, arrière-plan) rencontré devient un
----groupe de surbrillance. En truecolor, un GIF de 40 images en produit près de
----19000 à lui seul — nvim en refuse au-delà de 20000, treesitter et les LSP
----compris (E849). Arrondir au multiple de 8 le plus proche (erreur maximale de
----4 sur 255, invisible) fait retomber le compte autour de 4800.
+---WHY: each (foreground, background) pair met becomes a
+---highlight group. In truecolor, a 40 frame GIF produces nearly
+---19000 on its own, and nvim refuses more than 20000, treesitter and the LSPs
+---included (E849). Rounding to the nearest multiple of 8 (maximum error of
+---4 out of 255, invisible) brings the count down to about 4800.
 ---@param v integer
 ---@param step integer
 ---@return integer
@@ -181,15 +181,15 @@ local function snap(v, step)
     return math.min(255, math.floor((v + step / 2) / step) * step)
 end
 
----Applique une séquence SGR à l'état courant.
----@param params string  le corps de la séquence, sans "\27[" ni "m"
----@param state table    { fg = ..., bg = ..., q = pas de quantification|nil }
+---Applies an SGR sequence to the current state.
+---@param params string  the body of the sequence, without "\27[" or "m"
+---@param state table    { fg = ..., bg = ..., q = quantization step|nil }
 local function apply_sgr(params, state)
     local codes = {}
     for n in params:gmatch("[0-9]+") do
         codes[#codes + 1] = tonumber(n)
     end
-    if #codes == 0 then           -- "\27[m" équivaut à "\27[0m"
+    if #codes == 0 then           -- "\27[m" is the same as "\27[0m"
         codes = { 0 }
     end
     local i = 1
@@ -200,10 +200,10 @@ local function apply_sgr(params, state)
         elseif c == 1 then
             state.bold = true
         elseif c == 7 then
-            -- Vidéo inversée : échange avant-plan et arrière-plan.
-            -- chafa s'en sert pour économiser des octets (52 fois dans le logo).
-            -- L'ignorer donnait 52 cellules aux couleurs inversées, ce qui déformait
-            -- visiblement l'image par rapport à ce qu'affiche le terminal.
+            -- Reverse video: swaps foreground and background.
+            -- chafa uses it to save bytes (52 times in the logo).
+            -- Ignoring it gave 52 cells with inverted colours, which visibly
+            -- distorted the image compared to what the terminal shows.
             state.reverse = true
         elseif c == 27 then
             state.reverse = nil
@@ -222,11 +222,11 @@ local function apply_sgr(params, state)
             if c == 38 then state.fg = col else state.bg = col end
             i = i + 4
         elseif (c == 38 or c == 48) and codes[i + 1] == 5 then
-            local col = palette(codes[i + 2] or 0)       -- palette 256 : seuls les 16 premiers
+            local col = palette(codes[i + 2] or 0)       -- 256 palette: only the first 16
             if c == 38 then state.fg = col else state.bg = col end
             i = i + 2
-        -- Couleurs ANSI de base. git --color=always n'émet QUE celles-ci
-        -- (31 rouge, 32 vert) : sans ce cas, le git diff restait monochrome.
+        -- Basic ANSI colours. git --color=always emits ONLY these
+        -- (31 red, 32 green): without this case, the git diff stayed monochrome.
         elseif c >= 30 and c <= 37 then
             state.fg = palette(c - 30)
         elseif c >= 90 and c <= 97 then
@@ -240,14 +240,14 @@ local function apply_sgr(params, state)
     end
 end
 
----Traduit une chaîne ANSI en une liste de LIGNES de morceaux colorés.
----Découpage nécessaire pour l'animation : chaque ligne devient un extmark posé
----par-dessus le buffer (voir lua/ansi_anim.lua). `M.parse` n'est plus qu'un
----aplatissement de ce résultat.
+---Turns an ANSI string into a list of LINES of coloured pieces.
+---The split is needed for the animation: each line becomes an extmark laid
+---over the buffer (see lua/ansi_anim.lua). `M.parse` is now just a
+---flattening of this result.
 ---@param raw string
----@param opts? { quantize?: integer }  arrondit les couleurs 24 bits à ce pas
----                                     (voir `snap` : indispensable pour un GIF)
----@return table[][] lines  une liste de morceaux par ligne
+---@param opts? { quantize?: integer }  rounds 24-bit colours to this step
+---                                     (see `snap`: required for a GIF)
+---@return table[][] lines  one list of pieces per line
 function M.parse_lines(raw, opts)
     local lines = {}
     local state = { fg = nil, bg = nil, q = opts and opts.quantize }
@@ -256,9 +256,9 @@ function M.parse_lines(raw, opts)
         local chunks = {}
         local pos = 1
         while pos <= #line do
-            -- Toutes les séquences CSI, pas seulement les SGR : celles qui ne se
-            -- terminent pas par « m » (curseur, effacement d'écran…) sont simplement
-            -- jetées. Les traiter ici évite qu'elles finissent dans le texte affiché.
+            -- Every CSI sequence, not only SGR: those that do not
+            -- end with "m" (cursor, screen clearing…) are simply
+            -- dropped. Handling them here keeps them out of the displayed text.
             local s, e, params, final = line:find("\27%[([0-9;?]*)(%a)", pos)
             if s then
                 if s > pos then
@@ -281,9 +281,9 @@ function M.parse_lines(raw, opts)
     return lines
 end
 
----Traduit une chaîne contenant des couleurs ANSI en `snacks.dashboard.Text`.
----Sert autant pour un fichier d'art que pour la sortie colorée d'une commande
----(`git diff --color=always`, par exemple).
+---Turns a string holding ANSI colours into `snacks.dashboard.Text`.
+---Used both for an art file and for the coloured output of a command
+---(`git diff --color=always`, for example).
 ---@param raw string
 ---@param opts? { quantize?: integer }
 ---@return table[] chunks
@@ -294,14 +294,14 @@ function M.parse(raw, opts)
         chunks[#chunks + 1] = { "\n" }
     end
 
-    -- retire le saut de ligne final, sinon le dashboard gagne une ligne vide
+    -- drops the final newline, or the dashboard gains an empty line
     if #chunks > 0 and chunks[#chunks][1] == "\n" then
         table.remove(chunks)
     end
     return chunks
 end
 
----Lit un fichier d'art ANSI.
+---Reads an ANSI art file.
 ---@param path string
 ---@return table[]|nil chunks, string|nil err
 function M.read(path)
@@ -314,14 +314,14 @@ function M.read(path)
     return M.parse(raw)
 end
 
----Réapplique tous les groupes avec les réglages courants.
----À appeler après avoir changé `vim.g.ansi_art_shadow` pour voir l'effet
----sans redémarrer nvim (le dashboard doit ensuite être rouvert).
+---Applies every group again with the current settings.
+---To call after changing `vim.g.ansi_art_shadow` to see the effect
+---without restarting nvim (the dashboard then has to be reopened).
 function M.refresh()
     reapply()
 end
 
----Largeur visible maximale (utile pour centrer ou dimensionner).
+---Maximum visible width (useful to centre or size).
 ---@param chunks table[]
 ---@return integer
 function M.width(chunks)
@@ -333,7 +333,7 @@ function M.width(chunks)
                 max = math.max(max, cur); cur = 0
             end
         end
-        cur = cur - 1  -- compense le "\0" sentinelle
+        cur = cur - 1  -- makes up for the "\0" sentinel
     end
     return math.max(max, cur)
 end

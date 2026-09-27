@@ -16,8 +16,8 @@ end
 vim.opt.rtp:prepend(lazypath)
 
 local function should_show_image()
-    local ui = vim.api.nvim_list_uis()[1]          -- Récupère les dimensions du terminal
-    return ui and ui.width > 50 and ui.height > 40 -- Ajuste ces valeurs selon tes besoins
+    local ui = vim.api.nvim_list_uis()[1]          -- Gets the terminal size
+    return ui and ui.width > 50 and ui.height > 40 -- Adjust these values to your needs
 end
 
 
@@ -30,10 +30,10 @@ local function navigate_to_parent_smooth(picker)
     local parent_dir = vim.fs.dirname(current_cwd)
 
     if parent_dir and parent_dir ~= current_cwd then
-        -- Enregistre le répertoire actuel dans l’historique
+        -- Saves the current directory in the history
         table.insert(picker_state.history, current_cwd)
 
-        -- Mise à jour du répertoire
+        -- Updates the directory
         vim.cmd("cd " .. vim.fn.fnameescape(parent_dir))
         picker:close()
 
@@ -201,7 +201,7 @@ require("lazy").setup({
     --             preview_cutoff = 120,
     --           },
     --           sort_mru = true;
-    --           ignore_current_buffer = true, -- Ignorer le buffer actif
+    --           ignore_current_buffer = true, -- Ignore the active buffer
     --         },
     --         current_buffer_fuzzy_find = {
     --           previewer = true,
@@ -211,7 +211,7 @@ require("lazy").setup({
     --           },
     --         },
     --
-    --         -- *************** VERSION AVC CHEMIN MAIS quand meme fichiers ************************
+    --         -- *************** VERSION WITH PATH BUT STILL FILES ************************
     --         live_grep = (function()
     --             local filename_registry = {}
     --
@@ -219,7 +219,7 @@ require("lazy").setup({
     --                 attach_mappings = function(_, map)
     --                     filename_registry = {}
     --                     vim.schedule(function()
-    --                         -- Création des highlights si non existants
+    --                         -- Creates the highlights if they do not exist
     --                         vim.api.nvim_set_hl(0, "TelescopePathSeparator", { fg = "#6C7085" })
     --                         vim.api.nvim_set_hl(0, "TelescopeMatching", {})
     --                     end)
@@ -235,7 +235,7 @@ require("lazy").setup({
     --                     local dir_path = vim.fn.fnamemodify(full_path, ":h")
     --                     local relative_dir = vim.fn.fnamemodify(dir_path, ":~:.") .. "/"
     --
-    --                     -- Gestion des doublons
+    --                     -- Handling duplicates
     --                     if not filename_registry[basename] then
     --                         filename_registry[basename] = {
     --                             dirs = { [dir_path] = true },
@@ -263,7 +263,7 @@ require("lazy").setup({
     --                             local display_text = icon .. " "
     --                             local highlights = {}
     --
-    --                             -- Highlight pour l'icône
+    --                             -- Highlight for the icon
     --                             table.insert(highlights, {
     --                                 { 0, icon_width + 1 },
     --                                 icon_hl
@@ -271,7 +271,7 @@ require("lazy").setup({
     --
     --                             if show_path then
     --                                 display_text = display_text .. relative_dir
-    --                                 -- Highlight pour le chemin
+    --                                 -- Highlight for the path
     --                                 table.insert(highlights, {
     --                                     { icon_width + 2, icon_width + 2 + dir_width },
     --                                     "TelescopePathSeparator"
@@ -298,7 +298,7 @@ require("lazy").setup({
     --                 attach_mappings = function(_, map)
     --                     filename_registry = {}
     --                     vim.schedule(function()
-    --                         -- Création des highlights si non existants
+    --                         -- Creates the highlights if they do not exist
     --                         vim.api.nvim_set_hl(0, "TelescopePathSeparator", { fg = "#6C7085" })
     --                         -- vim.api.nvim_set_hl(0, "DevIconDefault", { fg = "#FFFFFF" })
     --                         vim.api.nvim_set_hl(0, "TelescopeMatching", {})
@@ -315,7 +315,7 @@ require("lazy").setup({
     --                     local dir_path = vim.fn.fnamemodify(full_path, ":h")
     --                     local relative_dir = vim.fn.fnamemodify(dir_path, ":~:.") .. "/"
     --
-    --                     -- Gestion des doublons
+    --                     -- Handling duplicates
     --                     if not filename_registry[basename] then
     --                         filename_registry[basename] = {
     --                             dirs = { [dir_path] = true },
@@ -343,7 +343,7 @@ require("lazy").setup({
     --                             local display_text = icon .. " "
     --                             local highlights = {}
     --
-    --                             -- Highlight pour l'icône
+    --                             -- Highlight for the icon
     --                             table.insert(highlights, {
     --                                 { 0, icon_width + 1 },
     --                                 icon_hl
@@ -351,7 +351,7 @@ require("lazy").setup({
     --
     --                             if show_path then
     --                                 display_text = display_text .. relative_dir
-    --                                 -- Highlight pour le chemin
+    --                                 -- Highlight for the path
     --                                 table.insert(highlights, {
     --                                     { icon_width + 2, icon_width + 2 + dir_width },
     --                                     "TelescopePathSeparator"
@@ -371,9 +371,9 @@ require("lazy").setup({
     --         end)(),
     --
     --
-    --         -- *********** SANS CHEMIN GRIS *********************
+    --         -- *********** WITHOUT GREY PATH *********************
     --         -- grep_string = {
-    --         --     -- Désactiver le surlignage
+    --         --     -- Disable highlighting
     --         --     attach_mappings = function(_, map)
     --         --         vim.schedule(function()
     --         --             vim.api.nvim_set_hl(0, "TelescopeMatching", {})
@@ -383,7 +383,7 @@ require("lazy").setup({
     --         --     only_sort_text = true,
     --         --     previewer = true,
     --         --     entry_maker = function(line)
-    --         --         -- line au format : "filepath:line:col:text"
+    --         --         -- line in the format: "filepath:line:col:text"
     --         --         local filename, lnum, col = line:match("^([^:]+):(%d+):(%d+):")
     --         --         local basename = filename and vim.fn.fnamemodify(filename, ":t") or line
     --         --
@@ -392,7 +392,7 @@ require("lazy").setup({
     --         --         local displayer = entry_display.create({
     --         --             separator = " ",
     --         --             items = {
-    --         --                 { width = 2 }, -- icône
+    --         --                 { width = 2 }, -- icon
     --         --                 { remaining = true }, -- filename
     --         --             },
     --         --         })
@@ -415,13 +415,13 @@ require("lazy").setup({
     --         --
     --         -- },
     --
-    --         -- **************** VERSION AVEC CHEMIN RELATIF EN GRIS ********************
+    --         -- **************** VERSION WITH THE RELATIVE PATH IN GREY ********************
     --         -- live_grep = {
-    --         --     -- désactiver le surlignage
+    --         --     -- disable highlighting
     --         --     attach_mappings = function(_, map)
     --         --         vim.schedule(function()
     --         --             vim.api.nvim_set_hl(0, "TelescopeMatching", {})
-    --         --             -- Définit la couleur grise pour le chemin
+    --         --             -- Sets the grey colour for the path
     --         --             vim.api.nvim_set_hl(0, "TelescopePathSeparator", { fg = "#6C7085" })
     --         --         end)
     --         --         return true
@@ -433,7 +433,7 @@ require("lazy").setup({
     --         --         local directory, filename_part = "", line
     --         --
     --         --         if filename then
-    --         --             local relative_path = vim.fn.fnamemodify(filename, ":~:.") -- Chemin relatif
+    --         --             local relative_path = vim.fn.fnamemodify(filename, ":~:.") -- Relative path
     --         --             directory, filename_part = relative_path:match("(.*/)([^/]+)$")
     --         --             if not directory then
     --         --                 directory = ""
@@ -452,13 +452,13 @@ require("lazy").setup({
     --         --                 local display_line = icon_padding .. directory .. filename_part
     --         --
     --         --                 local highlights = {
-    --         --                     { { 0, #icon_padding }, icon_hl }, -- Couleur de l'icône
+    --         --                     { { 0, #icon_padding }, icon_hl }, -- Icon colour
     --         --                 }
     --         --
     --         --                 if #directory > 0 then
     --         --                     table.insert(highlights, {
     --         --                         { #icon_padding, #icon_padding + #directory },
-    --         --                         "TelescopePathSeparator" -- Couleur grise pour le chemin
+    --         --                         "TelescopePathSeparator" -- Grey colour for the path
     --         --                     })
     --         --                 end
     --         --
@@ -474,11 +474,11 @@ require("lazy").setup({
     --         --
     --         -- grep_string = {
     --         --
-    --         --     -- désactiver le surlignage
+    --         --     -- disable highlighting
     --         --     attach_mappings = function(_, map)
     --         --         vim.schedule(function()
     --         --             vim.api.nvim_set_hl(0, "TelescopeMatching", {})
-    --         --             -- Définit la couleur grise pour le chemin
+    --         --             -- Sets the grey colour for the path
     --         --             vim.api.nvim_set_hl(0, "TelescopePathSeparator", { fg = "#6C7085" })
     --         --         end)
     --         --         return true
@@ -490,7 +490,7 @@ require("lazy").setup({
     --         --         local directory, filename_part = "", line
     --         --
     --         --         if filename then
-    --         --             local relative_path = vim.fn.fnamemodify(filename, ":~:.") -- Chemin relatif
+    --         --             local relative_path = vim.fn.fnamemodify(filename, ":~:.") -- Relative path
     --         --             directory, filename_part = relative_path:match("(.*/)([^/]+)$")
     --         --             if not directory then
     --         --                 directory = ""
@@ -509,13 +509,13 @@ require("lazy").setup({
     --         --                 local display_line = icon_padding .. directory .. filename_part
     --         --
     --         --                 local highlights = {
-    --         --                     { { 0, #icon_padding }, icon_hl }, -- Couleur de l'icône
+    --         --                     { { 0, #icon_padding }, icon_hl }, -- Icon colour
     --         --                 }
     --         --
     --         --                 if #directory > 0 then
     --         --                     table.insert(highlights, {
     --         --                         { #icon_padding, #icon_padding + #directory },
-    --         --                         "TelescopePathSeparator" -- Couleur grise pour le chemin
+    --         --                         "TelescopePathSeparator" -- Grey colour for the path
     --         --                     })
     --         --                 end
     --         --
@@ -582,16 +582,16 @@ require("lazy").setup({
             local sorters = require("telescope.sorters")
             local from_entry = require("telescope.from_entry")
 
-            -- Table pour stocker l'état des dossiers cachés par path
+            -- Table holding the hidden folders state per path
             local cd_state = {}
 
-            -- Fonction principale Cd avec closure pour capturer l'état
+            -- Main Cd function, with a closure to capture the state
             local function createCdFunction(initial_path, initial_show_hidden)
                 return function()
                     local path = initial_path or "."
                     local show_hidden = initial_show_hidden or false
 
-                    -- Stocker l'état pour ce path spécifique
+                    -- Store the state for this specific path
                     cd_state[path] = show_hidden
 
                     local cmd = { "fd", ".", path, "-t", "d", "--ignore-file", vim.fn.expand(
@@ -610,7 +610,7 @@ require("lazy").setup({
                         previewer = false,
                         sorter = sorters.get_fuzzy_file(),
                         attach_mappings = function(prompt_bufnr, map)
-                            -- sélectionner dossier et changer cwd
+                            -- select a folder and change cwd
                             actions.select_default:replace(function()
                                 local entry = action_state.get_selected_entry()
                                 actions.close(prompt_bufnr)
@@ -622,7 +622,7 @@ require("lazy").setup({
                                 { title = "Directory changed" })
                             end)
 
-                            -- Ctrl+h pour toggle les hidden files
+                            -- Ctrl+h toggles the hidden files
                             local toggleHidden = function()
                                 actions.close(prompt_bufnr)
                                 createCdFunction(path, not show_hidden)()
@@ -678,9 +678,9 @@ require("lazy").setup({
                         "--column",
                         "--smart-case",
                         "--hidden",
-                        -- Suivre les liens symboliques : les configs de ~/.config pointent
-                        -- vers le dépôt dotfiles. Sans --follow, rg les ignore et <leader>fg
-                        -- ne voit rien (mesuré dans ~/.config/nvim : 16 fichiers sans, 33 avec).
+                        -- Follow symlinks: the configs in ~/.config point
+                        -- to the dotfiles repository. Without --follow, rg skips them and <leader>fg
+                        -- sees nothing (measured in ~/.config/nvim: 16 files without, 33 with).
                         "--follow",
                         "--glob=!.git/",
                     },
@@ -716,7 +716,7 @@ require("lazy").setup({
                 pickers = {
                     find_files = {
                         sort_mru = true,
-                        -- Suivre les liens symboliques (dotfiles) et montrer les fichiers cachés
+                        -- Follow symlinks (dotfiles) and show hidden files
                         follow = true,
                         hidden = true,
                         layout_config = {
@@ -725,8 +725,8 @@ require("lazy").setup({
                         },
                     },
                     live_grep = {
-                        -- vimgrep_arguments contient déjà --follow ; ceci ne concerne
-                        -- que la liste des fichiers parcourus par live_grep
+                        -- vimgrep_arguments already holds --follow, this only affects
+                        -- the list of files live_grep walks through
                         follow = true,
                         hidden = true,
                     },
@@ -836,9 +836,9 @@ require("lazy").setup({
     --     end,
     -- },
 
-    -- Désactivé : plus utilisé, et c'est lui qui réclamait le trousseau de clés
-    -- (son jeton d'authentification y est stocké) à chaque ouverture de nvim.
-    -- Pour le réactiver : décommenter, puis :Lazy sync
+    -- Disabled: no longer used, and it is what asked for the keyring
+    -- (its auth token is stored there) every time nvim opened.
+    -- To enable it again: uncomment, then :Lazy sync
     -- {
     --     "github/copilot.vim",
     --     config = function()
@@ -857,8 +857,8 @@ require("lazy").setup({
         lazy = false,
 
         config = function()
-            -- attention, c'est moi qui est modifié à la main le code source pour pouvoir rajouter la ligne ["<cr>"] = "open",
-            -- dans le fichier "neo-tree.nvim/lua/neo-tree/sources/filesystem/lib/filter.lua", après la fonction 
+            -- careful, I edited the source code by hand to add the line ["<cr>"] = "open",
+            -- in the file "neo-tree.nvim/lua/neo-tree/sources/filesystem/lib/filter.lua", after the function 
             --     close_clear_filter = function(_state, _scroll_padding)
             --[[ 
 
@@ -866,16 +866,16 @@ require("lazy").setup({
                 local fs_cmds = require("neo-tree.sources.filesystem.commands")
                 local utils = require("neo-tree.utils")
 
-                -- Récupère le buffer actif avant d'ouvrir
+                -- Gets the active buffer before opening
                 local bufnr_before = vim.api.nvim_get_current_buf()
 
-                -- Appelle la commande native open de Neo-tree
+                -- Calls Neo-tree's native open command
                 fs_cmds.open(state_)
 
-                -- Récupère le buffer actif après ouverture
+                -- Gets the active buffer after opening
                 local bufnr_after = vim.api.nvim_get_current_buf()
 
-                -- Supprime les buffers No Name laissés derrière
+                -- Deletes the No Name buffers left behind
                 for _, b in ipairs(vim.api.nvim_list_bufs()) do
                     if vim.api.nvim_buf_get_name(b) == "" and b ~= bufnr_after then
                         vim.api.nvim_buf_delete(b, { force = true })
@@ -885,16 +885,16 @@ require("lazy").setup({
 
             ]]
 
-            -- Ajout de la configuration pour les événements de déplacement/renommage
+            -- Configuration for the move/rename events
             local function on_move(data)
                 Snacks.rename.on_rename_file(data.source, data.destination)
             end
             local events = require("neo-tree.events")
 
             require("neo-tree").setup({
-                -- Affiche la cible des liens symboliques.
-                -- Le composant existe déjà dans le renderer par défaut de neo-tree,
-                -- il est simplement désactivé d'origine.
+                -- Shows the target of symlinks.
+                -- The component already exists in neo-tree's default renderer,
+                -- it is just disabled out of the box.
                 default_component_configs = {
                     symlink_target = {
                         enabled = true,
@@ -967,10 +967,10 @@ require("lazy").setup({
                           if not node then return end
 
                           local api = vim.api
-                          local tree_win = api.nvim_get_current_win() -- fenêtre Neo-tree
+                          local tree_win = api.nvim_get_current_win() -- Neo-tree window
                           local main_win
 
-                          -- trouver la première fenêtre qui n'est pas Neo-tree
+                          -- find the first window that is not Neo-tree
                           for _, win in ipairs(api.nvim_list_wins()) do
                               if win ~= tree_win then
                                   main_win = win
@@ -979,12 +979,12 @@ require("lazy").setup({
                           end
 
                           if node.type == "file" and main_win then
-                              -- ouvrir le fichier dans la fenêtre principale
+                              -- open the file in the main window
                               api.nvim_win_call(main_win, function()
                                   vim.cmd.edit({ args = { node.path }, mods = { silent = true, keepalt = true } })
                               end)
                           elseif node.type == "directory" then
-                              -- ouvrir le dossier dans Neo-tree normalement
+                              -- open the folder in Neo-tree as usual
                               require("neo-tree.sources.filesystem.commands").open(state)
                           end
                       end,
@@ -994,10 +994,10 @@ require("lazy").setup({
                           if not node then return end
 
                           local api = vim.api
-                          local tree_win = api.nvim_get_current_win() -- fenêtre Neo-tree
+                          local tree_win = api.nvim_get_current_win() -- Neo-tree window
                           local main_win
 
-                          -- trouver la première fenêtre qui n'est pas Neo-tree
+                          -- find the first window that is not Neo-tree
                           for _, win in ipairs(api.nvim_list_wins()) do
                               if win ~= tree_win then
                                   main_win = win
@@ -1006,12 +1006,12 @@ require("lazy").setup({
                           end
 
                           if node.type == "file" and main_win then
-                              -- ouvrir le fichier dans la fenêtre principale
+                              -- open the file in the main window
                               api.nvim_win_call(main_win, function()
                                   vim.cmd.edit({ args = { node.path }, mods = { silent = true, keepalt = true } })
                               end)
                           elseif node.type == "directory" then
-                              -- ouvrir le dossier dans Neo-tree normalement
+                              -- open the folder in Neo-tree as usual
                               require("neo-tree.sources.filesystem.commands").open(state)
                           end
                       end,
@@ -1021,10 +1021,10 @@ require("lazy").setup({
                           if not node then return end
 
                           local api = vim.api
-                          local tree_win = api.nvim_get_current_win() -- fenêtre Neo-tree
+                          local tree_win = api.nvim_get_current_win() -- Neo-tree window
                           local main_win
 
-                          -- trouver la première fenêtre qui n'est pas Neo-tree
+                          -- find the first window that is not Neo-tree
                           for _, win in ipairs(api.nvim_list_wins()) do
                               if win ~= tree_win then
                                   main_win = win
@@ -1033,12 +1033,12 @@ require("lazy").setup({
                           end
 
                           if node.type == "file" and main_win then
-                              -- ouvrir le fichier dans la fenêtre principale
+                              -- open the file in the main window
                               api.nvim_win_call(main_win, function()
                                   vim.cmd.edit({ args = { node.path }, mods = { silent = true, keepalt = true } })
                               end)
                           elseif node.type == "directory" then
-                              -- ouvrir le dossier dans Neo-tree normalement
+                              -- open the folder in Neo-tree as usual
                               require("neo-tree.sources.filesystem.commands").open(state)
                           end
                       end,
@@ -1122,7 +1122,7 @@ require("lazy").setup({
                         -- ['<key>'] = function(state) ... end,
                       },
                       fuzzy_finder_mappings = { -- define keymaps for filter popup window in fuzzy_finder_mode
-                        ["<cr>"] = "open", --<<<------------------------------------------- COMMANDE PERSO (cf commentaire plus haut)
+                        ["<cr>"] = "open", --<<<------------------------------------------- CUSTOM COMMAND (see the comment above)
                         ["<down>"] = "move_cursor_down",
                         ["<C-n>"] = "move_cursor_down",
                         ["<up>"] = "move_cursor_up",
@@ -1177,15 +1177,15 @@ require("lazy").setup({
 
             })
 
-            -- Raccourcit la cible affichée pour un lien symbolique.
-            -- neo-tree rend UNE ligne par fichier : impossible d'y mettre un retour à la
-            -- ligne, on abrège donc le chemin plutôt que de l'afficher en entier.
-            --   avant : ➛ /home/for/Documents/programming/github-noforest/dotfiles/modules/nvim/.config/nvim/lua/plugins/lazy.lua
-            --   après : ➛ dotfiles:…/plugins/lazy.lua
+            -- Shortens the target shown for a symlink.
+            -- neo-tree draws ONE line per file: no room for a line break,
+            -- so the path is abbreviated instead of shown in full.
+            --   before: ➛ /home/for/Documents/programming/github-noforest/dotfiles/modules/nvim/.config/nvim/lua/plugins/lazy.lua
+            --   after:  ➛ dotfiles:…/plugins/lazy.lua
             --
-            -- L'assignation se fait sur le module lui-même : setup() écrase la clé
-            -- `components` de la config source par ce module (setup/init.lua:537),
-            -- donc la passer dans la config utilisateur ne fonctionne pas.
+            -- The assignment is made on the module itself: setup() overwrites the
+            -- `components` key of the source config with this module (setup/init.lua:537),
+            -- so passing it in the user config does not work.
             local fs_components = require("neo-tree.sources.filesystem.components")
             fs_components.symlink_target = function(config, node, _)
                 if not node.is_link then
@@ -1229,7 +1229,7 @@ require("lazy").setup({
     --     version = "*",
     --     dependencies = 'nvim-tree/nvim-web-devicons',
     -- },
-    -- NOTE: BUFFERS en haut de la fenêtre
+    -- NOTE: BUFFERS at the top of the window
     {
         "romgrk/barbar.nvim",
         dependencies = {
@@ -1309,7 +1309,7 @@ require("lazy").setup({
                 callback = set_highlights,
             })
 
-            -- NOTE: Exclure les buffers codediff de barbar
+            -- NOTE: Exclude the codediff buffers from barbar
             -- vim.api.nvim_create_autocmd("BufAdd", {
             --     callback = function(ev)
             --         local name = vim.api.nvim_buf_get_name(ev.buf)
@@ -1350,8 +1350,8 @@ require("lazy").setup({
     --     max_width_window_percentage = math.huge,
     --     max_height_window_percentage = math.huge,
     --
-    --     -- CONFIGURATION POUR ÉVITER LA DISPARITION AVEC BLINK.CMP :
-    --     window_overlap_clear_enabled = false, -- Empêche d'effacer l'image quand une popup s'ouvre
+    --     -- CONFIGURATION TO AVOID THE IMAGE VANISHING WITH BLINK.CMP:
+    --     window_overlap_clear_enabled = false, -- Keeps the image from being cleared when a popup opens
     --     window_overlap_clear_ft_ignore = { 
     --       "cmp_menu", 
     --       "cmp_docs", 
@@ -1548,11 +1548,11 @@ require("lazy").setup({
                 if vim.bo.filetype == 'tex' then
                     return '% %s'
                 end
-                -- Sans parser Treesitter pour le buffer, Comment.ft.calculate()
-                -- appelle parser:lang() sur un nil (nvim >= 0.11 renvoie nil au lieu
-                -- de lever une erreur) : gcc/gbc échouent en silence. Cas concret :
-                -- filetype zsh (.zshrc, .zshenv, .p10k.zsh) — aucun parser zsh installé.
-                -- On retombe alors sur le 'commentstring' du buffer.
+                -- Without a Treesitter parser for the buffer, Comment.ft.calculate()
+                -- calls parser:lang() on a nil (nvim >= 0.11 returns nil instead
+                -- of raising an error): gcc/gbc fail silently. Concrete case:
+                -- the zsh filetype (.zshrc, .zshenv, .p10k.zsh), no zsh parser installed.
+                -- It then falls back to the buffer's 'commentstring'.
                 if not vim.treesitter.get_parser(0, nil, { error = false }) then
                     return vim.bo.commentstring
                 end
@@ -1568,13 +1568,13 @@ require("lazy").setup({
     --         -- VimTeX configuration goes here, e.g.
     --         vim.g.vimtex_view_method = "zathura"
     --         vim.g.maplocalleader = "ù"
-    --         vim.g.vimtex_quickfix_mode = 0 -- enlève la fenêtre de warning à chaque fois que je compile.
+    --         vim.g.vimtex_quickfix_mode = 0 -- removes the warning window every time I compile.
     --     end
     -- },
 
     {
         -- ùll
-        -- IMPORTANT: faire: ':h vimtex' et aller dans default mapping
+        -- IMPORTANT: run ':h vimtex' and go to default mapping
         -- --------------------------------------------------------------------- ~
        --  LHS              RHS                                          MODE ~
        --  -------------------------------------------------------------------- ~
@@ -1592,21 +1592,21 @@ require("lazy").setup({
        --                   (replaces vimtex-toggle-main, still :VimtexToggleMain)
 
         "lervag/vimtex",
-        lazy = false, -- on ne veut pas charger VimTeX en lazy
-        -- tag = "v2.15", -- décommente si tu veux figer la version
+        lazy = false, -- we don't want to lazy load VimTeX
+        -- tag = "v2.15", -- uncomment to pin the version
         init = function()
-            -- Configuration de base
+            -- Basic configuration
             vim.g.vimtex_view_method = "zathura"
             vim.g.maplocalleader = "ù"
-            vim.g.vimtex_quickfix_mode = 0 -- enlève la fenêtre de warning à chaque compilation
+            vim.g.vimtex_quickfix_mode = 0 -- removes the warning window on every compilation
 
-            -- ajouter pour gagner nettement de la performance
+            -- added for a clear performance gain
             vim.g.vimtex_complete_enabled = 0
             vim.g.vimtex_syntax_enabled = 1
             vim.g.vimtex_syntax_conceal_disable = 1
             vim.g.vimtex_indent_enabled = 0
 
-            -- --- Compilateur par défaut : PdfLaTeX ---
+            -- --- Default compiler: PdfLaTeX ---
             vim.g.vimtex_compiler_method = "latexmk"
             vim.g.vimtex_compiler_latexmk = {
                 aux_dir = '_latex_aux',
@@ -1615,7 +1615,7 @@ require("lazy").setup({
                 continuous = 1,
                 executable = 'latexmk',
                 options = {
-                    '-pdf', -- compile avec pdflatex par défaut
+                    '-pdf', -- compiles with pdflatex by default
                     '-interaction=nonstopmode',
                     '-synctex=1',
                 },
@@ -1752,7 +1752,7 @@ require("lazy").setup({
     {
         'nvim-treesitter/nvim-treesitter',
         branch = 'main',
-        lazy = false,  -- le README dit explicitement no lazy loading
+        lazy = false,  -- the README explicitly says no lazy loading
         build = ':TSUpdate',
         config = function()
             require('nvim-treesitter').setup({
@@ -1857,7 +1857,7 @@ require("lazy").setup({
     -- },
 
     {
-        -- IMPORTANT: C'est MON PLUGIN LOCAL: codediff_milestone_noah
+        -- IMPORTANT: this is MY LOCAL PLUGIN: codediff_milestone_noah
         dir = vim.fn.expand("~/.config/nvim/plugins/codediff_milestone_noah"),
         name = "codediff",
         dependencies = { "MunifTanjim/nui.nvim" },
@@ -1979,7 +1979,7 @@ require("lazy").setup({
     --             },
     --             hooks = {
     --                 diff_buf_win_enter = function(bufnr, winid, ctx)
-    --                     -- Focus le côté droit (modified)
+    --                     -- Focus the right side (modified)
     --                     if ctx.layout_name:match("^diff2") and ctx.symbol == "b" then
     --                         vim.schedule(function()
     --                             vim.api.nvim_set_current_win(winid)
@@ -2092,7 +2092,7 @@ require("lazy").setup({
                     lualine_c = {
                         {
                             'filename',
-                            path = 1, -- Affiche le chemin relatif
+                            path = 1, -- Shows the relative path
                         }
                     },
                     lualine_x = { 'encoding', 'fileformat', 'filetype' },
@@ -2105,7 +2105,7 @@ require("lazy").setup({
                     lualine_c = {
                         {
                             'filename',
-                            path = 1, -- Affiche le chemin relatif
+                            path = 1, -- Shows the relative path
                         }
                     },
                     lualine_x = { 'location' },
@@ -2121,7 +2121,7 @@ require("lazy").setup({
     },
 
 
-    -- {"ggandor/leap.nvim"}, -- qd je serai un vim-experienced guy
+    -- {"ggandor/leap.nvim"}, -- once I am a vim-experienced guy
 
     -- {
     --   "leath-dub/snipe.nvim",
@@ -2137,18 +2137,18 @@ require("lazy").setup({
     --   config = function()
     --     local snipe = require("snipe")
     --
-    --     -- Surcharge de la méthode de formatage des buffers
+    --     -- Overrides the buffer formatting method
     --     local function custom_format(buffer)
     --       local max_path_width = 2
     --       local path = buffer.path or ""
-    --       -- Troncature des chemins trop longs
+    --       -- Truncates paths that are too long
     --       if #path > max_path_width then
     --         path = "…" .. path:sub(-max_path_width)
     --       end
     --       return string.format("[%d] %s", buffer.bufnr, path)
     --     end
     --
-    --     -- Configuration de Snipe avec la fonction de formatage personnalisée
+    --     -- Snipe configuration with the custom formatting function
     --     snipe.setup({
     --       hints = {
     --         dictionary = "123456789",
@@ -2159,7 +2159,7 @@ require("lazy").setup({
     --         under_cursor = "<Tab>",
     --       },
     --       sort = "default",
-    --       buffer_formatter = custom_format, -- Utilisation de notre format personnalisé
+    --       buffer_formatter = custom_format, -- Uses our custom format
     --     })
     --   end,
     -- },
@@ -2202,13 +2202,13 @@ require("lazy").setup({
         },
         cmd = { "Z", "Zg", "Zt", "Zw" },
 
-        -- Notification du répertoire courant après un saut zoxide.
-        -- Autocmd natif au lieu d'un patch du plugin : rien ne peut se périmer.
-        -- Le motif suit `behaviour` ci-dessus : "tabs" utilise `tcd`, qui déclenche
-        -- DirChanged avec le motif "tabpage". Si tu passes behaviour à "global" ou
-        -- "window", remplace le motif par "global" ou "window".
-        -- Ce ciblage évite aussi les doublons avec explorer_cd de snacks, qui fait
-        -- un `cd` global et notifie déjà de son côté.
+        -- Notifies the current directory after a zoxide jump.
+        -- A native autocmd instead of a plugin patch: nothing can go stale.
+        -- The pattern follows `behaviour` above: "tabs" uses `tcd`, which fires
+        -- DirChanged with the "tabpage" pattern. If behaviour becomes "global" or
+        -- "window", change the pattern to "global" or "window".
+        -- This targeting also avoids duplicates with snacks' explorer_cd, which does
+        -- a global `cd` and already notifies on its own.
         init = function()
             vim.api.nvim_create_autocmd("DirChanged", {
                 pattern = "tabpage",
@@ -2256,7 +2256,7 @@ require("lazy").setup({
                 keyword = "wide",
                 after = "fg",
                 pattern = [[.*<(KEYWORDS)\s*:]],
-                comments_only = true, -- met true si tes TODO/FIX sont dans des commentaires
+                comments_only = true, -- set to true if your TODO/FIX are in comments
                 max_line_len = 400,
                 exclude = {},
             },
@@ -2270,7 +2270,7 @@ require("lazy").setup({
 
                 error = "#ff4d4d",
                 -- warning = "#fff176",
-                warning = "#fff59d",  -- jaune clair légèrement néon
+                warning = "#fff59d",  -- light, slightly neon yellow
                 -- info = "#6eeed9",
                 -- info = "#64f2d8",
                 -- info = "#5ef0d0" ,
@@ -2337,7 +2337,7 @@ require("lazy").setup({
                 },
 
                 notifications = {
-                    wrap = true, -- Assure-toi que le wrapping est activé pour les notifications
+                    wrap = true, -- Make sure wrapping is enabled for notifications
                 },
                 -- debug = {
                 --     scores = true, -- show scores in the list
@@ -2419,10 +2419,10 @@ require("lazy").setup({
                             },
                         },
                     },
-                    -- Suivre les liens symboliques.
-                    -- Les configs de ~/.config sont des liens vers le dépôt dotfiles ;
-                    -- sans ceci, fd et rg les ignorent et la moitié des fichiers est
-                    -- invisible (mesuré dans ~/.config/nvim : 289 fichiers sans, 575 avec).
+                    -- Follow symlinks.
+                    -- The configs in ~/.config are links to the dotfiles repository,
+                    -- without this, fd and rg skip them and half of the files are
+                    -- invisible (measured in ~/.config/nvim: 289 files without, 575 with).
                     files = {
                         follow = true,
                         hidden = true,
@@ -2567,10 +2567,10 @@ require("lazy").setup({
                         },
                     },
                 },
-                -- Actions personnalisées.
-                -- Déclarées ici plutôt qu'en patchant snacks : picker.opts.actions est
-                -- consulté AVANT les actions internes du plugin (snacks/picker/core/actions.lua),
-                -- donc une mise à jour de snacks ne peut pas les écraser.
+                -- Custom actions.
+                -- Declared here rather than by patching snacks: picker.opts.actions is
+                -- looked up BEFORE the plugin's own actions (snacks/picker/core/actions.lua),
+                -- so a snacks update cannot overwrite them.
                 actions = {
                     explorer_cd = function(picker)
                         local path = picker:dir()
@@ -2592,7 +2592,7 @@ require("lazy").setup({
                         picker.list:select()
                     end,
 
-                    -- Désélectionne tout
+                    -- Deselects everything
                     unselect_all = function(picker)
                         if picker.list and picker.list.set_selected then
                             picker.list:set_selected({})
@@ -2629,11 +2629,11 @@ require("lazy").setup({
                 enabled = true,
                 -- pane_gap = 8, -- empty columns between vertical panes
                 pane_gap = 16, -- empty columns between vertical panes
-                -- 51 et non 50 : le header ASCII fait 51 colonnes de large. Avec width = 50
-                -- il débordait du panneau 1 et poussait le panneau 2 d'une colonne, mais
-                -- uniquement sur ses propres lignes — l'art se retrouvait décalé en haut et
-                -- pas en bas. Invisible du temps où l'art était une fenêtre flottante,
-                -- positionnée indépendamment du contenu du panneau 1.
+                -- 51 and not 50: the ASCII header is 51 columns wide. With width = 50
+                -- it overflowed pane 1 and pushed pane 2 by one column, but
+                -- only on its own lines, so the art was shifted at the top and
+                -- not at the bottom. Invisible back when the art was a floating window,
+                -- placed independently of the content of pane 1.
                 width = 51,
                 -- width = 60,
                 -- row = nil,     -- dashboard position. nil for center
@@ -2682,7 +2682,7 @@ require("lazy").setup({
                     -- { pane = 1, icon = " ", title = "Recent Files", section = "recent_files", indent = 2, padding = 1, limit = 5 },
 
                     function()
-                        -- Utiliser getcwd() plutôt que Snacks.git.get_root() qui n'est pas fiable au premier lancement
+                        -- Use getcwd() rather than Snacks.git.get_root(), which is unreliable on the first launch
                         local cwd = vim.fn.getcwd()
                         local git_root_handle = io.popen("git -C " .. cwd .. " rev-parse --show-toplevel 2>/dev/null")
                         local git_root = git_root_handle:read("*a"):gsub("%s+$", "")
@@ -2700,7 +2700,7 @@ require("lazy").setup({
                             }
                         end
 
-                        -- Vérifier qu'il y a au moins 2 commits
+                        -- Check there are at least 2 commits
                         local check = io.popen("git -C " .. git_root .. " rev-parse --verify HEAD~1 2>/dev/null")
                         local result = check:read("*a")
                         check:close()
@@ -2717,7 +2717,7 @@ require("lazy").setup({
                             }
                         end
 
-                        -- Compter les fichiers changés (sans la ligne summary)
+                        -- Count the changed files (without the summary line)
                         local handle = io.popen("git -C " .. git_root .. " diff --stat HEAD~1 2>/dev/null | tail -n 1 | awk '{print $1}'")
                         local raw = handle:read("*a")
                         handle:close()
@@ -2731,13 +2731,13 @@ require("lazy").setup({
                         local height = 7
                         local visible = height - 1
 
-                        -- Texte statique plutôt qu'une section "terminal".
-                        -- L'ancienne version ajoutait « #os.time() » à la commande pour forcer
-                        -- le rafraîchissement. Effet de bord : la clé de cache changeait à chaque
-                        -- appel, donc git était relancé à CHAQUE dashboard:update() — donc à
-                        -- chaque <leader>e — et son rendu asynchrone se voyait clignoter.
-                        -- Ici git tourne une fois, en synchrone, quand la section est construite :
-                        -- le texte est prêt avant l'affichage. La touche « r » rafraîchit toujours.
+                        -- Static text rather than a "terminal" section.
+                        -- The old version appended "#os.time()" to the command to force
+                        -- a refresh. Side effect: the cache key changed on every
+                        -- call, so git ran again on EVERY dashboard:update(), that is on
+                        -- every <leader>e, and its asynchronous rendering visibly flickered.
+                        -- Here git runs once, synchronously, when the section is built:
+                        -- the text is ready before it is shown. The "r" key still refreshes.
                         local out = vim.fn.system({
                             "git", "-C", git_root, "--no-pager", "diff", "--stat",
                             "--stat-width=50", "--color=always", "HEAD~1",
@@ -2750,9 +2750,9 @@ require("lazy").setup({
                             dlines = vim.list_slice(dlines, 1, visible)
                         end
 
-                        -- Deux éléments plutôt qu'un : dans D:format, dès que `text` est
-                        -- défini, snacks ignore `icon` et `title` (le bloc `text` remplace
-                        -- la colonne centrale). Le titre doit donc être son propre élément.
+                        -- Two items rather than one: in D:format, as soon as `text` is
+                        -- set, snacks ignores `icon` and `title` (the `text` block replaces
+                        -- the middle column). The title therefore has to be its own item.
                         return {
                             { pane = 1, icon = " ", title = title },
                             {
@@ -2766,24 +2766,24 @@ require("lazy").setup({
 
                     { section = "startup" },
                     -- ------------------------------------------------------------------
-                    -- ART FIXE (PNG) — conservé, remplacé par le GIF animé ci-dessous.
-                    -- Pour y revenir : décommenter ce bloc et commenter le suivant.
+                    -- STILL ART (PNG), kept, replaced by the animated GIF below.
+                    -- To go back to it: uncomment this block and comment out the next one.
                     --
-                    -- Texte coloré statique, plus une section "terminal".
+                    -- Static coloured text, no more "terminal" section.
                     --
-                    -- POURQUOI : une section terminal est détruite et recréée à chaque
-                    -- dashboard:update(), donc à chaque WinResized — donc à chaque
-                    -- <leader>e. Elle vit dans une fenêtre flottante posée par-dessus le
-                    -- dashboard, redimensionnée à chaque fois : d'où le clignotement et
-                    -- l'art qui se déforme. Aucun réglage de largeur ne corrige ça, le
-                    -- problème est la recréation elle-même.
+                    -- WHY: a terminal section is destroyed and recreated on every
+                    -- dashboard:update(), so on every WinResized, so on every
+                    -- <leader>e. It lives in a floating window laid over the
+                    -- dashboard, resized every time: hence the flicker and
+                    -- the art getting distorted. No width setting fixes that, the
+                    -- problem is the recreation itself.
                     --
-                    -- lua/ansi_art.lua traduit les couleurs ANSI de chafa en morceaux de
-                    -- texte avec groupes de surbrillance. Le résultat fait partie du
-                    -- buffer du dashboard : jamais relancé, jamais reflowé, il suit la
-                    -- mise en page sans bouger.
+                    -- lua/ansi_art.lua turns chafa's ANSI colours into pieces of
+                    -- text with highlight groups. The result is part of the
+                    -- dashboard buffer: never rerun, never reflowed, it follows the
+                    -- layout without moving.
                     --
-                    -- Pour régénérer l'art :
+                    -- To regenerate the art:
                     --   chafa --symbols all --size 50 image.png > samurai_logo_blue_doom_5040.txt
                     --
                     should_show_image() and {
@@ -2796,35 +2796,35 @@ require("lazy").setup({
                     },
                     -- ------------------------------------------------------------------
 
-                    -- ART ANIMÉ (GIF) — mêmes contraintes que le PNG ci-dessus : la
-                    -- première image est du texte statique dans le buffer du dashboard
-                    -- (c'est elle qui fixe la mise en page, jamais relancée ni reflowée),
-                    -- les suivantes sont peintes par-dessus en extmarks. Toujours aucune
-                    -- section "terminal", donc toujours aucun clignotement au <leader>e.
-                    -- Le détail est dans lua/ansi_anim.lua.
+                    -- ANIMATED ART (GIF), same constraints as the PNG above: the
+                    -- first frame is static text in the dashboard buffer
+                    -- (it sets the layout, never rerun nor reflowed),
+                    -- the next ones are painted over it as extmarks. Still no
+                    -- "terminal" section, so still no flicker on <leader>e.
+                    -- The details are in lua/ansi_anim.lua.
                     --
-                    -- Pour régénérer l'animation :
+                    -- To regenerate the animation:
                     --   chafa --size 50 --font-ratio 10/24 samurai_float.gif > samurai_float_frames.txt
-                    -- Le --font-ratio est obligatoire : redirigée dans un fichier, la
-                    -- sortie de chafa ne peut plus mesurer le terminal et suppose des
-                    -- cellules 1/2. Celles d'Alacritty en Roboto Mono 12.5 font 10 × 24 px,
-                    -- d'où un dessin étiré de 20 % en hauteur si on ne le précise pas.
+                    -- --font-ratio is required: redirected to a file, chafa's
+                    -- output can no longer measure the terminal and assumes
+                    -- 1/2 cells. Alacritty's, in Roboto Mono 12.5, are 10 × 24 px,
+                    -- hence a drawing stretched 20 % in height when it is left out.
                     --
-                    -- Le curseur du terminal est masqué tant que l'animation tourne, comme
-                    -- le fait chafa lui-même : sinon il se fait peindre au milieu du dessin
-                    -- et semble sauter au hasard. Pour le garder : hide_cursor = false.
+                    -- The terminal cursor is hidden while the animation runs, as
+                    -- chafa itself does: otherwise it gets painted in the middle of the drawing
+                    -- and seems to jump around. To keep it: hide_cursor = false.
                     --
-                    -- OMBRES sur les contours (désactivées par défaut) — commun aux deux :
-                    --   vim.g.ansi_art_shadow = true        -- fond du thème assombri de 35 %
-                    --   vim.g.ansi_art_shadow = 0.5         -- plus marquées (0 à 1)
-                    --   vim.g.ansi_art_shadow = "#14161b"   -- couleur imposée
-                    -- À placer avant le chargement de lazy, ou à l'essai :
+                    -- SHADOWS on the outlines (off by default), shared by both:
+                    --   vim.g.ansi_art_shadow = true        -- theme background darkened by 35 %
+                    --   vim.g.ansi_art_shadow = 0.5         -- stronger (0 to 1)
+                    --   vim.g.ansi_art_shadow = "#14161b"   -- fixed colour
+                    -- To set before lazy loads, or to try it out:
                     --   :lua vim.g.ansi_art_shadow = true; require("ansi_art").refresh()
-                    -- puis rouvrir le dashboard (:lua Snacks.dashboard()).
+                    -- then reopen the dashboard (:lua Snacks.dashboard()).
                     -- should_show_image() and function()
                     --     local anim = require("ansi_anim").load(
                     --         vim.fn.stdpath("config") .. "/samurai_float_frames.txt",
-                    --         { delay = 80 }   -- le GIF est cadencé à 8 cs par image
+                    --         { delay = 80 }   -- the GIF runs at 8 cs per frame
                     --     )
                     --     if not anim then
                     --         return {}
@@ -2849,7 +2849,7 @@ require("lazy").setup({
             { "<leader>:",  function() Snacks.picker.command_history() end,              desc = "Command History" },
             { "<leader>fn", function() Snacks.picker.notifications({ wrap = true }) end, desc = "Notification History" },
             { "<leader>un", function() Snacks.notifier.hide() end,                       desc = "Dismiss All Notifications" },
-            -- { "<leader>e",  function() Snacks.explorer() end,                            desc = "File Explorer" }, -- ~~~~~~~~~~~~~~~ <leader>E correspond à mini.files (explorer flottant) ~~~~~~~~~~~~~~~~~~
+            -- { "<leader>e",  function() Snacks.explorer() end,                            desc = "File Explorer" }, -- ~~~~~~~~~~~~~~~ <leader>E is mini.files (floating explorer) ~~~~~~~~~~~~~~~~~~
 
             -- Picker (file & lsp)
             { "<leader>ff", function() Snacks.picker.files() end,                        desc = "Picker Find Files" },
@@ -2901,17 +2901,17 @@ require("lazy").setup({
             vim.api.nvim_create_autocmd("User", {
                 pattern = "VeryLazy",
                 callback = function()
-                    -- important : permet de relancer le dashboard pour que git diff soit à jour notamment
+                    -- important: reruns the dashboard so that git diff, among others, is up to date
                     if Snacks.dashboard then
                         Snacks.dashboard.update()
                     end
 
-                    -- -- Aperçu d'image par chafa, au lieu du protocole graphique de snacks.
-                    -- -- Surcharge du module depuis la config plutôt qu'un patch du plugin :
-                    -- -- une mise à jour de snacks ne peut plus l'effacer.
-                    -- -- NOTE: on passe { pty = true } SANS ft. La logique amont est
-                    -- --       `pty = opts.pty ~= false and not opts.ft` : ajouter ft
-                    -- --       désactiverait le terminal et chafa s'afficherait en échappements bruts.
+                    -- -- Image preview through chafa, instead of snacks' graphics protocol.
+                    -- -- The module is overridden from the config rather than patched in the plugin:
+                    -- -- a snacks update can no longer wipe it out.
+                    -- -- NOTE: { pty = true } is passed WITHOUT ft. The upstream logic is
+                    -- --       `pty = opts.pty ~= false and not opts.ft`: adding ft
+                    -- --       would disable the terminal and chafa would show as raw escapes.
                     -- local preview = require("snacks.picker.preview")
                     -- preview.image = function(ctx)
                     --     local path = Snacks.picker.util.path(ctx.item)
@@ -2962,7 +2962,7 @@ require("lazy").setup({
                 end,
             })
 
-            -- update git diff si : on change de panel tmux et un nouveau fichier modifié est repéré et on est sur le buffer dashboard
+            -- update git diff if: the tmux pane changes, a newly modified file shows up, and the dashboard buffer is current
             local last_git_diff = ""
             vim.api.nvim_create_autocmd("FocusGained", {
                 pattern = "*",
@@ -3005,7 +3005,7 @@ require("lazy").setup({
     --
     --         vim.g.db = 'postgresql://noah@localhost/db_test'
     --
-    --             -- Mapping personnalisé pour exécuter dans le buffer courant
+    --             -- Custom mapping to run in the current buffer
     --         vim.api.nvim_create_autocmd('FileType', {
     --             pattern = { 'sql', 'mysql', 'plsql' },
     --             callback = function()
@@ -3016,10 +3016,10 @@ require("lazy").setup({
     --
     --         -- vim.g.dbs = {
     --         --     dev = 'postgresql://username:password@localhost:5432/dbname',
-    --         --     -- Ajoutez d'autres connexions si nécessaire
+    --         --     -- Add more connections if needed
     --         -- }
     --
-    --         -- -- Charger les connexions depuis un fichier séparé
+    --         -- -- Load the connections from a separate file
     --         -- local db_config = vim.fn.stdpath('config') .. '/db_connections.lua'
     --         -- if vim.fn.filereadable(db_config) == 1 then
     --         --     dofile(db_config)
@@ -3027,8 +3027,8 @@ require("lazy").setup({
     --         -- vim.g.db_ui_save_location = vim.fn.stdpath('config') .. '/db_ui'
     --
     --         --[[
-    --         Créez ~/.config/nvim/db_connections.lua :
-    --         -- Ce fichier ne doit PAS être versionné (ajoutez-le au .gitignore)
+    --         Create ~/.config/nvim/db_connections.lua:
+    --         -- This file must NOT be versioned (add it to .gitignore)
     --         vim.g.db = 'postgresql://noah@localhost/db_test'
     --
     --         vim.g.dbs = {
@@ -3078,7 +3078,7 @@ require("lazy").setup({
     --
     --
     --         local function save_dbout_to_buffer()
-    --             -- Chercher la fenêtre dbout
+    --             -- Look for the dbout window
     --             local dbout_win = nil
     --             local wins = vim.api.nvim_list_wins()
     --
@@ -3096,20 +3096,20 @@ require("lazy").setup({
     --                 return
     --             end
     --
-    --             -- Sauvegarder la fenêtre actuelle
+    --             -- Save the current window
     --             local original_win = vim.api.nvim_get_current_win()
     --
-    --             -- Aller à la fenêtre dbout
+    --             -- Go to the dbout window
     --             vim.api.nvim_set_current_win(dbout_win)
     --
-    --             -- Créer le fichier temporaire
+    --             -- Create the temporary file
     --             local filename = "/tmp/dbout_" .. os.date('%H%M%S') .. ".txt"
     --             vim.cmd("w " .. filename)
     --
-    --             -- Fermer la fenêtre dbout
+    --             -- Close the dbout window
     --             vim.api.nvim_win_close(dbout_win, false)
     --
-    --             -- Revenir à la fenêtre originale et ouvrir le fichier
+    --             -- Go back to the original window and open the file
     --             vim.api.nvim_set_current_win(original_win)
     --             vim.cmd("edit " .. filename)
     --             vim.bo.buflisted = true
@@ -3118,12 +3118,12 @@ require("lazy").setup({
     --             vim.cmd("only")
     --         end
     --
-    --         -- Remplacer le mapping <leader>S original
+    --         -- Replace the original <leader>S mapping
     --         vim.keymap.set('n', '<leader>L', function()
-    --             -- Exécuter la requête SQL (commande originale de dbui)
+    --             -- Run the SQL query (dbui's original command)
     --             vim.cmd('DB')
     --
-    --             -- Attendre un peu que le résultat soit affiché puis sauvegarder
+    --             -- Wait a little for the result to show, then save
     --             vim.defer_fn(function()
     --                 save_dbout_to_buffer()
     --             end, 2000)
@@ -3340,7 +3340,7 @@ require("lazy").setup({
                         require("cmp").event:on("confirm_done", cmp_autopairs.on_confirm_done)
                     end,
                 },
-                { 'L3MON4D3/LuaSnip',            version = 'v2.*' }, -- utiliser uniquement pour fichier .tex
+                { 'L3MON4D3/LuaSnip',            version = 'v2.*' }, -- used only for .tex files
                 { "rafamadriz/friendly-snippets" },
             },
 
@@ -3357,7 +3357,7 @@ require("lazy").setup({
                 opts.sources = vim.tbl_deep_extend("force", opts.sources or {}, {
                     default = { "lsp", "path", "snippets", "buffer", "cmdline" },
                     -- per_filetype = {
-                    --     sql = { 'dadbod', 'buffer', 'path' }, -- dadbod en premier pour la priorité
+                    --     sql = { 'dadbod', 'buffer', 'path' }, -- dadbod first for priority
                     -- },
                     providers = {
                         lsp = {
@@ -3460,8 +3460,8 @@ require("lazy").setup({
 
                     keymap = {
                         -- preset = 'inherit',
-                        -- ['<Esc>'] = { 'hide' }, -- marche mais je peux plus quitter la cmdline ...
-                        ["<Tab>"] = { "select_and_accept" },  -- Tab accepte la première suggestion
+                        -- ['<Esc>'] = { 'hide' }, -- works but then I can no longer leave the cmdline ...
+                        ["<Tab>"] = { "select_and_accept" },  -- Tab accepts the first suggestion
                         ["<S-Tab>"] = { "select_prev", "fallback" },
                         ['<Down>'] = { 'select_next', 'fallback' },
                         ['<Up>'] = { 'select_prev', 'fallback' },
@@ -3469,7 +3469,7 @@ require("lazy").setup({
                     },
                     completion = {
                         trigger = {
-                            -- Ne pas bloquer le caractère "/" comme déclencheur
+                            -- Do not block the "/" character as a trigger
 
                             show_on_blocked_trigger_characters = {},
                             show_on_x_blocked_trigger_characters = {},
@@ -3482,7 +3482,7 @@ require("lazy").setup({
                                 if ctx.mode == 'cmdline' then
                                     local cmdline = vim.fn.getcmdline()
 
-                                    -- Ne pas afficher pour les commandes simples de base
+                                    -- Do not show for the basic simple commands
                                     local simple_cmds = { "^q!?$", "^w!?$", "^wq!?$", "^x!?$", "^qa!?$", "^wqa!?$" }
                                     for _, pattern in ipairs(simple_cmds) do
                                         if cmdline:match(pattern) then
@@ -3490,7 +3490,7 @@ require("lazy").setup({
                                         end
                                     end
 
-                                    -- Afficher dès qu'on commence à taper
+                                    -- Show as soon as typing starts
                                     return #cmdline > 0
                                 end
                                 return false
@@ -3502,7 +3502,7 @@ require("lazy").setup({
                         list = {
                             selection = {
                                 preselect = true,
-                                auto_insert = false,  -- Attendre Tab pour accepter
+                                auto_insert = false,  -- Wait for Tab to accept
                             },
                         },
                         ghost_text = { enabled = false },
@@ -3546,9 +3546,9 @@ require("lazy").setup({
                         border = "single",
 
                         -- vim.api.nvim_set_hl(0, "BlinkCmpSignatureHelp", {
-                        --     fg = "#ffffff",  -- Couleur du texte (premier plan)
-                        --     bg = "#ff0000",  -- Couleur de fond
-                        --     bold = true,     -- Appliquer un texte en gras
+                        --     fg = "#ffffff",  -- Text colour (foreground)
+                        --     bg = "#ff0000",  -- Background colour
+                        --     bold = true,     -- Make the text bold
                         -- }),
 
                         winhighlight =
@@ -3574,16 +3574,16 @@ require("lazy").setup({
                                         return require("colorful-menu").blink_components_text(ctx)
                                     end,
                                     highlight = function(ctx)
-                                        -- Récupération des highlights de colorful-menu
+                                        -- Gets the colorful-menu highlights
                                         local highlights = require("colorful-menu").blink_components_highlight(ctx) or {}
 
-                                        -- Ajout du surlignage pour les caractères correspondants au fuzzy matching (à la fin)
+                                        -- Adds highlighting for the characters matched by the fuzzy matching (at the end)
 
                                         -- vim.api.nvim_set_hl(0, "MyErrorMsg", { fg = "#f38ba8", bold = true })
                                         -- vim.api.nvim_set_hl(0, "MyInfoMsg", { fg = "#94e2d5", bold = true })
                                         --
                                         -- for _, idx in ipairs(ctx.label_matched_indices or {}) do
-                                        --     table.insert(highlights, { idx, idx + 1, group = 'MyErrorMsg' }) -- Vérifier si ça force le changement
+                                        --     table.insert(highlights, { idx, idx + 1, group = 'MyErrorMsg' }) -- Check whether this forces the change
                                         -- end
 
 
@@ -3598,7 +3598,7 @@ require("lazy").setup({
                     },
 
 
-                    -- Définition du groupe de surlignage pour les lettres correspondant au fuzzy matcher
+                    -- Highlight group for the letters matched by the fuzzy matcher
                     vim.api.nvim_set_hl(0, "BlinkCmpLabelMatch",
                         { fg = "#ffffff", bg = "#ffff00", bold = true, underline = true }),
 
@@ -3625,31 +3625,31 @@ require("lazy").setup({
                     },
                 }
 
-                -- Priorité par type d'item : les fonctions/méthodes remontent,
-                -- les constantes / variables / modules descendent (ex: `np.` en Python)
+                -- Priority by item kind: functions/methods move up,
+                -- constants / variables / modules move down (e.g. `np.` in Python)
                 local kind_priority = nil
                 local function kind_rank(item)
                     if kind_priority == nil then
                         local K = require("blink.cmp.types").CompletionItemKind
                         kind_priority = {
-                            -- 1 : tout ce qui s'utilise directement. Variable est ici volontairement :
-                            -- les ufuncs numpy (np.abs, np.cos, np.arccos...) sont des instances de
-                            -- np.ufunc, donc pyright les renvoie en Variable et non en Function.
+                            -- 1: everything used directly. Variable is here on purpose:
+                            -- numpy ufuncs (np.abs, np.cos, np.arccos...) are instances of
+                            -- np.ufunc, so pyright reports them as Variable and not Function.
                             [K.Method]        = 1,
                             [K.Function]      = 1,
                             [K.Variable]      = 1,
                             [K.Field]         = 1,
                             [K.Property]      = 1,
                             [K.Constructor]   = 1,
-                            -- 2 : les types
+                            -- 2: types
                             [K.Class]         = 2,
                             [K.Struct]        = 2,
                             [K.Interface]     = 2,
                             [K.Enum]          = 2,
                             [K.TypeParameter] = 2,
-                            -- 3 : les sous-modules (np.linalg, np.random)
+                            -- 3: submodules (np.linalg, np.random)
                             [K.Module]        = 3,
-                            -- 4 : les constantes (np.pi, np.inf, np.ALLOW_THREADS, np.MAXDIMS)
+                            -- 4: constants (np.pi, np.inf, np.ALLOW_THREADS, np.MAXDIMS)
                             [K.Value]         = 4,
                             [K.Constant]      = 4,
                             [K.EnumMember]    = 4,
@@ -3664,7 +3664,7 @@ require("lazy").setup({
                 opts.fuzzy = {
                     implementation = "prefer_rust_with_warning",
 
-                    -- ordre de tri : match exact > score du fuzzy > type d'item > sortText du LSP > label
+                    -- sort order: exact match > fuzzy score > item kind > LSP sortText > label
                     sorts = {
                         "exact",
                         "score",
@@ -3672,9 +3672,9 @@ require("lazy").setup({
                             local ra, rb = kind_rank(a), kind_rank(b)
                             if ra ~= rb then return ra < rb end
                         end,
-                        -- sort_text insensible a la casse : sinon 'S' (0x53) passe avant 'a' (0x61)
-                        -- et np.ScalarType se retrouve devant np.abs. Les prefixes de priorite
-                        -- du serveur (pyright : 09. normal, 10. , 11. dunders) restent intacts.
+                        -- case-insensitive sort_text: otherwise 'S' (0x53) sorts before 'a' (0x61)
+                        -- and np.ScalarType ends up ahead of np.abs. The server's priority
+                        -- prefixes (pyright: 09. normal, 10. , 11. dunders) stay intact.
                         function(a, b)
                             local sa, sb = a.sortText, b.sortText
                             if sa == nil or sb == nil then return end
@@ -3723,12 +3723,12 @@ require("lazy").setup({
 
         {"nanotee/sqls.nvim"},
 
-        -- REFONTE DE MA CONFIG LSP
+        -- OVERHAUL OF MY LSP CONFIG
 
         {
             'neovim/nvim-lspconfig',
 
-            -- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ permet quand je fais nvim fichier.c de ne pas avoir les arguments d'une fonction automatiquement écrits quand je fais tab entre les parenthèses
+            -- @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ when I run nvim file.c, keeps a function's arguments from being written automatically when I press tab between the parentheses
             lazy = false,
 
             dependencies = {
@@ -3761,7 +3761,7 @@ require("lazy").setup({
                         root_dir = vim.fs.dirname(vim.fs.find({
                             'compile_commands.json', '.clangd', '.git'
                         }, { upward = true })[1]),
-                        -- NOTE: C'est ici que tu peux désactiver le grisé sémantique globalement
+                        -- NOTE: this is where semantic greying can be disabled globally
                         -- on_init = function(client)
                         --     client.server_capabilities.semanticTokensProvider = nil
                         -- end,
@@ -3822,7 +3822,7 @@ require("lazy").setup({
                     sqls = (function()
 
                         -- ============================================================================================================================
-                        -- TOUJOURS mettre un fichier config.yml au root du projet (cf template ~/.config/sqls/config.yml), ex sans mdp:
+                        -- ALWAYS put a config.yml file at the project root (see the template ~/.config/sqls/config.yml), e.g. without a password:
                         --[[ 
                         connections:
                           - alias: db_test
@@ -3840,10 +3840,10 @@ require("lazy").setup({
 
                         local config_path = "config.yml"
 
-                        -- Vérifie que le fichier existe
+                        -- Checks the file exists
                         if vim.fn.filereadable(config_path) == 0 then
-                            -- vim.notify("Fichier SQLs config non trouvé : " .. config_path .. ", le LSP utilisera la config globale", vim.log.levels.WARN)
-                            config_path = nil -- laisse sqls utiliser la config par défaut
+                            -- vim.notify("SQLs config file not found: " .. config_path .. ", the LSP will use the global config", vim.log.levels.WARN)
+                            config_path = nil -- lets sqls use the default config
                         end
 
                         return {
@@ -3862,7 +3862,7 @@ require("lazy").setup({
                 local signature = require('lsp_signature')
                 local capabilities_base = require('blink.cmp').get_lsp_capabilities()
 
-                --  Fonction utilitaire : capabilities dynamiques selon le type de fichier
+                --  Helper: dynamic capabilities depending on the file type
                 local function get_capabilities_for_server(server_name)
                     -- local enable_snippets = (server_name == "texlab" or server_name=="rust_analyzer")
                     local enable_snippets = (server_name == "texlab")
@@ -3891,18 +3891,18 @@ require("lazy").setup({
 
                 end
 
-                -- Bordures pour les diagnostics
+                -- Borders for diagnostics
                 local hover = vim.lsp.buf.hover
                 vim.lsp.buf.hover = function()
                     hover({border = 'rounded',})
                 end
 
-                -- Bordures pour les diagnostics
+                -- Borders for diagnostics
                 vim.diagnostic.config({
-                    -- NOTE: SI j'ai envie de mettre les popups diagnostics à côtés des erreurs sans que je fasse <leader>dd
+                    -- NOTE: IF I want the diagnostic popups next to the errors without pressing <leader>dd
                     -- virtual_text = {
                     --     spacing = 4,
-                    --     prefix = "󰝤" -- ou "▪", "■", "",
+                    --     prefix = "󰝤" -- or "▪", "■", "",
                     -- },
 
                     float = { border = "rounded" }
@@ -3916,7 +3916,7 @@ require("lazy").setup({
                 })
 
 
-                -- Configurer chaque serveur via la nouvelle API
+                -- Configure each server through the new API
                 for name, config in pairs(opts.servers) do
                     vim.lsp.config[name] = vim.tbl_deep_extend("force", config, {
                         on_attach = on_attach,

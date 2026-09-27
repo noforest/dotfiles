@@ -18,7 +18,7 @@
 # echo " $icon"
 
 
-# Ce script ne réagit qu'au clic gauche (1)
+# This script only reacts to a left click (1)
 case "$BUTTON" in
     1)
         CHOICE=$(echo -e "Kill dwm\nShutdown\nReboot\nLock & Sleep" | dmenu -i -p "Select an action:")
@@ -32,6 +32,6 @@ case "$BUTTON" in
         ;;
 esac
 
-# Affiche une icône pour le module de la status bar (toujours visible)
+# Shows an icon for the status bar module (always visible)
 icon=" "
 echo " $icon"

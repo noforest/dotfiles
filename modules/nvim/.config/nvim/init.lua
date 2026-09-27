@@ -1,38 +1,38 @@
 require("keymaps")
 require("options")
 
--- NOTE: avant le démarrage de lazy
-vim.g.ansi_art_shadow = true        -- fond du thème assombri de 35 %
-vim.g.ansi_art_shadow = 1         -- plus marquées (0 à 1)
-vim.g.ansi_art_shadow = "#14161b"   -- couleur imposée
+-- NOTE: before lazy starts
+vim.g.ansi_art_shadow = true        -- theme background darkened by 35 %
+vim.g.ansi_art_shadow = 1         -- stronger (0 to 1)
+vim.g.ansi_art_shadow = "#14161b"   -- fixed colour
 require("plugins.lazy")
 require("plugins.keymaps")
 require("plugins.options")
 
 vim.api.nvim_set_hl(0, "MyInfoMsg", {
-    fg = "#94e2d5",       -- Couleur du texte en rouge
-    bg = "#1e1e2e",       -- Couleur de fond en noir
-    bold = true,          -- Texte en gras
-    italic = false,       -- Pas d'italique
-    underline = false,    -- Pas de soulignement
-    undercurl = false,    -- Pas de soulignement ondulé
-    -- Autres options disponibles :
-    -- reverse = false,   -- Pas d'inversion
-    -- standout = false,  -- Pas de mise en évidence
-    -- strikethrough = false -- Pas de barré
+    fg = "#94e2d5",       -- Text colour in red
+    bg = "#1e1e2e",       -- Background colour in black
+    bold = true,          -- Bold text
+    italic = false,       -- No italics
+    underline = false,    -- No underline
+    undercurl = false,    -- No wavy underline
+    -- Other available options:
+    -- reverse = false,   -- No reverse
+    -- standout = false,  -- No standout
+    -- strikethrough = false -- No strikethrough
 })
 
 vim.api.nvim_set_hl(0, "MyOrange", {
-    fg = "#fab387",       -- Couleur du texte en rouge
-    bg = "#1e1e2e",       -- Couleur de fond en noir
-    bold = true,          -- Texte en gras
-    italic = false,       -- Pas d'italique
-    underline = false,    -- Pas de soulignement
-    undercurl = false,    -- Pas de soulignement ondulé
-    -- Autres options disponibles :
-    -- reverse = false,   -- Pas d'inversion
-    -- standout = false,  -- Pas de mise en évidence
-    -- strikethrough = false -- Pas de barré
+    fg = "#fab387",       -- Text colour in red
+    bg = "#1e1e2e",       -- Background colour in black
+    bold = true,          -- Bold text
+    italic = false,       -- No italics
+    underline = false,    -- No underline
+    undercurl = false,    -- No wavy underline
+    -- Other available options:
+    -- reverse = false,   -- No reverse
+    -- standout = false,  -- No standout
+    -- strikethrough = false -- No strikethrough
 })
 
 vim.api.nvim_set_hl(0, "MyPurple", {
@@ -42,11 +42,11 @@ vim.api.nvim_set_hl(0, "MyPurple", {
     italic = false,
     underline = false,
     undercurl = false,
-    -- Autres options disponibles :
-    -- reverse = false,   -- Pas d'inversion
-    -- standout = false,  -- Pas de mise en évidence
-    -- strikethrough = false -- Pas de barré
+    -- Other available options:
+    -- reverse = false,   -- No reverse
+    -- standout = false,  -- No standout
+    -- strikethrough = false -- No strikethrough
 })
 
--- Charger le module
+-- Load the module
 require("clangd_auto").setup()

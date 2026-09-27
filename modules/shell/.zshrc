@@ -28,7 +28,7 @@ export MANPAGER="vim +MANPAGER --not-a-term -"
 export RAINFROG_CONFIG=~/.config/rainfrog
 
 
-# Pour colorer eza, tree, etc... (parfait pour la couleur violet)
+# Colours for eza, tree, etc... (perfect for purple)
 export LS_COLORS="$(vivid generate dracula)"
 
 
@@ -60,7 +60,7 @@ alias yay='PATH=/usr/bin:$PATH yay'
 alias vlc="vlc-resume"
 alias pdftoimage="pdftoppm"
 alias pdf2ocr="ocrmypdf -l fra+eng"
-alias okular="pdf"  # NOTE: script localisé à /usr/local/bin/pdf
+alias okular="pdf"  # NOTE: script located at /usr/local/bin/pdf
 alias handbrake="ghb"
 alias sudo='sudo '
 alias nv='nvim'
@@ -88,7 +88,7 @@ alias ll="l"
 alias la='eza -al --git --group-directories-first --icons=always'
 alias lt="eza --tree --level=2 --icons --git"
 
-# ~~~~~~~(tend à être obsolète)~~~~~~~~~~~
+# ~~~~~~~(becoming obsolete)~~~~~~~~~~~
 alias "ls -ll"="ll"
 alias "ls -la"="la"
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -101,11 +101,11 @@ alias ......="cd ../../../../.."
 
 alias lg="lazygit"
 
-# # ANCIEN dépôt bare, conservé intact comme archive.
-# # Toujours consultable : `dotfiles log`, `dotfiles show HEAD:.zshrc`…
+# # OLD bare repository, kept intact as an archive.
+# # Still browsable: `dotfiles log`, `dotfiles show HEAD:.zshrc`…
 # alias dotfiles='git --git-dir=$HOME/.dotfiles_old/ --work-tree=$HOME'
 
-# Nouveau dépôt et sa CLI (voir $DOTFILES_DIR/README.md)
+# New repository and its CLI (see $DOTFILES_DIR/README.md)
 export DOTFILES_DIR="$HOME/Documents/programming/github-noforest/dotfiles"
 alias dotfiles="cd $DOTFILES_DIR"
 alias dot="$DOTFILES_DIR/dot"
@@ -114,13 +114,13 @@ alias dotgit="git -C $DOTFILES_DIR"
 
 
 bindkey "^[[3~" delete-char
-bindkey "^[[1;3D" backward-word    # Alt + flèche gauche
-bindkey "^[[1;3C" forward-word     # Alt + flèche droite
-bindkey "^[[1;5D" backward-word    # Ctrl + flèche gauche
-bindkey "^[[1;5C" forward-word     # Ctrl + flèche droite
+bindkey "^[[1;3D" backward-word    # Alt + left arrow
+bindkey "^[[1;3C" forward-word     # Alt + right arrow
+bindkey "^[[1;5D" backward-word    # Ctrl + left arrow
+bindkey "^[[1;5C" forward-word     # Ctrl + right arrow
 
 
-# recherche fuzzy dans tous les dossiers, y compris cachés
+# fuzzy search in every folder, hidden ones included
 
 # fuzzy_cd() {
 #     local dir
@@ -134,7 +134,7 @@ bindkey "^[[1;5C" forward-word     # Ctrl + flèche droite
 # }
 
 
-# # pour zsh
+# # for zsh
 # bindkey -s '^f' 'fuzzy_cd\n'
 
 git() {
@@ -142,10 +142,10 @@ git() {
     shift
     # command git-graph --format "$(echo "%h \033[90m%ad\033[0m \033[34m%an\033[0m →  %s")" 
     
-    # avec retour à la ligne 
+    # with a line break 
     # command git-graph --format "$(echo "%h \033[90m%ad\033[0m \033[34m%an\033[0m \033[31m→ \033[0m %s%n ")"    
 
-    # sans retour à la ligne 
+    # without a line break 
     command git-graph --format "$(echo "%h \033[90m%ad\033[0m \033[34m%an\033[0m \033[31m→ \033[0m %s%n")"    
   elif [[ "$1" == "modif" ]]; then
     command git diff --stat HEAD~1 HEAD
@@ -157,8 +157,8 @@ git() {
   fi
 }
 
-# NOTE: GSL_PATH, les chemins de projets enseirb et les complétions de cours
-#       sont propres à cette machine → ~/.zshrc.local (non versionné, sourcé en fin de fichier)
+# NOTE: GSL_PATH, the enseirb project paths and the course completions
+#       are specific to this machine → ~/.zshrc.local (not versioned, sourced at the end of the file)
 
 # ========= alacritty terminal in the same directory as the last terminal used
 export TERMINAL_LAST_DIR="$HOME"
@@ -168,16 +168,16 @@ update_last_dir() {
 }
 
 chpwd() {
-    # Les répertoires qui déclenchent `td` sont définis dans ~/.zshrc.local
-    # via le tableau TD_AUTO_DIRS (vide par défaut).
+    # The directories that trigger `td` are set in ~/.zshrc.local
+    # through the TD_AUTO_DIRS array (empty by default).
     local d
     for d in ${TD_AUTO_DIRS[@]:-}; do
         [[ "$PWD" == "$d" ]] && { td; break; }
     done
     update_last_dir;
-}  # Appelé automatiquement après chaque `cd`
+}  # Called automatically after every `cd`
 
-# Charger le dernier répertoire au lancement
+# Load the last directory at startup
 if [ -f "$HOME/.last_dir" ]; then
     export TERMINAL_LAST_DIR="$(cat "$HOME/.last_dir")"
 fi
@@ -245,10 +245,10 @@ ZSH_AUTOSUGGEST_MANUAL_REBIND=0
 # }
 # fi
 
-# Vérifie si on est bien lancé depuis Alacritty (même dans tmux)
+# Checks the shell was started from Alacritty (even inside tmux)
 if [[ -n "$ALACRITTY_WINDOW_ID" ]]; then
     precmd() {
-        # Change le titre de la fenêtre alacritty avec le chemin courant
+        # Sets the alacritty window title to the current path
         echo -ne "\033]0;Alacritty: ${PWD/#$HOME/~}\007"
     }
 fi
@@ -317,13 +317,13 @@ img2pdf() {
 }
 
 #################################################################
-# config pour tmux
+# config for tmux
 
 # export TERM="tmux-256color"
 export TERM="xterm-256color"
 export COLORTERM=truecolor
 
-# sert pour tmux pour pas rentrer en mode normal notamment
+# used for tmux, mainly to avoid entering normal mode
 set -o emacs
 
 # if [[ -z $TMUX ]] && [[ -z $DISPLAY ]]; then
@@ -344,9 +344,9 @@ set -o emacs
 
 
 #################################################################
-# Réglages propres à CETTE machine — jamais versionnés.
-# Chemins de projets, variables d'école, complétions locales, TD_AUTO_DIRS…
-# Voir examples/zshrc.local dans le dépôt pour un modèle.
+# Settings specific to THIS machine, never versioned.
+# Project paths, school variables, local completions, TD_AUTO_DIRS…
+# See examples/zshrc.local in the repository for a template.
 #################################################################
 [[ -r "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"
 export TMPDIR="/var/tmp"

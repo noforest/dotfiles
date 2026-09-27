@@ -2,19 +2,19 @@
 set -euo pipefail
 
 # === CONFIGURATION ===
-# Les chemins personnels vivent hors du dépôt (voir examples/ dans le dépôt).
+# Personal paths live outside the repository (see examples/ in the repository).
 CONF_DIR="${BACKUP_GDRIVE_CONF_DIR:-$HOME/.config/backup-to-gdrive}"
 FILTERS="$CONF_DIR/filters"
 
-SRC1="$HOME/Documents"                            # première source
-SRC2=""                                           # deuxième source, facultative
-BASE_REMOTE="gdrive:_BackupsLinux"                # racine sur Drive
+SRC1="$HOME/Documents"                            # first source
+SRC2=""                                           # second source, optional
+BASE_REMOTE="gdrive:_BackupsLinux"                # root on Drive
 
-# Surcharges locales facultatives : SRC1, SRC2, BASE_REMOTE
+# Optional local overrides: SRC1, SRC2, BASE_REMOTE
 [ -r "$CONF_DIR/config" ] && . "$CONF_DIR/config"
 
-HOST="$(hostname)"                                # nom de la machine
-DEST="$BASE_REMOTE/$HOST"                         # dossier principal distant
+HOST="$(hostname)"                                # machine name
+DEST="$BASE_REMOTE/$HOST"                         # main remote folder
 
 if [ ! -r "$FILTERS" ]; then
     echo "backup-to-gdrive: fichier de filtres manquant : $FILTERS" >&2
@@ -64,8 +64,8 @@ rclone sync \
     "$SRC1" \
     "$DEST/Documents"
 
-# Deuxième source : synchronisée telle quelle, sans filtres, quand elle est
-# définie dans le fichier de config. Absente, il n'y a simplement rien à faire.
+# Second source: synced as is, without filters, when it is
+# set in the config file. When it is missing, there is simply nothing to do.
 if [ -n "$SRC2" ]; then
     rclone sync \
         --verbose \

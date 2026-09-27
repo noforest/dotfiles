@@ -1,35 +1,35 @@
 -- lua/clangd_auto.lua
 --
--- Ce module génère automatiquement un fichier .clangd à la racine du projet
--- en scannant les macros préprocesseur C dans les fichiers sources.
+-- This module generates a .clangd file at the project root automatically
+-- by scanning the C preprocessor macros in the source files.
 --
--- LOGIQUE PRINCIPALE :
+-- MAIN LOGIC:
 --
--- 1. scan_ifdef_macros() : parcourt tous les .c/.h/.cc et collecte :
---    - ifdef_macros  : macros vues dans #ifdef ET #if defined()
---                      → même sémantique, même traitement
---    - ifndef_macros : macros vues dans #ifndef → NE seront PAS définies
+-- 1. scan_ifdef_macros(): walks through every .c/.h/.cc and collects:
+--    - ifdef_macros  : macros seen in #ifdef AND #if defined()
+--                      → same semantics, same handling
+--    - ifndef_macros : macros seen in #ifndef → will NOT be defined
 --
---    Les macros présentes dans ifndef_macros sont retirées de ifdef_macros.
+--    The macros found in ifndef_macros are removed from ifdef_macros.
 --
--- 2. scan_defines() : collecte les #define NOM valeur
---    Utilisé UNIQUEMENT pour résoudre les valeurs des groupes #if X==Y.
---    Ces valeurs ne sont PAS écrites dans le .clangd car elles sont
---    déjà présentes dans les fichiers sources, clangd les lit naturellement.
+-- 2. scan_defines(): collects the #define NAME value
+--    Used ONLY to resolve the values of the #if X==Y groups.
+--    These values are NOT written to the .clangd because they are
+--    already in the source files, clangd reads them on its own.
 --
--- 3. scan_conditions() : collecte les groupes mutuellement exclusifs
---    Exemple :
+-- 3. scan_conditions(): collects the mutually exclusive groups
+--    Example:
 --      #if SCHED_POLICY == SCHED_FIFO       → groups["SCHED_POLICY"][1]
 --      #elif SCHED_POLICY == SCHED_PRIORITY → groups["SCHED_POLICY"][2]
---    → demande à l'utilisateur quelle branche activer
+--    → asks the user which branch to enable
 --
--- CE QUI EST ECRIT dans le .clangd final :
---   - #ifdef / #if defined() → question posée : tout, rien, ou un par un
---   - #ifndef                → NON définies
---   - #if X==Y               → valeur choisie + valeur de la constante choisie
---   - #define déjà dans les sources → NON écrits (clangd les lit naturellement)
---   - Guards d'include (__NOM__) → ignorés (commence par _)
---   - Constantes numériques (R0, OP_ADD...) → ignorées
+-- WHAT IS WRITTEN to the final .clangd:
+--   - #ifdef / #if defined() → asked: all, none, or one by one
+--   - #ifndef                → NOT defined
+--   - #if X==Y               → chosen value + value of the chosen constant
+--   - #define already in the sources → NOT written (clangd reads them on its own)
+--   - Include guards (__NAME__) → ignored (starts with _)
+--   - Numeric constants (R0, OP_ADD...) → ignored
 
 local M = {}
 
@@ -81,8 +81,8 @@ end
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Scan #ifdef / #if defined() / #ifndef
--- ifdef_macros  : #ifdef ET #if defined() → même sémantique
--- ifndef_macros : #ifndef → ne pas définir
+-- ifdef_macros  : #ifdef AND #if defined() → same semantics
+-- ifndef_macros : #ifndef → do not define
 -- ─────────────────────────────────────────────────────────────────────────────
 local function scan_ifdef_macros(root)
     local ifdef_macros  = {}
@@ -119,9 +119,9 @@ local function scan_ifdef_macros(root)
 end
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- #define NOM valeur + résolution des alias
--- Pas de filtre sur la valeur : utilisé uniquement pour résoudre
--- les groupes #if X==Y, pas pour écrire dans le .clangd
+-- #define NAME value + alias resolution
+-- No filter on the value: only used to resolve
+-- the #if X==Y groups, not to write to the .clangd
 -- ─────────────────────────────────────────────────────────────────────────────
 local function scan_defines(root)
     local raw = {}
@@ -159,7 +159,7 @@ local function scan_defines(root)
 end
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- Groupes mutuellement exclusifs (#if X == Y / #elif X == Y)
+-- Mutually exclusive groups (#if X == Y / #elif X == Y)
 -- ─────────────────────────────────────────────────────────────────────────────
 local function scan_conditions(root, defines)
     local function is_project_macro(s)
@@ -200,8 +200,8 @@ local function scan_conditions(root, defines)
 end
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- Ecriture du .clangd
--- Toujours écraser le fichier existant, même si vide
+-- Writing the .clangd
+-- Always overwrite the existing file, even when empty
 -- ─────────────────────────────────────────────────────────────────────────────
 function M._write_clangd(root, chosen_flags, chosen_defines)
     local lines = {
@@ -234,9 +234,9 @@ function M._write_clangd(root, chosen_flags, chosen_defines)
 
     local path = root .. "/.clangd"
 
-    -- Toujours écrire, même si vide (pour effacer l'ancien contenu)
+    -- Always write, even when empty (to wipe the old content)
     if #lines == 3 then
-        -- Fichier vide : juste l'entête sans macros
+        -- Empty file: just the header without macros
         vim.fn.writefile({ "# .clangd - genere automatiquement par Neovim" }, path)
         vim.notify(".clangd vide genere (aucune macro) -> " .. path, vim.log.levels.INFO)
     else
@@ -263,7 +263,7 @@ function M._write_clangd(root, chosen_flags, chosen_defines)
 end
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- Generation interactive
+-- Interactive generation
 -- ─────────────────────────────────────────────────────────────────────────────
 function M._do_generate(root)
     vim.schedule(function()
@@ -271,15 +271,15 @@ function M._do_generate(root)
         local defines = scan_defines(root)
         local groups  = scan_conditions(root, defines)
 
-        -- Retirer les macros #ifndef de ifdef_macros
+        -- Remove the #ifndef macros from ifdef_macros
         for name in pairs(ifndef_macros) do
             ifdef_macros[name] = nil
         end
 
-        local chosen_flags   = {}  -- vide au départ, rempli par les questions
+        local chosen_flags   = {}  -- empty at first, filled by the questions
         local chosen_defines = {}
 
-        -- Liste triée des macros #ifdef / #if defined() à proposer
+        -- Sorted list of the #ifdef / #if defined() macros to offer
         local all_optional = {}
         for name in pairs(ifdef_macros) do
             table.insert(all_optional, name)
@@ -288,7 +288,7 @@ function M._do_generate(root)
 
         local questions = {}
 
-        -- 1. Macros #ifdef / #if defined() → tout, rien, ou une par une
+        -- 1. #ifdef / #if defined() macros → all, none, or one by one
         if #all_optional > 0 then
             table.insert(questions, {
                 type   = "optional_group",
@@ -306,7 +306,7 @@ function M._do_generate(root)
             })
         end
 
-        -- 2. Groupes mutuellement exclusifs (#if X == Y)
+        -- 2. Mutually exclusive groups (#if X == Y)
         for macro, choices in pairs(groups) do
             local labels = vim.tbl_map(function(c)
                 return string.format("%-20s  (%s = %s)", c.name, macro, c.value)
@@ -330,11 +330,11 @@ function M._do_generate(root)
 
             local q = questions[q_idx]
 
-            -- ── Macros #ifdef / #if defined() ─────────────────────────────
+            -- ── #ifdef / #if defined() macros ─────────────────────────────
             if q.type == "optional_group" then
                 vim.ui.select(q.choices, { prompt = q.prompt }, function(_, i)
                     if i == 1 then
-                        -- Tout activer
+                        -- Enable all
                         for _, name in ipairs(q.macros) do
                             chosen_flags[name] = true
                         end
@@ -342,12 +342,12 @@ function M._do_generate(root)
                         ask_next()
 
                     elseif i == 2 then
-                        -- Rien activer → chosen_flags reste vide
+                        -- Enable none → chosen_flags stays empty
                         q_idx = q_idx + 1
                         ask_next()
 
                     elseif i == 3 then
-                        -- Choisir une par une
+                        -- Choose one by one
                         local m_idx = 1
                         local function ask_one()
                             if m_idx > #q.macros then
@@ -377,13 +377,13 @@ function M._do_generate(root)
                         ask_one()
 
                     else
-                        -- Annulé → rien activer
+                        -- Cancelled → enable none
                         q_idx = q_idx + 1
                         ask_next()
                     end
                 end)
 
-            -- ── Groupes mutuellement exclusifs (#if X == Y) ───────────────
+            -- ── Mutually exclusive groups (#if X == Y) ───────────────
             elseif q.type == "group" then
                 vim.ui.select(q.choices, { prompt = q.prompt }, function(_, i)
                     if i then
@@ -404,7 +404,7 @@ function M._do_generate(root)
 end
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- Entree publique
+-- Public entry point
 -- ─────────────────────────────────────────────────────────────────────────────
 function M.generate()
     local root = vim.fs.dirname(vim.fs.find({

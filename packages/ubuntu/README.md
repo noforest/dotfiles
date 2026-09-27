@@ -1,52 +1,52 @@
 # packages/ubuntu
 
-Listes pour **Ubuntu 26.04 LTS (resolute)**, dérivées de `packages/arch/`.
+Lists for **Ubuntu 26.04 LTS (resolute)**, derived from `packages/arch/`.
 
-Chaque nom a été vérifié contre l'index officiel de l'archive Ubuntu (main,
-restricted, universe, multiverse), sur deux critères : le paquet existe dans cette
-version, et ce n'est pas une redirection vers un snap. Les paquets de transition
-comme `firefox`, `chromium-browser` ou `thunderbird` sont donc écartés, ils
-n'installent que le snap correspondant.
+Every name was checked against the official index of the Ubuntu archive (main,
+restricted, universe, multiverse), on two criteria: the package exists in this
+release, and it is not a redirect to a snap. Transitional packages such as
+`firefox`, `chromium-browser` or `thunderbird` are therefore left out, they only
+install the matching snap.
 
-Les groupes portent les mêmes noms que dans `packages/arch/`, puisqu'un profil
-déclare `packages: core shell fonts x11-dwm ...` sans savoir sur quelle
-distribution il tourne. `dot install` lit le dossier de la distribution détectée.
+The groups have the same names as in `packages/arch/`, since a profile
+declares `packages: core shell fonts x11-dwm ...` without knowing which
+distribution it runs on. `dot install` reads the folder of the detected distribution.
 
-## Ce qui diffère d'Arch
+## What differs from Arch
 
-Un paquet Ubuntu peut regrouper ce qu'Arch découpe. `x11-xserver-utils` remplace à
-lui seul `xorg-xrandr`, `xorg-xset`, `xorg-xsetroot`, `xorg-xmodmap`, `xorg-xrdb`,
-`xorg-xhost` et `xorg-iceauth`. Le compte total est donc plus bas sans que rien ne
-manque.
+One Ubuntu package can bundle what Arch splits up. `x11-xserver-utils` alone
+replaces `xorg-xrandr`, `xorg-xset`, `xorg-xsetroot`, `xorg-xmodmap`, `xorg-xrdb`,
+`xorg-xhost` and `xorg-iceauth`. The total count is therefore lower without
+anything missing.
 
-Trois substitutions fonctionnelles, l'outil d'origine n'étant pas packagé :
+Three functional substitutions, since the original tool is not packaged:
 
 | Arch | Ubuntu | Note |
 |---|---|---|
-| `diff-so-fancy` | `git-delta` | même rôle, binaire `delta` |
-| `tldr` | `tealdeer` | même commande `tldr` |
-| `neofetch` | `fastfetch` | neofetch n'est plus maintenu |
+| `diff-so-fancy` | `git-delta` | same role, `delta` binary |
+| `tldr` | `tealdeer` | same `tldr` command |
+| `neofetch` | `fastfetch` | neofetch is no longer maintained |
 
-`x11-dwm.txt` ajoute les en-têtes de développement X11 (`libx11-dev`,
-`libxft-dev`, `libxinerama-dev`...) dont `dot build-suckless` a besoin pour
-compiler dwm, st, dmenu, slock et dwmblocks. Sur Arch, `base-devel` et les groupes
-xorg les fournissent déjà.
+`x11-dwm.txt` adds the X11 development headers (`libx11-dev`,
+`libxft-dev`, `libxinerama-dev`...) that `dot build-suckless` needs to
+build dwm, st, dmenu, slock and dwmblocks. On Arch, `base-devel` and the xorg
+groups already provide them.
 
-## Ce qui n'est pas repris
+## What is not carried over
 
-`packages/arch/core.txt` contient `base`, `linux`, `linux-firmware`, `grub`,
-`efibootmgr`, `pacman-contrib`, `reflector`, c'est un manifeste de réinstallation
-d'Arch. Sur une Ubuntu déjà installée, le noyau et le bootloader appartiennent à la
-distribution.
+`packages/arch/core.txt` holds `base`, `linux`, `linux-firmware`, `grub`,
+`efibootmgr`, `pacman-contrib`, `reflector`: it is a manifest for reinstalling
+Arch. On an Ubuntu that is already installed, the kernel and the bootloader belong
+to the distribution.
 
-`aur.txt` n'a pas d'équivalent, `dot install` ignore le réglage `aur:` hors Arch.
-Ce qui venait de l'AUR et reste utile est reventilé dans les groupes concernés
-(`flameshot` et `qimgv` dans `desktop.txt`, `fastfetch` dans `shell.txt`). Le
-reste, plus les outils appelés par `.xinitrc` qui ne sont pas packagés, est
-documenté dans [manual.md](manual.md), à lire avant le premier `dot bootstrap`.
+`aur.txt` has no equivalent, `dot install` ignores the `aur:` setting outside Arch.
+What came from the AUR and is still useful is spread over the relevant groups
+(`flameshot` and `qimgv` in `desktop.txt`, `fastfetch` in `shell.txt`). The
+rest, plus the tools `.xinitrc` calls that are not packaged, is
+documented in [manual.md](manual.md), to read before the first `dot bootstrap`.
 
-## Groupes encore absents
+## Groups still missing
 
-`dev.txt` et `extra.txt`, que seul le profil `full` déclare. Un groupe absent est
-ignoré silencieusement, donc `full` s'installe partiellement sur Ubuntu sans rien
-signaler.
+`dev.txt` and `extra.txt`, which only the `full` profile declares. A missing group is
+skipped silently, so `full` installs partially on Ubuntu without reporting
+anything.

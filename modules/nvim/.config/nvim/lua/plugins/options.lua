@@ -1,7 +1,7 @@
 
 -- ================== catpuccin only =============================
 
--- -- METTRE LE FOND du colorscheme DE la meme couleur que mon terminal!!!!!!!!!!!!!!!
+-- -- GIVE the colorscheme background THE same colour as my terminal!!!!!!!!!!!!!!!
 require("catppuccin").setup({
 
     integrations = {
@@ -115,9 +115,9 @@ vim.opt.termguicolors = true      --bufferline
 -- }
 
 
--- permet de renvoyer à la ligne les diagnostics
+-- wraps the diagnostics
 vim.api.nvim_create_autocmd("FileType", {
-  pattern = "qf", -- pour la quickfix et loclist
+  pattern = "qf", -- for the quickfix and loclist
   callback = function()
     vim.wo.wrap = true
   end,
@@ -127,29 +127,29 @@ vim.api.nvim_create_autocmd("FileType", {
 
 -- vim.keymap.set('n', '<leader>gh', '<cmd>lua vim.lsp.buf.hover()<cr>', opts)
 
--- -- Fonction pour désactiver le plugin de rendu Markdown
+-- -- Function disabling the Markdown render plugin
 -- local function disable_markdown_render()
 --   vim.cmd('RenderMarkdown disable')
 -- end
 --
--- -- Fonction pour réactiver le plugin de rendu Markdown
+-- -- Function enabling the Markdown render plugin again
 -- local function enable_markdown_render()
 --   vim.cmd('RenderMarkdown enable')
 -- end
 --
 --
--- -- Configuration de la touche de raccourci pour le hover LSP
+-- -- Shortcut key for the LSP hover
 -- vim.keymap.set('n', '<leader>gh', function()
---   disable_markdown_render() -- Désactiver le plugin de rendu Markdown
---   vim.lsp.buf.hover() -- Appeler la fonction de hover LSP
+--   disable_markdown_render() -- Disable the Markdown render plugin
+--   vim.lsp.buf.hover() -- Call the LSP hover function
 --
---   -- Définir une autocommande pour réactiver le plugin de rendu Markdown lors d'un mouvement de curseur
+--   -- Set an autocommand enabling the Markdown render plugin again when the cursor moves
 --   local group = vim.api.nvim_create_augroup('MarkdownRenderGroup', { clear = true })
 --   vim.api.nvim_create_autocmd('CursorMoved', {
 --     group = group,
 --     callback = function()
---       enable_markdown_render() -- Réactiver le plugin de rendu Markdown
---       vim.api.nvim_del_augroup_by_name('MarkdownRenderGroup') -- Supprimer l'autocommande après utilisation
+--       enable_markdown_render() -- Enable the Markdown render plugin again
+--       vim.api.nvim_del_augroup_by_name('MarkdownRenderGroup') -- Delete the autocommand after use
 --     end,
 --   })
 -- end)
@@ -157,18 +157,18 @@ vim.api.nvim_create_autocmd("FileType", {
 
 vim.cmd("doautocmd BufReadPost")
 
--- Gestionnaire d'erreurs pour ignorer l'erreur spécifique
+-- Error handler ignoring one specific error
 vim.lsp.handlers["textDocument/signatureHelp"] = function(err, result, ctx, config)
     if err and err.message and err.message:match("height' key must be a positive Integer") then
-        return -- Ignorer l'erreur
+        return -- Ignore the error
     end
-    -- Appeler le gestionnaire par défaut si l'erreur n'est pas celle que nous voulons ignorer
+    -- Call the default handler if the error is not the one to ignore
     vim.lsp.handlers.signature_help(err, result, ctx, config)
 end
 
 
 
--- Enregistre le répertoire courant dans zoxide à chaque changement
+-- Records the current directory in zoxide on every change
 vim.api.nvim_create_autocmd({'DirChanged'}, {
     pattern = '*',
     callback = function()
@@ -181,7 +181,7 @@ vim.api.nvim_create_autocmd({'DirChanged'}, {
 -- vim.api.nvim_create_autocmd("BufReadPost", {
 --     pattern = "*.java",
 --     callback = function()
---         -- attendre que jdtls soit attaché
+--         -- wait for jdtls to be attached
 --         vim.defer_fn(function()
 --             local bufnr = vim.api.nvim_get_current_buf()
 --             for _, client in pairs(vim.lsp.get_clients({bufnr = bufnr})) do
@@ -191,18 +191,18 @@ vim.api.nvim_create_autocmd({'DirChanged'}, {
 --                     break
 --                 end
 --             end
---         end, 10000)  -- délai en ms, ajustable
+--         end, 10000)  -- delay in ms, adjustable
 --     end,
 -- })
 
 
 
--- Autocmd déclenché à chaque fois qu'un client LSP s'attache à un buffer
+-- Autocmd fired every time an LSP client attaches to a buffer
 -- vim.api.nvim_create_autocmd("LspAttach", {
 --     callback = function(args)
 --         local client = vim.lsp.get_client_by_id(args.data.client_id)
 --         local bufnr = args.buf
---         -- si c'est jdtls et un fichier Java
+--         -- if it is jdtls and a Java file
 --         if client.name == "jdtls" and vim.bo[bufnr].filetype == "java" then
 --             vim.cmd("LspStop jdtls")
 --             print("jdtls stopped automatically for this Java buffer")
@@ -211,11 +211,11 @@ vim.api.nvim_create_autocmd({'DirChanged'}, {
 -- })
 --
 --
--- -- Override vim.notify pour ignorer le warning de jdtls
+-- -- Override vim.notify to ignore the jdtls warning
 -- local original_notify = vim.notify
 -- vim.notify = function(msg, level, opts)
 --     if type(msg) == "string" and msg:match("Client jdtls quit") then
---         return -- ignore ce message
+--         return -- ignores this message
 --     end
 --     original_notify(msg, level, opts)
 -- end
@@ -227,13 +227,13 @@ vim.api.nvim_create_autocmd({'DirChanged'}, {
 --         local bufnr = args.buf
 --
 --         if client.name == "jdtls" and vim.bo[bufnr].filetype == "java" then
---             -- Désactive la complétion
+--             -- Disables completion
 --             client.server_capabilities.completionProvider = nil
---             -- Désactive la signature help
+--             -- Disables signature help
 --             client.server_capabilities.signatureHelpProvider = nil
---             -- Désactive le hover
+--             -- Disables hover
 --             client.server_capabilities.hoverProvider = nil
---             -- Désactive le document formatting si tu veux
+--             -- Disables document formatting if you want
 --             client.server_capabilities.documentFormattingProvider = false
 --
 --             -- print("jdtls completions/snippets/signature/hover disabled for this buffer")
@@ -242,9 +242,9 @@ vim.api.nvim_create_autocmd({'DirChanged'}, {
 -- })
 
 
--- Désactivé en même temps que le plugin github/copilot.vim (voir lazy.lua).
--- Sans le plugin, copilot#Accept() n'existe pas : ce raccourci produirait une
--- erreur à chaque <C-J> en mode insertion.
+-- Disabled along with the github/copilot.vim plugin (see lazy.lua).
+-- Without the plugin, copilot#Accept() does not exist: this shortcut would raise an
+-- error on every <C-J> in insert mode.
 -- vim.keymap.set('i', '<C-J>', 'copilot#Accept("\\<CR>")', {
 --     expr = true,
 --     replace_keycodes = false

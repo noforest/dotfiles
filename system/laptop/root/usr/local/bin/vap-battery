@@ -2,7 +2,7 @@
 
 count_file="/tmp/battery_count.txt"
 
-# Charger les compteurs à partir du fichier
+# Load the counters from the file
 if [ -f "$count_file" ]; then
   source "$count_file"
 else
@@ -53,9 +53,9 @@ else
   fi
 fi
 
-# Afficher l'icône de batterie suivie du pourcentage
+# Show the battery icon followed by the percentage
 # echo " $icon $battery_percent% "
-# marge uniforme dwmblocks : 1 espace a gauche, rien a droite
+# uniform dwmblocks margin: 1 space on the left, nothing on the right
 echo " $icon $battery_percent% "
 
 echo "count_10=$count_10" > "$count_file"

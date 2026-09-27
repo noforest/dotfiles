@@ -402,24 +402,24 @@ frame_color = "#2AABEE"
 appname = instagram
 frame_color = "#E1306C"
 
-# Le calendrier de vap-clock est du texte à chasse fixe : chaque ligne compte.
-# Avec alignment = center, dunst ajoute « (Xm Ys old) » au-delà de
-# show_age_threshold, la dernière ligne devient la plus large et toutes les
-# autres se recentrent par rapport à elle — les colonnes de jours se décalent.
-# En left, les espaces de `cal` suffisent à aligner, et l'âge ne décale plus rien.
+# vap-clock's calendar is fixed-width text: every line counts.
+# With alignment = center, dunst appends "(Xm Ys old)" past
+# show_age_threshold, the last line becomes the widest and all the
+# others are centred again against it, so the day columns shift.
+# With left, the spaces of `cal` are enough to align, and the age no longer shifts anything.
 [calendrier]
 summary = "This Month"
 alignment = left
 
-# Thunar envoie ses notifs d'éjection/démontage en urgency low (cadre jaune).
-# Changer l'urgency ne réapplique pas les couleurs, on force celles de normal.
+# Thunar sends its eject/unmount notifications with low urgency (yellow frame).
+# Changing the urgency does not apply the colours again, so normal's are forced.
 [thunar]
 appname = thunar
 msg_urgency = low
 frame_color = "#aaaaaa"
 timeout = 15
 
-# Solaar notifie chaque changement de batterie de la souris : silence.
+# Solaar notifies every battery change of the mouse: silence.
 [souris_batterie]
 appname = solaar
 summary = "V450 Nano*"

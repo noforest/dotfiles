@@ -882,11 +882,11 @@ cmd_bootstrap() {
     profile_check "$profile"
     head_ "bootstrap ($profile)"
 
-    # De toutes les commandes, c'est la plus lourde : elle installe des paquets,
-    # écrit dans /etc en root et remplace des fichiers de $HOME. Quand personne
-    # n'a nommé le profil, il vient du châssis ou d'un repli, et une tour prise
-    # pour un portable recevrait le touchpad, le rétroéclairage et la gestion du
-    # capot. D'où le récapitulatif, et la confirmation quand rien n'a été choisi.
+    # Of all the commands, this is the heaviest: it installs packages,
+    # writes to /etc as root and replaces files in $HOME. When nobody
+    # named the profile, it comes from the chassis or from a fallback, and a desktop taken
+    # for a laptop would get the touchpad, the backlight and the lid
+    # handling. Hence the summary, and the confirmation when nothing was chosen.
     if [ $# -eq 0 ]; then
         info "  ${D}host $(hostname), chassis $(hostnamectl chassis 2>/dev/null || echo unknown), distro $(distro)${N}"
         if [ "$DEFAULT_PROFILE_SOURCE" = fallback ]; then

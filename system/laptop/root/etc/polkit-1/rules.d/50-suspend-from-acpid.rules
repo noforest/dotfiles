@@ -1,21 +1,21 @@
-// Autorise la mise en veille demandée par un programme lancé en arrière-plan.
+// Allows a suspend requested by a program started in the background.
 //
-// Par défaut, `systemctl suspend` n'est accordé qu'à un programme lancé depuis
-// la session graphique. Or c'est acpid qui lance xidlehook-start.sh à chaque
-// branchement et débranchement, et acpid tourne en dehors de la session. Pour
-// polkit, le xidlehook qui en sort n'appartient à aucune session : il réclame
-// un mot de passe administrateur, personne n'est là pour le taper, et la mise
-// en veille est abandonnée sans le moindre message dans le journal.
+// By default, `systemctl suspend` is only granted to a program started from
+// the graphical session. But it is acpid that starts xidlehook-start.sh on every
+// plug and unplug, and acpid runs outside the session. For
+// polkit, the resulting xidlehook belongs to no session: it asks for
+// an administrator password, nobody is there to type it, and the
+// suspend is dropped without a single message in the journal.
 //
-// C'est ce qui faisait que l'écran s'éteignait bien mais que le portable ne se
-// suspendait jamais après un débranchement. L'extinction de l'écran passe par
-// `xset`, qui parle au serveur X : X se contente d'un cookie, celui que
-// desktop-env.sh fournit avec DISPLAY et XAUTHORITY. polkit, lui, ne regarde
-// aucun fichier mais la session du processus appelant, et une session ne se
-// transmet pas par des variables d'environnement.
+// That is why the screen did turn off but the laptop never
+// suspended after being unplugged. Turning the screen off goes through
+// `xset`, which talks to the X server: X is fine with a cookie, the one
+// desktop-env.sh provides with DISPLAY and XAUTHORITY. polkit, on the other hand, looks at
+// no file but at the session of the calling process, and a session cannot be
+// passed on through environment variables.
 //
-// Portée volontairement étroite : le groupe wheel, et seulement la veille et
-// l'hibernation. Rien sur l'extinction ni le redémarrage.
+// Deliberately narrow scope: the wheel group, and only suspend and
+// hibernate. Nothing about power off or reboot.
 
 polkit.addRule(function(action, subject) {
     if ((action.id == "org.freedesktop.login1.suspend" ||

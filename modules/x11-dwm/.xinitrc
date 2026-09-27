@@ -1,13 +1,13 @@
 #!/bin/sh
 
-# Pour que clipster fonctionne
+# For clipster to work
 export PYENV_ROOT="$HOME/.pyenv"
 export PATH="$PYENV_ROOT/bin:$PYENV_ROOT/shims:$PATH"
 
-# HACK: faire <gf> dans nvim pour ouvrir le fichier sous le curseur
+# HACK: press <gf> in nvim to open the file under the cursor
 # *****************************************************
-# autres dossiers & fichiers importants:
-# - /etc/udev/rules.d/* (ex: 95-monitor-hotplug.rules)
+# other important folders & files:
+# - /etc/udev/rules.d/* (e.g. 95-monitor-hotplug.rules)
 # - /etc/X11/xorg.conf.d/*
 # - /etc/ly/config.ini
 # - /etc/systemd/logind.conf
@@ -15,22 +15,22 @@ export PATH="$PYENV_ROOT/bin:$PYENV_ROOT/shims:$PATH"
 # - /etc/acpi/events/*
 # - /usr/local/bin/*
 #
-# ==> tous ces fichiers sont désormais versionnés dans system/ du dépôt dotfiles,
-#     et déployés par `dot system-apply`.
+# ==> all these files are now versioned in system/ of the dotfiles repository,
+#     and deployed by `dot system-apply`.
 # *****************************************************
 
 exec >"$HOME/.xinitrc.log" 2>&1
-# ly stocke le fichier d'autorité dans /run/user/<uid>/lyxauth : on le recopie vers
-# ~/.Xauthority, que plusieurs scripts lisent. Les autres gestionnaires de session
-# (GDM, LightDM, SDDM) exportent XAUTHORITY eux-mêmes et n'ont rien à recopier —
-# d'où le test, sans lequel `set -e` ferait échouer la session sur une machine sans ly.
+# ly stores the authority file in /run/user/<uid>/lyxauth: it is copied to
+# ~/.Xauthority, which several scripts read. The other session managers
+# (GDM, LightDM, SDDM) export XAUTHORITY themselves and have nothing to copy,
+# hence the test, without which `set -e` would fail the session on a machine without ly.
 if [ -r "/run/user/$(id -u)/lyxauth" ]; then
     cp "/run/user/$(id -u)/lyxauth" ~/.Xauthority
 fi
-# Donne DISPLAY et XAUTHORITY au gestionnaire systemd utilisateur.
-# ly + .xinitrc ne démarrent pas la session via systemd : sans cet import, les
-# services activés à la demande (xdg-desktop-portal-gtk, xfconfd…) échouent sur
-# « cannot open display » et thunar ou flameshot restent bloqués.
+# Hands DISPLAY and XAUTHORITY to the systemd user manager.
+# ly + .xinitrc do not start the session through systemd: without this import, the
+# services activated on demand (xdg-desktop-portal-gtk, xfconfd…) fail with
+# "cannot open display" and thunar or flameshot hang.
 systemctl --user import-environment DISPLAY XAUTHORITY 2>/dev/null
 
 picom -b &
@@ -49,9 +49,9 @@ xset r rate 250 50 &
 clipster -d -f ~/.config/clipster/clipster.ini &
 export MOZ_GTK_TITLEBAR_DECORATION=none
 
-# Réglages propres à la machine : identifiants xinput, écrans, périphériques.
-# Ces noms ("ELAN2204:00 04F3:3109 Touchpad"…) n'existent que sur un portable donné,
-# d'où un fichier par machine. Sur un nouveau PC : créer le sien, sinon rien n'est chargé.
+# Machine-specific settings: xinput ids, screens, devices.
+# These names ("ELAN2204:00 04F3:3109 Touchpad"…) only exist on a given laptop,
+# hence one file per machine. On a new PC: create its own, otherwise nothing is loaded.
 MACHINE_CONF="$HOME/.config/dwm/machine.d/$(hostname).sh"
 [ -r "$MACHINE_CONF" ] && . "$MACHINE_CONF"
 
@@ -59,23 +59,23 @@ libinput-gestures-setup restart &
 dwmblocks &
 
 
-# IMPORTANT: ouvre en arrière plan solaar: permet d'éviter que le logibolt
-# envoie des signaux USB au contrôleur usb XHC0 PENDANT que je suis en suspend
-# impliquant le réveil involontaire de l'ordi (situation: quand je ferme le capot, etc...)
+# IMPORTANT: starts solaar in the background: keeps the logibolt receiver from
+# sending USB signals to the XHC0 usb controller WHILE I am suspended,
+# which woke the computer up unintentionally (situation: when I close the lid, etc...)
 solaar -w hide &  
 
-xset -dpms        # désactive DPMS natif (évite HDMI disconnected)
-xset s off        # désactive le screensaver X (sinon au bout de 10min slock s'active tt seul)
+xset -dpms        # disables native DPMS (avoids HDMI disconnected)
+xset s off        # disables the X screensaver (otherwise slock starts on its own after 10min)
 export SESSION_ID=$(loginctl list-sessions --no-legend | awk '$4 != "-" {print $1}' | head -1)
-xss-lock --session="$SESSION_ID" -- /usr/local/bin/slock-wrapper.sh &   # NOTE: Permet de remettre l'écran noir au bout de x secondes quand slock actif
-                                                                        # du coup quand je fais slock dans le terminal: il n'y a
-                                                                        # plus de wrapper (reste donc tout le temps actif ou du moins pendant 
-                                                                        # le temps restant du script xidlehook-start.sh) 
-                                                                        # ==> il faut que je fasse la commande lock (qui est un alias de xset s activate) 
-                                                                        # pour activer xss-lock et donc le wrapper de slock
+xss-lock --session="$SESSION_ID" -- /usr/local/bin/slock-wrapper.sh &   # NOTE: turns the screen black again after x seconds while slock is active
+                                                                        # so when I run slock in the terminal: there is
+                                                                        # no wrapper any more (so it stays on all the time, or at least for 
+                                                                        # the remaining time of the xidlehook-start.sh script) 
+                                                                        # ==> I have to run the lock command (an alias of xset s activate) 
+                                                                        # to trigger xss-lock and therefore the slock wrapper
 
-# NOTE: et est utilisé dans: /etc/acpi/events/autolock-power (acpid détecte
-# branchement et débranchement)
+# NOTE: also used in: /etc/acpi/events/autolock-power (acpid detects
+# plugging and unplugging)
 /usr/local/bin/xidlehook-start.sh & 
 
 exec dwm

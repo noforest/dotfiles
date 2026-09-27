@@ -1,16 +1,16 @@
 " ======================
-" Vimrc inspiré de Neovim
+" Vimrc inspired by Neovim
 " ======================
 
 " correction bug echap lent
 set ttimeoutlen=10
 
-" Définir la touche leader
+" Set the leader key
 let mapleader=" " 
 
-" Syntaxe et couleurs
+" Syntax and colours
 syntax on
-" set termguicolors           " true colors, désactivé pour Vim 8 simple
+" set termguicolors           " true colors, disabled for plain Vim 8
 set background=dark
 set t_Co=256
 colorscheme default
@@ -33,21 +33,21 @@ set encoding=utf-8
 set fileencoding=utf-8
 set fileencodings=utf-8,latin1
 
-" Numéros de ligne
+" Line numbers
 " set number
 " set relativenumber
 
-" Numéros relatifs plus discrets
+" Subtler relative numbers
 hi LineNr guifg=#606060 ctermfg=240
 hi CursorLineNr guifg=#ffffff ctermfg=15
 
 " Wrap & break
-" Toggle wrap mode avec feedback
+" Toggle wrap mode with feedback
 nnoremap <leader>w :set wrap! \| set wrap?<CR>
 set linebreak
 set breakindent
 
-" Spell (désactiver fr si fichier manquant)
+" Spell (disable fr if the file is missing)
 nnoremap <leader>us :set spell!<CR>
 set spelllang=en_us,fr
 
@@ -72,10 +72,10 @@ set splitbelow
 " Shell
 set shell=/bin/bash
 
-" Nettoyage de la recherche sur <Enter>
+" Clear the search on <Enter>
 nnoremap <CR> :nohlsearch<CR>
 
-" Ouvrir le fichier à la position où il a été fermé
+" Open the file at the position where it was closed
 augroup restore_cursor
   autocmd!
   autocmd BufReadPost * if line("'\"") > 0 && line("'\"") <= line("$") | exe "normal! g`\"" | endif
@@ -93,6 +93,6 @@ let g:netrw_liststyle = 3
 " endif
 
 
-" Recentrer la ligne du curseur après un scroll Ctrl-d / Ctrl-u
+" Centre the cursor line again after a Ctrl-d / Ctrl-u scroll
 nnoremap <C-d> <C-d>zz
 nnoremap <C-u> <C-u>zz

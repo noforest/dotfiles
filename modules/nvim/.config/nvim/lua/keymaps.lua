@@ -7,7 +7,7 @@ vim.g.mapleader = " "
 -- vim.keymap.set("n", "<leader>b", ":bp<cr>", { silent = true })
 
 
--- Si j'ai bufferline d'activer!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+-- If bufferline is enabled!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 -- vim.keymap.set("n", ",", ":BufferLineCyclePrev<cr>", { silent = true })
 -- vim.keymap.set("n", ";", ":BufferLineCycleNext<cr>", { silent = true })
 
@@ -20,12 +20,12 @@ vim.keymap.set("n", "<A-;>", "<Cmd>BufferMoveNext<CR>", { silent = true })
 -- vim.keymap.set("n", "<C-,>", ":BufferLineCyclePrev<CR>", { silent = true })
 -- vim.keymap.set("n", "<C-;>", ":BufferLineCycleNext<CR>", { silent = true })
 
--- Si je désactive bufferline !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+-- If I disable bufferline !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 -- vim.keymap.set("n", ",", ":bp<cr>", { silent = true })
 -- vim.keymap.set("n", ";", ":bn<cr>", { silent = true })
 
 
-----------Comme pour dwm, <C-j> ou <leader>j ou <Alt-j> permet de changer de fenêtres (ici dans nvim ce sont des splits)
+----------As in dwm, <C-j> or <leader>j or <Alt-j> switches windows (here in nvim they are splits)
 vim.keymap.set("n", "<C-j>", "<C-w><C-w>", { silent = true })
 -- vim.keymap.set("n", "<M-j>", "<C-w><C-w>", { silent = true })
 -- vim.keymap.set("n", "<leader>j", "<C-w><C-w>", { silent = true })
@@ -36,25 +36,25 @@ vim.keymap.set("n", "<C-j>", "<C-w><C-w>", { silent = true })
 -- vim.keymap.set("n", "<leader>b", function()
 --     local original_win = vim.api.nvim_get_current_win()
 --
---     -- Essayer de se déplacer vers n'importe quel autre split
+--     -- Try to move to any other split
 --     local found_other_win = false
 --
---     -- Essayer en bas
+--     -- Try below
 --     vim.cmd("wincmd j")
 --     if vim.api.nvim_get_current_win() ~= original_win then
 --         found_other_win = true
 --     else
---         -- Essayer à droite
+--         -- Try on the right
 --         vim.cmd("wincmd l")
 --         if vim.api.nvim_get_current_win() ~= original_win then
 --             found_other_win = true
 --         else
---             -- Essayer en haut
+--             -- Try above
 --             vim.cmd("wincmd k")
 --             if vim.api.nvim_get_current_win() ~= original_win then
 --                 found_other_win = true
 --             else
---                 -- Essayer à gauche
+--                 -- Try on the left
 --                 vim.cmd("wincmd h")
 --                 if vim.api.nvim_get_current_win() ~= original_win then
 --                     found_other_win = true
@@ -64,7 +64,7 @@ vim.keymap.set("n", "<C-j>", "<C-w><C-w>", { silent = true })
 --     end
 --
 --     if not found_other_win then
---         print("Aucun autre split trouvé")
+--         print("No other split found")
 --         vim.api.nvim_set_current_win(original_win)
 --         return
 --     end
@@ -72,12 +72,12 @@ vim.keymap.set("n", "<C-j>", "<C-w><C-w>", { silent = true })
 --     local target_win = vim.api.nvim_get_current_win()
 --     local target_buf = vim.api.nvim_win_get_buf(target_win)
 --
---     -- Récupérer le contenu du split cible
+--     -- Get the content of the target split
 --     local content = vim.api.nvim_buf_get_lines(target_buf, 0, -1, false)
 --     local original_filetype = vim.bo.filetype
 --     local original_bufname = vim.fn.bufname(target_buf)
 --
---     -- Générer le nom de fichier
+--     -- Build the file name
 --     local timestamp = os.date('%H%M%S')
 --     local basename = original_bufname ~= '' and 
 --     vim.fn.fnamemodify(original_bufname, ':t:r') .. "_" .. timestamp or 
@@ -86,21 +86,21 @@ vim.keymap.set("n", "<C-j>", "<C-w><C-w>", { silent = true })
 --     local extension = original_filetype ~= '' and original_filetype or "txt"
 --     local filename = "/tmp/" .. basename .. "." .. extension
 --
---     -- Sauvegarder dans /tmp
+--     -- Save to /tmp
 --     local file = io.open(filename, "w")
 --     if file then
 --         file:write(table.concat(content, "\n"))
 --         file:close()
 --     else
---         print("Erreur: Impossible d'écrire dans " .. filename)
+--         print("Error: cannot write to " .. filename)
 --         vim.api.nvim_set_current_win(original_win)
 --         return
 --     end
 --
---     -- Fermer le split cible
+--     -- Close the target split
 --     vim.cmd("close")
 --
---     -- Retourner à la fenêtre originale et ouvrir le nouveau fichier
+--     -- Go back to the original window and open the new file
 --     vim.api.nvim_set_current_win(original_win)
 --     vim.cmd("edit " .. filename)
 --     vim.bo.buflisted = true
@@ -110,7 +110,7 @@ vim.keymap.set("n", "<C-j>", "<C-w><C-w>", { silent = true })
 --         vim.bo.filetype = original_filetype
 --     end
 --
---     -- print('Split converti en buffer: ' .. filename)
+--     -- print('Split turned into a buffer: ' .. filename)
 -- end, { silent = true })
 
 -- vim.keymap.set("n", "<leader>b", function()
@@ -143,7 +143,7 @@ vim.keymap.set("n", "<leader>c", function()
 end, { silent = true })
 
 vim.keymap.set("n", "<Leader>C", function()
-    -- nbr de buffers modifiés
+    -- number of modified buffers
     local modified_count = 0
     for _, buf in ipairs(vim.api.nvim_list_bufs()) do
         if vim.api.nvim_buf_is_loaded(buf) and vim.api.nvim_buf_get_option(buf, "modified") then
@@ -151,7 +151,7 @@ vim.keymap.set("n", "<Leader>C", function()
         end
     end
 
-    -- S'il y a des buffers non saved, demander confirmation
+    -- If there are unsaved buffers, ask for confirmation
     if modified_count > 0 then
         local message = modified_count == 1 
         and "Buffer modified, close anyway?" 
@@ -183,18 +183,18 @@ vim.keymap.set("n", "<leader><up>", ":resize +10<cr>")
 vim.keymap.set("n", "<leader><down>", ":resize -10<cr>")
 
 
--- Définir un autocmd pour ajuster le raccourci en fonction du type de fichier
+-- Set an autocmd adjusting the shortcut to the file type
 vim.api.nvim_create_autocmd("FileType", {
   pattern = "*",
   callback = function()
     local filetype = vim.bo.filetype
 
     if filetype == "python" then
-      -- Si le fichier est de type Python, utiliser black pour formater
+      -- If the file is Python, use black to format
       vim.keymap.set("n", "<leader>fm", ":silent !autopep8 --indent-size 2 --in-place %<cr>",
         { noremap = true, silent = true, buffer = true })
     else
-      -- Sinon, utiliser la fonction LSP pour formater
+      -- Otherwise, use the LSP function to format
       vim.keymap.set("n", "<leader>fm", vim.lsp.buf.format, { noremap = true, silent = true, buffer = true })
     end
   end
@@ -205,7 +205,7 @@ vim.api.nvim_create_autocmd("FileType", {
 -- vim.api.nvim_set_keymap('n', 'P', "P`[v`]=<CR>`]", { noremap = true, silent = true })
 -- vim.api.nvim_set_keymap('x', 'p', '"_PP`[v`]=<CR>`]', { noremap = true, silent = true })
 
--- amélioration des précédentes: permettent de bien lié le clipboard au registre de nvim
+-- improvement over the previous ones: ties the clipboard properly to the nvim register
 vim.api.nvim_set_keymap('n', 'p', '"+p`[v`]=<CR>`]', { noremap = true, silent = true })
 vim.api.nvim_set_keymap('n', 'P', '"+P`[v`]=<CR>`]', { noremap = true, silent = true })
 vim.api.nvim_set_keymap('x', 'p', '"_"+P`[v`]=<CR>`]', { noremap = true, silent = true })
@@ -214,18 +214,18 @@ vim.api.nvim_set_keymap('x', 'p', '"_"+P`[v`]=<CR>`]', { noremap = true, silent 
 
 
 -- comment.nvim
--- Keymap pour copier sans descendre d'une ligne
+-- Keymap to yank without moving down a line
 vim.api.nvim_set_keymap('x', 'gyc', 'ygvgc', { silent = true })
 vim.api.nvim_set_keymap('x', 'gyb', 'ygvgb', { silent = true })
 
--- -- Keymap pour copier sans descendre d'une ligne
+-- -- Keymap to yank without moving down a line
 -- vim.api.nvim_set_keymap('x', 'y', 'ygv<Esc>', { noremap = true, silent = true })
 
 
 
 
 
--- -- CODE DEPASSÉ: c'est une save ou cas où
+-- -- OUTDATED CODE: kept as a backup just in case
 -- vim.api.nvim_set_keymap('v', 'p', '"_dP`[v`]=<CR>`]', { noremap = true, silent = true })
 -- vim.api.nvim_set_keymap('x', 'p', '0"_dO<Esc>P`[v`]=<CR>`]', { noremap = true, silent = true })
 
@@ -248,7 +248,7 @@ vim.api.nvim_set_keymap('x', 'gyb', 'ygvgb', { silent = true })
 --   ["Move Right"] = "<Right>",
 -- }
 
--- Remapper les touches directionnelles
+-- Remap the arrow keys
 -- vim.api.nvim_set_keymap('n', '<Up>', 'k', { noremap = true, silent = true })
 -- vim.api.nvim_set_keymap('n', '<Down>', 'j', { noremap = true, silent = true })
 -- vim.api.nvim_set_keymap('n', '<Left>', 'h', { noremap = true, silent = true })
@@ -257,7 +257,7 @@ vim.api.nvim_set_keymap('x', 'gyb', 'ygvgb', { silent = true })
 vim.api.nvim_set_keymap(
   'n',
   '<leader>m',
-  'iint main(int argc, char *argv[]) {\n\nreturn 0;\n}<Esc>', -- le texte à insérer
+  'iint main(int argc, char *argv[]) {\n\nreturn 0;\n}<Esc>', -- the text to insert
   { noremap = true, silent = true }
 )
 
@@ -273,7 +273,7 @@ vim.keymap.set('n', 'J', ':m .+1<CR>==', { noremap = true, silent = true })
 vim.keymap.set('v', 'K', ":m '<-2<CR>gv=gv", { noremap = true, silent = true })
 vim.keymap.set('v', 'J', ":m '>+1<CR>gv=gv", { noremap = true, silent = true })
 
--- Remap Shift+V pour sélectionner la ligne et déplacer le curseur à la fin
+-- Remap Shift+V to select the line and move the cursor to its end
 -- vim.api.nvim_set_keymap('n', 'V', 'V$', { noremap = true, silent = true })
 
 vim.keymap.set('n', '<S-Up>', '<Nop>')
@@ -325,7 +325,7 @@ vim.keymap.set('n', '<C-ù>',":ToggleTerm<CR>", { noremap = true, silent = true 
 
 
 
--- Toggle wrap avec <leader>w
+-- Toggle wrap with <leader>w
 vim.keymap.set('n', '<leader>w', function()
     vim.wo.wrap = not vim.wo.wrap
     local status = vim.wo.wrap and "wrap enabled" or "wrap disabled"
@@ -333,7 +333,7 @@ vim.keymap.set('n', '<leader>w', function()
 end, { desc = "Toggle wrap with visible feedback" })
 
 
--- Toggle colorcolumn à 80 avec <leader>x
+-- Toggle colorcolumn at 80 with <leader>x
 vim.keymap.set('n', '<leader>x', function()
     if vim.wo.colorcolumn == "" then
         vim.wo.colorcolumn = "80"
@@ -344,7 +344,7 @@ end, { desc = "Toggle colorcolumn at 80" })
 
 
 
--- Sauvegarde du répertoire courant au démarrage
+-- Saves the current directory at startup
 vim.g.startup_dir = vim.fn.getcwd()
 
 vim.keymap.set("n", "<leader>z", function()
@@ -366,7 +366,7 @@ vim.keymap.set('n', '<leader><BS>', function()
 end, { desc = 'Return to the Neovim startup directory' })
 
 
--- Empêcher la sélection automatique du premier item
+-- Prevent the first item from being selected automatically
 vim.o.completeopt = "menuone,noinsert,noselect"
 
 vim.api.nvim_set_keymap('i', '<Tab>', 'pumvisible() ? "\\<C-n>" : "\\<Tab>"', {expr = true, noremap = true})

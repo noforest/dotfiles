@@ -1,6 +1,6 @@
 vim.cmd("let g:netrw_liststyle = 3")
 
--- -- Désactiver la couleur de fond pour obtenir celle du terminal
+-- -- Disable the background colour to get the terminal's
 -- vim.cmd("hi Normal guibg=NONE ctermbg=NONE")
 -- vim.cmd("hi LineNr guibg=NONE ctermbg=NONE")
 -- vim.cmd("hi SignColumn guibg=NONE ctermbg=NONE")
@@ -10,7 +10,7 @@ local opt = vim.opt
 vim.g.loaded_netrw = 1
 vim.g.loaded_netrwPlugin = 1
 
--- langues pour le correcteur
+-- languages for the spell checker
 opt.spelllang = { "en_us", "fr" }
 
 -- line numbers
@@ -22,12 +22,12 @@ opt.tabstop = 4 -- 2 spaces for tabs (prettier default)
 opt.shiftwidth = 4 -- 2 spaces for indent width
 opt.expandtab = true -- expand tab to spaces
 opt.autoindent = true -- copy indent from current line when starting new one
-opt.smartindent = true  -- Indentation intelligente
+opt.smartindent = true  -- Smart indentation
 opt.scrolloff = 3
 opt.cinkeys:remove("0#")
 
--- DiffView Delete line comme sur CodeDiff 
--- rajouter ça quand meme -> vim.api.nvim_set_hl(0, "DiffDelete", { fg = "#444444" })
+-- DiffView Delete line as in CodeDiff 
+-- add this anyway -> vim.api.nvim_set_hl(0, "DiffDelete", { fg = "#444444" })
 vim.opt.fillchars:append { diff = "╱" }
 
 
@@ -39,12 +39,12 @@ vim.opt.fileencodings = { "utf-8", "latin1" }
 
 
 opt.wrap = false
-opt.linebreak = true          -- couper proprement sans casser les mots
-opt.breakindent = true        -- garder indentation pour lignes coupées
--- -- opt.showbreak = "↳"          -- symbole pour indiquer le début d'une ligne coupée
+opt.linebreak = true          -- wrap cleanly without breaking words
+opt.breakindent = true        -- keep the indentation for wrapped lines
+-- -- opt.showbreak = "↳"          -- symbol marking the start of a wrapped line
 --
 --
--- -- Navigation ligne visuelle en mode normal et visuel
+-- -- Move by visual line in normal and visual mode
 -- for _, mode in ipairs({ "n", "v" }) do
 --     vim.keymap.set(mode, "j", "gj", { noremap = true, silent = true })
 --     vim.keymap.set(mode, "k", "gk", { noremap = true, silent = true })
@@ -84,20 +84,20 @@ opt.splitbelow = true -- split horizontal window to the bottom
 -- turn off swapfile
 opt.swapfile = false
 
--- avoir des modif même si on ferme le fichier
+-- keep changes even after the file is closed
 opt.undodir = os.getenv("HOME") .. "/.vim/undodir"
 opt.undofile = true
 
--- Désactiver la barre du bas
+-- Disable the bottom bar
 vim.opt.laststatus = 0
 
--- desactiver indication insert mode, visual mode etc
+-- disable the insert mode, visual mode etc. indicator
 vim.opt.showmode = false
 
--- Afficher les numéros de ligne et de colonne dans la ligne de commande
+-- Show the line and column numbers in the command line
 vim.opt.ruler = true
 
--- Afficher la position relative dans le fichier (top, bottom, etc.)
+-- Show the relative position in the file (top, bottom, etc.)
 vim.opt.showcmd = true
 
 
@@ -105,16 +105,16 @@ vim.o.shell = "/bin/bash"
 
 -- opt.colorcolumn = "80"
 
--- je veux pas aussi que le <CR> me fasse descendre d'une ligne
+-- I also don't want <CR> to move me down a line
 vim.api.nvim_set_keymap('n', '<CR>', ':nohlsearch<CR>', { noremap = true, silent = true })
 
--- -- commande pour :noh avec <CR> plus changement des liens markdowns en <leader><CR>
+-- -- :noh on <CR>, and markdown links moved to <leader><CR>
 -- vim.api.nvim_create_autocmd("BufEnter", {
 --     pattern = "*.md",
 --     callback = function()
 --         local buf = vim.api.nvim_get_current_buf()
 --
---         -- Récupérer le mapping existant du plugin pour <CR>
+--         -- Get the plugin's existing <CR> mapping
 --         local original_cr
 --         local maps = vim.api.nvim_buf_get_keymap(buf, 'n')
 --         for _, m in ipairs(maps) do
@@ -124,17 +124,17 @@ vim.api.nvim_set_keymap('n', '<CR>', ':nohlsearch<CR>', { noremap = true, silent
 --             end
 --         end
 --
---         -- Remapper <CR> pour :noh
+--         -- Remap <CR> to :noh
 --         vim.keymap.set("n", "<CR>", ":noh<CR>", { silent = true, buffer = true })
 --
---         -- Remapper <C-CR> pour l'ancien comportement
+--         -- Remap <C-CR> for the old behaviour
 --         if original_cr then
 --             vim.keymap.set("n", "<leader><CR>", original_cr, { silent = true, buffer = true })
 --         end
 --     end,
 -- })
 
--- on peut plus ouvrir un lien avec <CR> dans un markdown (il faudra faire :gx)
+-- a link can no longer be opened with <CR> in markdown (use :gx)
 -- vim.api.nvim_create_autocmd("FileType", {
 --     pattern = "markdown",
 --     callback = function()
@@ -144,7 +144,7 @@ vim.api.nvim_set_keymap('n', '<CR>', ':nohlsearch<CR>', { noremap = true, silent
 --     end,
 -- })
 
---désaction l'autocomplétion des commentaires
+--disables comment autocompletion
 vim.api.nvim_create_autocmd("BufEnter", {
   pattern = "*",
   callback = function()
@@ -153,7 +153,7 @@ vim.api.nvim_create_autocmd("BufEnter", {
 })
 
 
--- ~~~~~~~ sert à comber le vide dans nvim car, parfois il y a des gaps noirs
+-- ~~~~~~~ fills the empty space in nvim, because there are sometimes black gaps
 vim.api.nvim_create_autocmd({ "UIEnter", "ColorScheme" }, {
   callback = function()
     local normal = vim.api.nvim_get_hl(0, { name = "Normal" })
@@ -164,14 +164,14 @@ vim.api.nvim_create_autocmd({ "UIEnter", "ColorScheme" }, {
 
 -- vim.api.nvim_create_autocmd("VimLeave", {
 --   callback = function()
---     -- Change explicitement la couleur de fond au moment de quitter
---     io.write("\027]11;#101010\027\\")  -- Remplace #000000 par la couleur par défaut de ton terminal `st`
+--     -- Explicitly changes the background colour on quit
+--     io.write("\027]11;#101010\027\\")  -- Replace #000000 with the default colour of your `st` terminal
 --   end,
 -- })
 vim.api.nvim_create_autocmd("VimLeave", {
     callback = function()
-        -- Réinitialise la couleur de fond à la valeur par défaut du terminal
-        io.write("\027]111\027\\")  -- Séquence pour réinitialiser la couleur de fond
+        -- Resets the background colour to the terminal default
+        io.write("\027]111\027\\")  -- Sequence resetting the background colour
     end,
 })
 
@@ -183,7 +183,7 @@ vim.api.nvim_create_autocmd('BufReadPost', {
     command = 'silent! normal! g`"zv'
 })
 
--- -- ~~~~~~~ Le code en dessous permet d'éviter le recul du curseur quand on passe en mode normal
+-- -- ~~~~~~~ The code below keeps the cursor from stepping back when entering normal mode
 
 -- vim.api.nvim_create_autocmd("InsertLeave", {
 --   callback = function()
@@ -198,9 +198,9 @@ vim.api.nvim_create_autocmd('BufReadPost', {
 -- local function update_bufferline()
 --     local buffer_count = #vim.api.nvim_list_bufs()
 --     if buffer_count == 1 then
---         vim.opt_local.showtabline = 0  -- Cacher la ligne des onglets (bufferline)
+--         vim.opt_local.showtabline = 0  -- Hide the tab line (bufferline)
 --     else
---         vim.opt_local.showtabline = 2  -- Toujours afficher la ligne des onglets
+--         vim.opt_local.showtabline = 2  -- Always show the tab line
 --     end
 -- end
 
@@ -219,24 +219,24 @@ if exists('$TMUX')
 -- vim.api.nvim_create_autocmd("BufEnter", {
 --     pattern = "*.rs",
 --     callback = function()
---         -- Sauvegarder la position du curseur
+--         -- Save the cursor position
 --         local cursor_pos = vim.api.nvim_win_get_cursor(0)
 --         local view = vim.fn.winsaveview()
 --
---         -- Aller à la fin du fichier
+--         -- Go to the end of the file
 --         vim.cmd("normal! G")
 --
---         -- Ajouter une nouvelle ligne
+--         -- Add a new line
 --         vim.cmd("normal! o")
 --
---         -- Supprimer la ligne qu'on vient d'ajouter
+--         -- Delete the line just added
 --         vim.cmd("normal! dd")
 --
---         -- Restaurer la position du curseur et la vue
+--         -- Restore the cursor position and the view
 --         vim.fn.winrestview(view)
 --         vim.api.nvim_win_set_cursor(0, cursor_pos)
 --         vim.bo.modified = true
 --     end,
---     desc = "Marque les fichiers Rust comme modifiés à l'ouverture"
+--     desc = "Marks Rust files as modified when opened"
 -- })
 

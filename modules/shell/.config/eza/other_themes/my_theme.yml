@@ -2,7 +2,7 @@
 #
 # filekinds:
 #   normal: {foreground: "e5e5e5"}
-#   directory: {foreground: "#5aadb0"}   # <-- (vert camo) (bleu originel) --> #61AFEF      (autres) --> #44a4f2        #389ff2
+#   directory: {foreground: "#5aadb0"}   # <-- (camo green) (original blue) --> #61AFEF      (others) --> #44a4f2        #389ff2
 #   symlink: {foreground: "#56B6C2"}
 #   pipe: {foreground: "#5C6370"}
 #   block_device: {foreground: "#E5C07B"}

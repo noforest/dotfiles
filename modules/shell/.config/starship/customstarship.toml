@@ -7,7 +7,7 @@ $username\
 $directory\
 """
 
-# # FORMAT si je veux le code d'erreur rouge
+# # FORMAT if I want the error code in red
 # format = """
 # [ ](bg:color_gray_background)\
 # $status\

@@ -42,7 +42,7 @@
 # fi
 
 
-# ~~~~~~~~~~~ VERSION opti (sans titre-album audio) ~~~~~~~~~~~~~~
+# ~~~~~~~~~~~ OPTIMISED VERSION (without the audio title-album) ~~~~~~~~~~~~~~
 
 #!/bin/bash
 

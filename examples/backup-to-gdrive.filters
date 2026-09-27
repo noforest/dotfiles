@@ -1,20 +1,20 @@
-# Filtres rclone pour backup-to-gdrive.sh
+# rclone filters for backup-to-gdrive.sh
 #
-# À copier vers ~/.config/backup-to-gdrive/filters puis à adapter :
+# Copy to ~/.config/backup-to-gdrive/filters, then adapt:
 #   mkdir -p ~/.config/backup-to-gdrive
 #   cp examples/backup-to-gdrive.filters \
 #      ~/.config/backup-to-gdrive/filters
 #
-# Ce fichier reste hors du dépôt : il contient des chemins personnels.
-# Les chemins sont relatifs à $SRC1 ($HOME/Documents par défaut).
-# L'ordre compte : la première règle qui matche l'emporte.
+# That file stays out of the repository: it holds personal paths.
+# Paths are relative to $SRC1 ($HOME/Documents by default).
+# Order matters: the first matching rule wins.
 
-# Ne garder que les pièces jointes d'une bibliothèque Zotero, pas la base.
+# Keep only the attachments of a Zotero library, not the database.
 + zotero/storage/**
 - zotero/**
 
-# Dépôts git déjà hébergés ailleurs.
-# - programming/<compte-github>/**
+# Git repositories already hosted elsewhere.
+# - programming/<github-account>/**
 
-# Gros jeux de données ou espaces de travail régénérables.
-# - chemin/vers/projet/data/**
+# Large datasets or workspaces that can be regenerated.
+# - path/to/project/data/**

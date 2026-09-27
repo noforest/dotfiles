@@ -4,7 +4,7 @@ export DISPLAY=:0
 export XAUTHORITY=/run/user/1000/lyxauth
 export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/1000/bus"
 
-# Log pour débogage
+# Log for debugging
 echo "$(date): applying keyboard options" >> /tmp/udev-keyboard.log
 
 /usr/bin/setxkbmap fr -option caps:escape

@@ -2,7 +2,7 @@ void
 movestack(const Arg *arg) {
 	Client *c = NULL, *p = NULL, *pc = NULL, *i;
 
-	// verif si fenetre selectionnee
+	// check whether a window is selected
 	if (!selmon->sel)
 		return;
 

@@ -32,7 +32,7 @@ def main():
         os.execvp("vlc", ["vlc"])
         return
 
-    # Trouve le fichier (dernier arg non-option)
+    # Finds the file (last non-option arg)
     filepath = None
     for a in reversed(args):
         if not a.startswith("-") and os.path.exists(a):
@@ -49,7 +49,7 @@ def main():
 
     proc = subprocess.Popen(cmd)
 
-    # Polling toutes les 5s pour sauvegarder la position
+    # Polls every 5s to save the position
     try:
         while proc.poll() is None:
             time.sleep(5)
@@ -61,10 +61,10 @@ def main():
         pass
 
     proc.wait()
-    # À la fermeture, si proche de la fin → supprime l'entrée
+    # On close, if near the end → deletes the entry
     if filepath and filepath in db:
         pos = db[filepath]
-        # (optionnel) reset si > 95% — nécessiterait la durée totale
+        # (optional) reset if > 95%, would need the total duration
         save(db)
 
 if __name__ == "__main__":

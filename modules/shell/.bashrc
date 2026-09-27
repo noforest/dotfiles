@@ -67,6 +67,6 @@ eval "$(atuin init bash --disable-up-arrow)"
 
 [ -r "$HOME/Documents/enseirb/s8/prog_multicoeur_et_gpu/easypap-ecole/script/easypap-completion.bash" ] && \
     . "$HOME/Documents/enseirb/s8/prog_multicoeur_et_gpu/easypap-ecole/script/easypap-completion.bash"
-# ExAlgo completion - ajouté automatiquement
+# ExAlgo completion - added automatically
 [ -r "$HOME/Documents/enseirb/s8/pfa/ein8-proj2-pfa-27709/completion.bash" ] && \
     source "$HOME/Documents/enseirb/s8/pfa/ein8-proj2-pfa-27709/completion.bash"

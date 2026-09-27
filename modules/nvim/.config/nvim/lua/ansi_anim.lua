@@ -1,34 +1,34 @@
--- Anime un GIF sur le dashboard de snacks, avec les mêmes contraintes que l'art
--- fixe de lua/ansi_art.lua : rien ne doit être détruit ni recréé quand le
--- dashboard se met à jour.
+-- Animates a GIF on the snacks dashboard, with the same constraints as the still
+-- art of lua/ansi_art.lua: nothing may be destroyed or recreated when the
+-- dashboard updates.
 --
--- POURQUOI PAS UNE SECTION `terminal` : elle est détruite et recréée à chaque
--- dashboard:update(), donc à chaque WinResized — donc à chaque <leader>e. Elle
--- vit dans une fenêtre flottante posée par-dessus le dashboard : clignotement
--- garanti, et un chafa relancé en boucle pour rien.
+-- WHY NOT A `terminal` SECTION: it is destroyed and recreated on every
+-- dashboard:update(), so on every WinResized, so on every <leader>e. It
+-- lives in a floating window laid over the dashboard: flicker
+-- guaranteed, and chafa rerun over and over for nothing.
 --
--- COMMENT : la première image du GIF est posée en texte statique, exactement
--- comme le PNG l'était. C'est elle qui réserve la place dans le buffer et fixe
--- la mise en page. Les images suivantes sont ensuite PEINTES PAR-DESSUS avec des
--- extmarks `virt_text` : le texte du buffer ne change jamais, il n'y a ni reflow
--- ni recalcul de layout, et si l'animation s'arrête on retombe sur l'image fixe.
+-- HOW: the first frame of the GIF is laid down as static text, exactly
+-- as the PNG was. It reserves the room in the buffer and sets
+-- the layout. The next frames are then PAINTED OVER IT with
+-- `virt_text` extmarks: the buffer text never changes, there is no reflow
+-- nor layout recomputation, and if the animation stops the still frame remains.
 --
--- `virt_text_win_col` plutôt que `virt_text_pos = "overlay"` : l'art vit dans le
--- pane 2, et snacks construit chaque ligne en concaténant le pane 1 puis un
--- écart. La colonne d'OCTETS où commence l'art varie donc d'une ligne à l'autre
--- (les icônes du pane 1 sont multi-octets), alors que la colonne d'ÉCRAN, elle,
--- est constante — c'est tout l'intérêt des panes. On se cale donc sur l'écran.
--- Sans danger ici : le dashboard force `wrap = false`.
+-- `virt_text_win_col` rather than `virt_text_pos = "overlay"`: the art lives in
+-- pane 2, and snacks builds each line by joining pane 1 and then a
+-- gap. The BYTE column where the art starts therefore varies from line to line
+-- (the icons of pane 1 are multibyte), whereas the SCREEN column
+-- is constant, which is the whole point of panes. So the screen is used.
+-- Safe here: the dashboard forces `wrap = false`.
 --
--- PROPORTIONS — `--font-ratio` n'est pas facultatif ici. Quand sa sortie part
--- dans un fichier, chafa ne peut plus interroger le terminal et retombe sur des
--- cellules deux fois plus hautes que larges. Roboto Mono 12.5 dans Alacritty
--- donne 10 × 24 px : sans le dire à chafa, le dessin sort étiré de 20 % en
--- hauteur. Mesurer une cellule = repérer le pas horizontal entre deux glyphes
--- et le pas vertical entre deux lignes, sur une capture d'écran.
+-- PROPORTIONS: `--font-ratio` is not optional here. When its output goes
+-- to a file, chafa can no longer query the terminal and falls back to
+-- cells twice as tall as they are wide. Roboto Mono 12.5 in Alacritty
+-- gives 10 × 24 px: without telling chafa, the drawing comes out stretched 20 % in
+-- height. Measuring a cell = finding the horizontal step between two glyphs
+-- and the vertical step between two lines, on a screenshot.
 --
--- Pour régénérer les images (la sortie brute de chafa est conservée telle
--- quelle, le découpage en images se fait ici) :
+-- To regenerate the frames (chafa's raw output is kept as
+-- is, the split into frames happens here):
 --   chafa --size 50 --font-ratio 10/24 samurai_float.gif > samurai_float_frames.txt
 
 local ansi_art = require("ansi_art")
@@ -38,26 +38,26 @@ local M = {}
 local ns = vim.api.nvim_create_namespace("ansi_art_anim")
 local augroup = vim.api.nvim_create_augroup("AnsiArtAnim", { clear = true })
 local uv = vim.uv or vim.loop
-local cache = {} ---@type table<string, table>  chemin -> animation déjà chargée
+local cache = {} ---@type table<string, table>  path -> animation already loaded
 
 local Anim = {}
 Anim.__index = Anim
 
----Découpe la sortie brute de chafa en images.
+---Splits chafa's raw output into frames.
 ---
----chafa écrit, pour un GIF : `ESC[?25l`, autant de `ESC D` que de lignes (pour
----réserver la place), `ESC[<n>A` pour remonter, `ESC[s` pour mémoriser la
----position, puis les images séparées par `ESC[u` (retour à la position
----mémorisée), et enfin `ESC[?25h`.
+---For a GIF, chafa writes: `ESC[?25l`, as many `ESC D` as lines (to
+---reserve the room), `ESC[<n>A` to move back up, `ESC[s` to save the
+---position, then the frames separated by `ESC[u` (back to the saved
+---position), and finally `ESC[?25h`.
 ---
----Les séquences CSI sont ignorées par le parseur d'ansi_art, mais `ESC D` n'en
----est pas une (pas de `[`) : il faut la retirer à la main, sinon elle finirait
----dans le texte affiché.
+---CSI sequences are ignored by ansi_art's parser, but `ESC D` is not
+---one (no `[`): it has to be removed by hand, or it would end up
+---in the displayed text.
 ---
----Tout se fait à coups de découpes plutôt que de motifs : le fichier pèse 1 Mo,
----et un `gsub` de plus ou de moins s'y compte en dizaines de millisecondes
----payées au démarrage de nvim. D'où le nettoyage ciblé sur la première et la
----dernière image, seules concernées.
+---Everything is done by slicing rather than with patterns: the file weighs 1 MB,
+---and one `gsub` more or less counts in tens of milliseconds
+---paid at nvim startup. Hence the cleanup targeting only the first and the
+---last frame, the only ones affected.
 ---@param raw string
 ---@return string[]
 local function split_frames(raw)
@@ -65,8 +65,8 @@ local function split_frames(raw)
     if #parts == 0 then
         return {}
     end
-    parts[1] = parts[1]:gsub("\27D", "")                -- préambule
-    parts[#parts] = parts[#parts]:gsub("\27%[%?25h", "") -- curseur rétabli
+    parts[1] = parts[1]:gsub("\27D", "")                -- preamble
+    parts[#parts] = parts[#parts]:gsub("\27%[%?25h", "") -- cursor restored
 
     local frames = {}
     for _, part in ipairs(parts) do
@@ -80,20 +80,20 @@ local function split_frames(raw)
     return frames
 end
 
----Charge un fichier d'animation ANSI (sortie de chafa sur un GIF).
----Le résultat est mémorisé : rouvrir le dashboard ne relit pas le fichier.
+---Loads an ANSI animation file (chafa's output on a GIF).
+---The result is cached: reopening the dashboard does not read the file again.
 ---@param path string
 ---@param opts? { delay?: integer, quantize?: integer, hide_cursor?: boolean }
----  delay    : délai entre images en ms (défaut 80, soit ~12 i/s)
----  hide_cursor : masque le curseur du terminal tant que l'animation tourne
----                (défaut true, voir `Anim:hide_cursor`). Mettre false pour le
----                garder visible : il indique l'entrée de menu sélectionnée.
----  quantize : pas d'arrondi des couleurs 24 bits (défaut 8). Chaque couple de
----             couleurs devient un groupe de surbrillance, et nvim en refuse
----             plus de 20000 en tout (E849, treesitter et LSP compris). En
----             truecolor pur ce GIF en réclame ~19000 à lui seul ; arrondi au
----             multiple de 8, il en réclame ~4800 pour un écart de couleur
----             invisible. Mettre 0 pour désactiver.
+---  delay    : delay between frames in ms (default 80, about 12 fps)
+---  hide_cursor : hides the terminal cursor while the animation runs
+---                (default true, see `Anim:hide_cursor`). Set to false to
+---                keep it visible: it shows the selected menu entry.
+---  quantize : rounding step for 24-bit colours (default 8). Each pair of
+---             colours becomes a highlight group, and nvim refuses
+---             more than 20000 in total (E849, treesitter and LSP included). In
+---             pure truecolor this GIF asks for ~19000 on its own, rounded to a
+---             multiple of 8, it asks for ~4800 for a colour difference
+---             nobody can see. Set to 0 to disable.
 ---@return table|nil anim, string|nil err
 function M.load(path, opts)
     if cache[path] then
@@ -115,23 +115,23 @@ function M.load(path, opts)
     local quantize = (opts and opts.quantize) or 8
     local self = setmetatable({
         frames = frames,
-        parsed = {},                        -- images converties, à la demande
+        parsed = {},                        -- converted frames, on demand
         idx = 1,
         delay = (opts and opts.delay) or 80,
         hide = not (opts and opts.hide_cursor == false),
         parse_opts = quantize > 0 and { quantize = quantize } or nil,
     }, Anim)
 
-    -- Seule la première image est convertie tout de suite : c'est la seule dont
-    -- on ait besoin au démarrage. Les 39 autres le seront au fil de l'animation,
-    -- une fois chacune, pour ne pas payer ~1 Mo de parsing au lancement de nvim.
+    -- Only the first frame is converted right away: it is the only one
+    -- needed at startup. The other 39 are converted as the animation goes,
+    -- once each, to avoid paying for ~1 MB of parsing when nvim starts.
     self.parsed[1] = ansi_art.parse_lines(frames[1], self.parse_opts)
 
     cache[path] = self
     return self
 end
 
----Les morceaux colorés d'une image, convertis à la demande.
+---The coloured pieces of a frame, converted on demand.
 ---@param i integer
 ---@return table[][]
 function Anim:lines(i)
@@ -141,7 +141,7 @@ function Anim:lines(i)
     return self.parsed[i]
 end
 
----La première image, au format attendu par une section `text` du dashboard.
+---The first frame, in the format a dashboard `text` section expects.
 ---@return table[] chunks
 function Anim:text()
     local chunks = {}
@@ -154,7 +154,7 @@ function Anim:text()
     return chunks
 end
 
----Le buffer est-il toujours là et affiché ? Sinon l'animation n'a plus d'objet.
+---Is the buffer still there and shown? Otherwise the animation is pointless.
 ---@return boolean
 function Anim:alive()
     if not (self.buf and vim.api.nvim_buf_is_valid(self.buf)) then
@@ -168,7 +168,7 @@ function Anim:alive()
     return false
 end
 
----Peint une image par-dessus les lignes du buffer.
+---Paints a frame over the buffer lines.
 ---@param i integer
 function Anim:draw(i)
     local buf, row = self.buf, self.row
@@ -194,20 +194,20 @@ function Anim:draw(i)
     end
 end
 
----Masque le curseur du terminal pendant l'animation.
+---Hides the terminal cursor during the animation.
 ---
----POURQUOI : peindre une image, c'est ~35 Ko de séquences d'échappement, douze
----fois par seconde — 60 % des cellules changent d'une image à l'autre. Entre
----nvim, tmux et le terminal, le curseur finit par être dessiné au milieu du
----dessin, à une position différente à chaque image : on croit voir un curseur
----sauter au hasard sur le GIF. chafa fait exactement la même chose quand il
----anime un GIF — c'est le `ESC[?25l` en tête du fichier d'images — et pour
----cette raison précise.
+---WHY: painting a frame is ~35 KB of escape sequences, twelve
+---times per second, and 60 % of the cells change from one frame to the next. Between
+---nvim, tmux and the terminal, the cursor ends up drawn in the middle of the
+---drawing, at a different position on each frame: it looks like a cursor
+---jumping around on the GIF. chafa does exactly the same thing when it
+---animates a GIF (that is the `ESC[?25l` at the top of the frames file), and for
+---this very reason.
 ---
----nvim n'expose pas `ESC[?25l`. On passe par `guicursor` : il fait émettre un
----OSC 12 avec la couleur du groupe visé. Un curseur de la couleur du fond est
----invisible quelle que soit sa forme, y compris le rectangle creux qu'Alacritty
----dessine quand la fenêtre n'a pas le focus.
+---nvim does not expose `ESC[?25l`. `guicursor` is used instead: it makes nvim emit an
+---OSC 12 with the colour of the target group. A cursor the colour of the background is
+---invisible whatever its shape, including the hollow rectangle Alacritty
+---draws when the window is not focused.
 function Anim:hide_cursor()
     if not self.hide or self.saved_cursor then
         return
@@ -234,8 +234,8 @@ function Anim:stop()
         self.timer = nil
     end
     self:show_cursor()
-    -- On efface nos extmarks : le buffer reprend son texte, c'est-à-dire la
-    -- première image. Une animation arrêtée redevient l'art fixe d'avant.
+    -- Our extmarks are cleared: the buffer shows its own text again, that is the
+    -- first frame. A stopped animation turns back into the former still art.
     if self.buf and vim.api.nvim_buf_is_valid(self.buf) then
         vim.api.nvim_buf_clear_namespace(self.buf, ns, 0, -1)
     end
@@ -245,9 +245,9 @@ function Anim:start()
     if #self.frames < 2 or not self:alive() then
         return
     end
-    -- On peint l'image courante sans attendre le premier tic : après un
-    -- dashboard:update() le buffer vient de réafficher l'image 1, et 80 ms de
-    -- retour en arrière se verraient.
+    -- The current frame is painted without waiting for the first tick: after a
+    -- dashboard:update() the buffer has just shown frame 1 again, and 80 ms of
+    -- going backwards would show.
     self:draw(self.idx)
 
     if vim.api.nvim_get_current_buf() == self.buf then
@@ -265,21 +265,21 @@ function Anim:start()
     end))
 end
 
----Accroche l'animation à l'endroit où le dashboard vient de poser l'art.
----À appeler depuis le hook `render` d'un item : snacks y passe la position de
----la première ligne de l'item, `{ ligne 1-indexée, colonne 0-indexée du dernier
----caractère d'indentation }`. L'art commence donc à l'octet `col + 1`.
+---Attaches the animation where the dashboard has just laid down the art.
+---To call from an item's `render` hook: snacks passes it the position of
+---the item's first line, `{ 1-indexed line, 0-indexed column of the last
+---indentation character }`. The art therefore starts at byte `col + 1`.
 ---@param buf integer
----@param pos integer[]  le second argument du hook `render`
+---@param pos integer[]  the second argument of the `render` hook
 function Anim:attach(buf, pos)
     self:stop()
     self.buf = buf
-    self.row = pos[1] - 1        -- extmarks : lignes 0-indexées
+    self.row = pos[1] - 1        -- extmarks: 0-indexed lines
 
-    -- Le curseur n'est masqué que tant qu'on est DANS le dashboard : sortir vers
-    -- un autre buffer (neo-tree, un fichier) doit le rendre immédiatement, sans
-    -- attendre le prochain tic du timer. Les autocommandes attachées au buffer
-    -- disparaissent d'elles-mêmes avec lui ; l'augroup est vidé à chaque attache.
+    -- The cursor is only hidden while INSIDE the dashboard: leaving for
+    -- another buffer (neo-tree, a file) must bring it back at once, without
+    -- waiting for the next timer tick. The autocommands attached to the buffer
+    -- go away with it on their own, and the augroup is cleared on every attach.
     vim.api.nvim_clear_autocmds({ group = augroup })
     vim.api.nvim_create_autocmd({ "BufEnter", "WinEnter" }, {
         group = augroup,
@@ -305,14 +305,14 @@ function Anim:attach(buf, pos)
         callback = function() self:show_cursor() end,
     })
 
-    -- `render` est appelé AVANT que snacks n'écrive les lignes dans le buffer :
-    -- on attend la fin du cycle pour mesurer l'indentation et poser les extmarks.
+    -- `render` is called BEFORE snacks writes the lines into the buffer:
+    -- wait for the end of the cycle to measure the indentation and set the extmarks.
     vim.schedule(function()
         if not self:alive() then
             return
         end
         local line = vim.api.nvim_buf_get_lines(buf, self.row, self.row + 1, false)[1] or ""
-        -- Colonne d'écran, pas d'octets (voir l'en-tête du fichier).
+        -- Screen column, not bytes (see the file header).
         self.col = vim.fn.strdisplaywidth(line:sub(1, pos[2] + 1))
         self:start()
     end)

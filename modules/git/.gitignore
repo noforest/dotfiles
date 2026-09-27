@@ -1,19 +1,19 @@
-# Fichiers compilés
+# Compiled files
 *.o
 *.so
 *.a
 
-# Patches rejetés
+# Rejected patches
 *.rej
 
-# Fichiers de sauvegarde et temporaires
+# Backup and temporary files
 *~
 *.swp
 *.tmp
 *.bak
 *.orig
 
-# Cache d'éditeurs
+# Editor caches
 .netrwhist
 tags
 Session.vim
@@ -22,5 +22,5 @@ Session.vim
 .DS_Store
 *.log
 
-# Ignore les dossiers .git.bak partout dans le dépôt
+# Ignores the .git.bak folders anywhere in the repository
 **/.git*/

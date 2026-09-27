@@ -40,6 +40,6 @@ esac
 # echo " $icon$vol%   "
 # echo " $icon$vol%     "
 # echo " $icon$vol%  │ "
-# marge uniforme dwmblocks : 1 espace a gauche, rien a droite
+# uniform dwmblocks margin: 1 space on the left, nothing on the right
 echo " $icon$vol%  │"
 

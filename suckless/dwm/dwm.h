@@ -7,7 +7,7 @@
 #include <X11/Xutil.h>
 #include <stdlib.h>
 
-// Ajoutez d'autres includes ou définitions nécessaires
+// Add any other needed includes or definitions
 typedef struct {
   int i;
   unsigned int ui;
@@ -17,6 +17,6 @@ typedef struct {
 void quit(const Arg *arg);
 void quit_properly(const Arg *arg);
 
-// Ajoutez d'autres déclarations de fonction ici si nécessaire
+// Add other function declarations here if needed
 
 #endif // DWM_H

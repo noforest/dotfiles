@@ -1,18 +1,18 @@
 -- telescope
--- vim.keymap.set("n", "<leader>ff", ":Telescope find_files<cr>", { silent = true }) !!!!!!!!!!!!!!!!!!!!!!!!!!! est remplacé par snacks car smart
+-- vim.keymap.set("n", "<leader>ff", ":Telescope find_files<cr>", { silent = true }) !!!!!!!!!!!!!!!!!!!!!!!!!!! replaced by snacks because it is smart
 vim.keymap.set("n", "<leader>fg", ":Telescope live_grep<cr>", { silent = true })
 vim.keymap.set("n", "<leader>fw", ":Telescope grep_string<cr>", { silent = true }) --find word
--- vim.keymap.set("n", "<leader>fa", ":Telescope lsp_dynamic_workspace_symbols<cr>", { silent = true }) -- g pour tous les trucs en rapport avec lsp, et a pour all (symbols)
+-- vim.keymap.set("n", "<leader>fa", ":Telescope lsp_dynamic_workspace_symbols<cr>", { silent = true }) -- g for everything related to lsp, and a for all (symbols)
 
--- ATTENTION <leader>fd et <leader>fr SONT BIEN DEFINIE dans lazy.lua
--- vim.keymap.set("n", "<leader>fc", ":Telescope git_bcommits<cr>", { silent = true })  !!!!!!!!!// remplacer par <leader>fc dans snacks
+-- CAREFUL <leader>fd and <leader>fr ARE DEFINED in lazy.lua
+-- vim.keymap.set("n", "<leader>fc", ":Telescope git_bcommits<cr>", { silent = true })  !!!!!!!!!// replaced by <leader>fc in snacks
 vim.keymap.set("n", "<leader><Tab>", ":Telescope buffers<cr>", { silent = true })
 
 
 
 -- tree
 -- vim.keymap.set("n", "<leader>e", ":NvimTreeFindFileToggle<cr>", { silent = true })
--- --> c'est mini.files qui prend le relais: cd lazy.lua
+-- --> mini.files takes over: see lazy.lua
 vim.keymap.set("n", "<leader>e", ":Neotree toggle<cr>", { silent = true })
 
 
@@ -30,7 +30,7 @@ vim.keymap.set('n', '<leader>dp', vim.diagnostic.goto_prev)
 vim.keymap.set('n', '<leader>dN', vim.diagnostic.goto_prev)
 vim.keymap.set('n', '<leader>dn', vim.diagnostic.goto_next)
 vim.keymap.set('n', '<leader>dd', vim.diagnostic.open_float)
--- !!!!!!!!! DANS LAZY.LUA     { "<leader>ds", function() Snacks.picker.diagnostics() end, desc = "Diagnostics" } !!!!!!!!!!!!
+-- !!!!!!!!! IN LAZY.LUA     { "<leader>ds", function() Snacks.picker.diagnostics() end, desc = "Diagnostics" } !!!!!!!!!!!!
 
 
 -- lazygit plugin (Plugin for calling lazygit from within neovim)
@@ -45,14 +45,14 @@ vim.keymap.set('n', '<leader>dd', vim.diagnostic.open_float)
 vim.keymap.set("n", "<leader>do", ":CodeDiff history %<CR>", { desc = "CodeDiff history of one file" })
 -- vim.keymap.set("v", "<leader>dh", ":'<,'>DiffviewFileHistory<cr>", {desc = "Selection history" })
 
--- NOTE: regarde les anciennes versions des lignes sélectionnées
+-- NOTE: shows the older versions of the selected lines
 vim.keymap.set("v", "<leader>hh", ":'<,'>CodeDiff linehist<cr>", { silent = true }) 
 
 
 
 
 
--- Gitsigns : ajouter des mappages avec `on_attach`
+-- Gitsigns: add mappings with `on_attach`
 local gitsigns = require('gitsigns')
 
 gitsigns.setup({
@@ -60,14 +60,14 @@ gitsigns.setup({
   on_attach = function(bufnr)
     local gs = package.loaded.gitsigns
 
-    -- Fonction de mappage local
+    -- Local mapping function
     local function map(mode, l, r, opts)
       opts = opts or {}
       opts.buffer = bufnr
       vim.keymap.set(mode, l, r, opts)
     end
 
-    -- Raccourcis de navigation
+    -- Navigation shortcuts
     map('n', '<leader>hn', function()
       if vim.wo.diff then return ']c' end
       vim.schedule(function() gs.next_hunk() end)
@@ -97,32 +97,32 @@ gitsigns.setup({
 vim.keymap.set('n', '<leader>hB', ":G blame<CR>", { silent = true })
 
 -- local function open_file_and_hide_cursor(api)
---   -- Désactive le cursorline pour le panneau nvim-tree
+--   -- Disables cursorline for the nvim-tree panel
 --   -- vim.wo.cursorline = false
 --   vim.wo.cursorline = true
 --
---   -- Ouvre le fichier et retourne au panneau nvim-tree
+--   -- Opens the file and goes back to the nvim-tree panel
 --   api.node.open.edit()
 --   vim.cmd("wincmd p")
 --
---   -- Désactive cursorline à nouveau pour garder le curseur invisible
+--   -- Disables cursorline again to keep the cursor invisible
 --   -- vim.wo.cursorline = false
 --
---   -- Garder la surbrillance sous le curseur sans afficher le curseur
---   vim.opt.guicursor = "n:blinkon0,i:ver25" -- Désactive le curseur visuellement
+--   -- Keep the highlight under the cursor without showing the cursor
+--   vim.opt.guicursor = "n:blinkon0,i:ver25" -- Hides the cursor visually
 -- end
 --
 --
 --
 -- local function open_folder_and_highlight_cursor(api)
---   -- Active la surbrillance sous le curseur (cursorline) pour le panneau nvim-tree
+--   -- Enables the highlight under the cursor (cursorline) for the nvim-tree panel
 --   vim.wo.cursorline = true
 --
---   -- Ouvre le dossier sans perdre l'arborescence
+--   -- Opens the folder without losing the tree
 --   api.node.open.tab()
 --
---   -- Désactive le curseur visuellement sans affecter la ligne de surbrillance
---   vim.opt.guicursor = "n:blinkon0,i:ver25"  -- Cela désactive le curseur sans désactiver le "cursorline"
+--   -- Hides the cursor visually without affecting the highlight line
+--   vim.opt.guicursor = "n:blinkon0,i:ver25"  -- This hides the cursor without disabling "cursorline"
 -- end
 --
 -- local function my_on_attach(bufnr)
@@ -132,13 +132,13 @@ vim.keymap.set('n', '<leader>hB', ":G blame<CR>", { silent = true })
 --     return { desc = "nvim-tree: " .. desc, buffer = bufnr, noremap = true, silent = true, nowait = true }
 --   end
 --
---   -- Mappings par défaut
+--   -- Default mappings
 --   api.config.mappings.default_on_attach(bufnr)
 --
---   -- Mapping personnalisé pour <Tab>
+--   -- Custom mapping for <Tab>
 --   -- vim.keymap.set('n', '<Tab>', function() open_file_and_hide_cursor(api) end, opts("Open File and Stay"))
 --
---   -- Mapping personnalisé pour <Tab> : ouvrir fichier ou dossier
+--   -- Custom mapping for <Tab>: open a file or a folder
 --   vim.keymap.set('n', '<Tab>', function()
 --     local node = api.tree.get_node_under_cursor()
 --     if node and node.type == 'directory' then
@@ -149,26 +149,26 @@ vim.keymap.set('n', '<leader>hB', ":G blame<CR>", { silent = true })
 --   end, opts("Open File or Folder and Highlight"))
 -- end
 --
--- -- Configuration de nvim-tree avec on_attach
+-- -- nvim-tree configuration with on_attach
 -- require("nvim-tree").setup {
 --   on_attach = my_on_attach,
---   -- autres options...
+--   -- other options...
 -- }
 
 -------------------------------------------------------------------------------------------------------------
--- Toujours pour nvim tree
+-- Still for nvim tree
 -- local function open_file_and_hide_cursor(api)
 --   vim.wo.cursorline = true
 --   api.node.open.no_window_picker()
 --   vim.cmd("wincmd p")
---   vim.opt.guicursor = "n:blinkon0,i:ver25" -- Désactive le curseur visuellement
+--   vim.opt.guicursor = "n:blinkon0,i:ver25" -- Hides the cursor visually
 -- end
 --
 --
 -- local function open_folder_and_highlight_cursor(api)
 --   vim.wo.cursorline = true
 --   api.node.open.tab()
---   vim.opt.guicursor = "n:blinkon0,i:ver25"  -- Cela désactive le curseur sans désactiver le "cursorline"
+--   vim.opt.guicursor = "n:blinkon0,i:ver25"  -- This hides the cursor without disabling "cursorline"
 -- end
 --
 -- local function my_on_attach(bufnr)
@@ -195,7 +195,7 @@ vim.keymap.set('n', '<leader>hB', ":G blame<CR>", { silent = true })
 --     },
 --
 --     diagnostics = {
---         enable = false, -- A METTRE TRUE SI JE VEUX LOGOS A GAUCHE: attention ça lague quand j'ouvre pleins de docs
+--         enable = false, -- SET TO TRUE IF I WANT ICONS ON THE LEFT: careful, it lags when I open lots of docs
 --         show_on_dirs = true,
 --         show_on_open_dirs = true,
 --         debounce_delay = 50,
@@ -213,11 +213,11 @@ vim.keymap.set('n', '<leader>hB', ":G blame<CR>", { silent = true })
 -- }
 
 
--- Assure-toi que vim.lsp est attaché au buffer
+-- Make sure vim.lsp is attached to the buffer
 vim.api.nvim_create_autocmd("LspAttach", {
     callback = function(args)
         local bufnr = args.buf
-        -- Raccourci leader+r pour renommer un symbole LSP
+        -- leader+r shortcut to rename an LSP symbol
         vim.keymap.set("n", "<leader>r", vim.lsp.buf.rename, { buffer = bufnr, desc = "Rename LSP symbol" })
     end,
 })

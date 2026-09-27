@@ -149,12 +149,12 @@ static const char *prtscrcmd[] = { "flameshot", "gui", NULL};
 // void spawn_chrome_monocle(const Arg *arg) {
 //   const char *chrome[] = { "google-chrome-stable", NULL };
 //
-//   // Si aucune autre fenêtre n'est présente, passer en mode monocle
+//   // If no other window is there, switch to monocle mode
 //   if (!selmon->clients || !selmon->clients->next) {
-//     setlayout(&((Arg) { .v = &layouts[2] }));  // Mode monocle
+//     setlayout(&((Arg) { .v = &layouts[2] }));  // Monocle mode
 //   }
 //
-//   // Lancer Google Chrome
+//   // Start Google Chrome
 //   spawn(&(const Arg) { .v = chrome });
 // }
 
@@ -175,7 +175,7 @@ static const char *monitor_hotplug[] = {"/usr/local/bin/monitor-hotplug", NULL};
 Autostarttag autostarttaglist[] = {
   // {.cmd = nvimcmd, .tags = 1 << 7 },
   // {.cmd = chrome_with_options, .tags = 1 << 0 },
-  {.cmd = monitor_hotplug, .tags = 0 },  // tags = 0 : s'exécute en arrière-plan sans tag spécifique
+  {.cmd = monitor_hotplug, .tags = 0 },  // tags = 0: runs in the background without a specific tag
   {.cmd = firefox_launch, .tags = 1 << 0 },
   {.cmd = tmuxterm, .tags = 1 << 1 },
   {.cmd = NULL, .tags = 0 },
@@ -190,8 +190,8 @@ static const Key keys[] = {
     {MODKEY, XK_j, focusstack, {.i = +1}},
     {MODKEY, XK_k, focusstack, {.i = -1}},
 
-    // NOTE: shortcut qui foutent la merde (window qui va au bottom qui peut
-    // plus facilement revenir à droite)
+    // NOTE: shortcuts that mess things up (a window sent to the bottom can
+    // no longer easily come back to the right)
     // { MODKEY,                       XK_i,      incnmaster,     {.i = +1 } },
     // { MODKEY,                       XK_d,      incnmaster,     {.i = -1 } },
 
