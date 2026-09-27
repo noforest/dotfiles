@@ -89,6 +89,11 @@ them.
 A profile may also carry `steps:` to override the `dot bootstrap` chain. That is
 how `minimal` drops `build-suckless` and `fonts` from its own.
 
+`services:` lists the systemd units the profile needs, `ly@tty2` and
+`NetworkManager` first, so a new machine reboots to a login screen with the
+network up. `dot services` enables them one by one and skips any that is not
+installed, since ly for instance does not exist on Ubuntu.
+
 ---
 
 ## Everyday use
@@ -144,21 +149,24 @@ it: `git submodule update --init --recursive`.
 
 ### 3. After the bootstrap
 
-Steps the repo does not replay by itself. `system/state.md` records the reference
-state of the original machine.
+The bootstrap already enabled the system services of the profile (`ly@tty2`,
+`NetworkManager`…) and installed the nvim plugins. What is left needs you.
+`system/state.md` records the reference state of the original machine.
 
 ```sh
 chsh -s /bin/zsh                                   # default shell
-sudo usermod -aG docker,vboxusers "$USER"          # groups, compare with system/state.md
+sudo usermod -aG docker "$USER"                    # plus vboxusers on the full profile
+pyenv install 3.11.11                              # the Python .zshrc puts on the PATH
 
 rclone config                                      # create the gdrive: remote, backup_gdrive.timer needs it
 systemctl --user enable --now pipewire pipewire-pulse wireplumber \
                               ssh-agent.socket backup_gdrive.timer
 
-sudo udevadm control --reload && sudo udevadm trigger   # reload what system-apply installed
-sudo systemctl daemon-reload
-nvim --headless "+Lazy! sync" +qa                       # nvim plugins
+reboot                                             # ly, udev rules and groups take effect
 ```
+
+On a laptop, also install auto-cpufreq, see
+[packages/arch/manual.md](packages/arch/manual.md).
 
 Then see [Machine specific settings](#machine-specific-settings).
 
@@ -212,15 +220,12 @@ Three things matter:
 
 ```sh
 chsh -s /bin/zsh
-sudo usermod -aG docker "$USER"
-
-sudo systemctl enable --now lightdm NetworkManager acpid    # adapt to what you installed
 systemctl --user enable --now pipewire pipewire-pulse wireplumber ssh-agent.socket
-
-sudo udevadm control --reload && sudo udevadm trigger
-sudo systemctl daemon-reload
-nvim --headless "+Lazy! sync" +qa
+reboot
 ```
+
+The bootstrap enables NetworkManager and skips ly, which Ubuntu does not package.
+The display manager Ubuntu installed (gdm3, or lightdm) stays in charge.
 
 Then see [Machine specific settings](#machine-specific-settings).
 
@@ -307,16 +312,17 @@ link into the repository would break the boot.
 
 **Sources are linked, build trees are not.** `suckless/` is compiled in place
 rather than linked file by file, because `patch` refuses to touch a symlink and
-`sed -i` silently replaces one. `~/Suckless` is a single directory symlink into the
-repository, so old habits land in the right tree.
+`sed -i` silently replaces one.
 
 **Scripts run by root are user agnostic.** Those called by udev, acpid or systemd
 source `/usr/local/bin/desktop-env.sh`, which finds the active session instead of
 hardcoding a home directory. It cannot carry the logind session, which is why
 suspending from acpid needs a polkit rule.
 
-**The nvim plugins are not patched.** Customisations go through the API each plugin
-provides. Patches against third party code rot silently at the first update.
+**The nvim plugins are patched only where their API cannot reach.** Customisations
+go through the API each plugin provides, because patches against third party code
+rot at the first update. One line of snacks.nvim is the exception, its patch header
+says why, and `dot nvim-patch` reports when upstream moved.
 
 **`codediff` is a separate repo.** It is a real project (C and Lua, CMake, tests),
 not a configuration file, so it is a submodule with a relative URL.

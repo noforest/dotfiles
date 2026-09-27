@@ -12,14 +12,14 @@ sudo pacman -S --needed git base-devel
 git clone https://aur.archlinux.org/paru.git /tmp/paru && cd /tmp/paru && makepkg -si
 ```
 
-## 2. Rust and the tools built on it
+## 2. Rust
 
 ```sh
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-cargo install yazi-fm yazi-cli
 ```
 
-`~/.zshenv` runs `. "$HOME/.cargo/env"`. Without rustup the shell prints an error at startup.
+`~/.zshenv` loads `~/.cargo/env` when it exists. yazi itself comes from pacman
+(`shell.txt`).
 
 ## 3. Starship (shell prompt)
 
@@ -38,13 +38,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://setup.atuin.sh | sh
 `~/.config/atuin/config.toml` is **not versioned**, because it holds the sync key.
 After installing: `atuin login`, then `atuin sync`.
 
-## 5. zoxide
-
-```sh
-curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh
-```
-
-## 6. The zsh-autosuggestions plugin
+## 5. The zsh-autosuggestions plugin
 
 `.zshrc` sources it from `~/.zsh/zsh-autosuggestions/`:
 
@@ -52,27 +46,32 @@ curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh 
 git clone https://github.com/zsh-users/zsh-autosuggestions ~/.zsh/zsh-autosuggestions
 ```
 
-## 7. pyenv
+## 6. auto-cpufreq (laptop only)
+
+Not packaged in the official repositories, installed with its own installer.
+`power-profiles-daemon` (in `laptop.txt`) must then stay out of the way, it is
+masked on the reference machine: `sudo systemctl mask power-profiles-daemon`.
 
 ```sh
-curl -fsSL https://pyenv.run | bash
-pyenv install 3.11.11    # the version used in the PATH of .zshrc
+git clone https://github.com/AdnanHodzic/auto-cpufreq.git /tmp/auto-cpufreq
+cd /tmp/auto-cpufreq && sudo ./auto-cpufreq-installer
+sudo auto-cpufreq --install    # creates and enables auto-cpufreq.service
 ```
 
-## 8. opam (OCaml)
+## 7. opam (OCaml)
 
 ```sh
-sudo pacman -S opam && opam init
+opam init    # opam itself comes from dev.txt
 ```
 
 `.zshrc` sources `~/.opam/opam-init/init.zsh`, already guarded by an existence test.
 
-## 9. suckless
+## 8. suckless
 
 Built from `suckless/` by `dot build-suckless`. Nothing to download, the patched
 sources are in the repo.
 
-## 10. Fonts
+## 9. Fonts
 
 `dot fonts` fetches UnifontExMono and icons-in-terminal. Everything else is in
-`packages/fonts.txt`.
+`packages/arch/fonts.txt`.

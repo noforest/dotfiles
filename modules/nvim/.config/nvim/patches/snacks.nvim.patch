@@ -1,16 +1,16 @@
-Rend le terminal de rendu conditionnel à `opts.pty` explicite.
+Makes the rendering terminal depend on an explicit `opts.pty`.
 
-En amont, `M.cmd` ouvre un terminal dès que `ft` est absent (cas des aperçus git
-quand `builtin` est faux, preview.lua:303). Le rendu passe alors par un terminal
-qui se redessine à chaque rafraîchissement du picker — d'où un clignotement.
+Upstream, `M.cmd` opens a terminal as soon as `ft` is absent (git previews when
+`builtin` is false, preview.lua:303). Rendering then goes through a terminal that
+redraws on every picker refresh, hence the flicker.
 
-Cette ligne ne peut PAS être portée en configuration : `pty` reste calculé comme
-en amont et sert encore au dimensionnement et au lancement du process ; seule la
-création du canal de rendu change. Passer par les options modifierait les quatre
-autres usages de `pty`.
+This line CANNOT be moved to configuration: `pty` is still computed as upstream
+does and is still used to size and start the process, only the creation of the
+rendering channel changes. Going through the options would alter the four other
+uses of `pty`.
 
-Le reste des personnalisations snacks (actions du picker, aperçu chafa) vit dans
-lazy.lua et n'a plus besoin de patch.
+The rest of the snacks customisations (picker actions, chafa preview) lives in
+lazy.lua and no longer needs a patch.
 
 diff --git a/lua/snacks/picker/preview.lua b/lua/snacks/picker/preview.lua
 index 3b924cc..0d79696 100644

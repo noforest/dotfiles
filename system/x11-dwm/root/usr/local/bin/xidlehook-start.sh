@@ -6,7 +6,7 @@
 #
 
 . /usr/local/bin/desktop-env.sh   # sets DESKTOP_USER, USER_HOME, DISPLAY, XAUTHORITY
-export PULSE_RUNTIME_PATH=/run/user/$(id -u for)/pulse
+export PULSE_RUNTIME_PATH=/run/user/$(id -u "$DESKTOP_USER")/pulse
 export PULSE_SERVER=unix:${PULSE_RUNTIME_PATH}/native
 
 # Caffeine mode (see /usr/local/bin/idle_mode): nothing may turn the screen off
