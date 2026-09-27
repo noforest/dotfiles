@@ -19,7 +19,6 @@ gzdoom
 jlink
 jopdf
 klee
-klee-debug
 libinput-gestures
 librewolf-bin
 llvm14
@@ -37,7 +36,6 @@ ocrmypdf
 oh-my-posh
 opencode-bin
 paru
-paru-debug
 positron-ide-bin
 python-pywal
 python-xyzservices

@@ -16,7 +16,6 @@ xdg-desktop-portal-hyprland
 uwsm
 ydotool
 awww
-python-pywal
 
 # XFCE desktop (components and panel plugins)
 xfce4-appfinder

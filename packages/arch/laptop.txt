@@ -2,16 +2,12 @@
 # None of this is useful on a tower.
 acpi
 acpid
-acpilight
 brightnessctl
 power-profiles-daemon
 xss-lock
-xautolock
-xidlehook
 fprintd
 s-tui
 ethtool
-# Touchpad gestures
-libinput-gestures
-gestures
+# Touchpad gestures. libinput-gestures, gestures, xidlehook, xautolock and
+# acpilight also belong here but come from the AUR, see aur.txt.
 touchegg
