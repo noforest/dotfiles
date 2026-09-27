@@ -62,7 +62,11 @@ dwmblocks &
 # IMPORTANT: starts solaar in the background: keeps the logibolt receiver from
 # sending USB signals to the XHC0 usb controller WHILE I am suspended,
 # which woke the computer up unintentionally (situation: when I close the lid, etc...)
-solaar -w hide &  
+solaar -w hide &
+
+# LocalSend's own "Autostart after login" writes to ~/.config/autostart,
+# which nothing reads under dwm. Starts straight into the tray.
+localsend --hidden &
 
 xset -dpms        # disables native DPMS (avoids HDMI disconnected)
 xset s off        # disables the X screensaver (otherwise slock starts on its own after 10min)
