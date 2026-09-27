@@ -308,6 +308,37 @@ imagetopdf() {
     command img2pdf --fit into --pagesize "$page" "$tmp"/* -o "$out" && rm -rf "$tmp"
 }
 
+# videos (any format ffmpeg can read) -> H.265 + AAC, one <name>_compressed file each
+# .mkv stays .mkv to keep every audio and subtitle track, anything else becomes
+# .mp4 (video + audio), which plays everywhere
+# knobs: COMPRESSVIDEO_CRF (higher = smaller, 23-28 is sane), _PRESET (slower = smaller)
+compressvideo() {
+    (( $# < 1 )) && { echo "usage: compressvideo <videos...>" >&2; return 1; }
+    local crf=${COMPRESSVIDEO_CRF:-28} preset=${COMPRESSVIDEO_PRESET:-medium}
+    local f out before after
+    local -a streams
+    for f; do
+        if [[ "${f:l}" == *.mkv ]]; then
+            out="${f:r}_compressed.mkv"
+            streams=(-map 0 -c copy)
+        else
+            out="${f:r}_compressed.mp4"
+            # hvc1 tag: without it, Apple players refuse H.265 in mp4
+            streams=(-map 0:v:0 -map '0:a?' -tag:v hvc1 -movflags +faststart)
+        fi
+        # checked here: ffmpeg -n refuses to overwrite but still exits 0
+        [[ -e "$out" ]] && { echo "compressvideo: $out already exists, skipped" >&2; continue; }
+        # the scale keeps sizes even, which x265 requires
+        ffmpeg -hide_banner -loglevel error -stats -n -i "$f" "${streams[@]}" \
+            -vf 'scale=trunc(iw/2)*2:trunc(ih/2)*2' \
+            -c:v libx265 -crf "$crf" -preset "$preset" -x265-params log-level=error \
+            -c:a aac -b:a 128k "$out" || { echo "compressvideo: $f failed" >&2; continue; }
+        before=$(stat -c %s "$f") after=$(stat -c %s "$out")
+        printf '%s: %s -> %s (%d%%)\n' "$out" "$(numfmt --to=iec "$before")" \
+            "$(numfmt --to=iec "$after")" $(( after * 100 / before ))
+    done
+}
+
 # shadow img2pdf in favour of imagetopdf (which calls it via "command img2pdf")
 img2pdf() {
     print -u2 "img2pdf is shadowed: use \"imagetopdf <images...> <output.pdf>\"."
