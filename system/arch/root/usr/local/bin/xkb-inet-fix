@@ -1,0 +1,41 @@
+#!/bin/sh
+# Silences the xkbcomp warnings that xkeyboard-config's inet(evdev) triggers at
+# every X start (Xorg prints them on the tty ly leaves behind). Run by
+# /etc/pacman.d/hooks/xkb-inet-fix.hook after each xkeyboard-config or libx11
+# upgrade. Idempotent: it restores its own edits first, then comments out only
+# what still breaks, so it becomes a no-op once upstream catches up.
+set -eu
+
+FILE=/usr/share/X11/xkb/symbols/inet
+MARK='//xkb-inet-fix '
+
+[ -w "$FILE" ] || exit 0
+command -v xkbcomp >/dev/null || exit 0
+
+# Restore the lines commented out by a previous run.
+sed -i "s|^$MARK||" "$FILE"
+
+# <I201>/<I202> are aliases of <FK23>/<FK24> in keycodes/evdev, which the same
+# section already defines: the second definition turns XF86TouchpadOff into F23.
+# Only drop them while <FK23> is still defined, so nothing is lost if upstream
+# removes the other side instead.
+if grep -q '^ *key <FK23>' "$FILE"; then
+    sed -i "s|^\( *key <I20[12]> \)|$MARK\1|" "$FILE"
+fi
+
+# Keysyms newer than libx11 ("Could not resolve keysym"): ask xkbcomp itself
+# which ones it cannot resolve rather than keeping a list by hand.
+out=$(mktemp)
+trap 'rm -f "$out"' EXIT
+printf '%s\n' 'xkb_keymap {' \
+    'xkb_keycodes { include "evdev+aliases(qwerty)" };' \
+    'xkb_types { include "complete" };' \
+    'xkb_compat { include "complete" };' \
+    'xkb_symbols { include "pc+us+inet(evdev)" };' \
+    '};' |
+    xkbcomp -w 1 - -o "$out" 2>&1 |
+    sed -n 's/.*Could not resolve keysym \([A-Za-z0-9_]*\).*/\1/p' |
+    sort -u |
+    while read -r sym; do
+        sed -i "s|^\( *key <[A-Z0-9]*> *{ *\[ *$sym *\]\)|$MARK\1|" "$FILE"
+    done

@@ -1,0 +1,11 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = xkeyboard-config
+Target = libx11
+
+[Action]
+Description = Commenting out the inet(evdev) lines xkbcomp warns about...
+When = PostTransaction
+Exec = /usr/local/bin/xkb-inet-fix
