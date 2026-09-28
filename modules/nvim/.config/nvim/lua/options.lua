@@ -14,8 +14,10 @@ vim.g.loaded_netrwPlugin = 1
 opt.spelllang = { "en_us", "fr" }
 
 -- line numbers
-opt.relativenumber = true -- show relative line numbers
-opt.number = true -- shows absolute line number on cursor line (when relative number is on)
+opt.relativenumber = false -- absolute line numbers only
+opt.number = true
+opt.cursorline = true
+opt.cursorlineopt = "number" -- highlight the cursor's line number only, not the whole line
 
 -- tabs & indentation
 opt.tabstop = 4 -- 2 spaces for tabs (prettier default)
