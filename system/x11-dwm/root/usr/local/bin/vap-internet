@@ -69,12 +69,17 @@ for f in /sys/class/net/en*/operstate; do
     if [ "$(cat "$f" 2>/dev/null)" = "up" ]; then
         ethernet_status="󰈀"  # Ethernet connected
         wifi_status=""  # no Wi-Fi cross while online through Ethernet
-        [ "$operstate" = "up" ] && wifi_status="$wifi_icon${wifi_percentage}% "
+        [ "$operstate" = "up" ] && wifi_status="$wifi_icon${wifi_percentage}% / "
         break
     fi
 done
 
+# A link can be up without reaching the internet: warn when a ping fails
+if [ -n "$ethernet_status" ] || [ "$operstate" = "up" ]; then
+    ping -c1 -W1 1.1.1.1 >/dev/null 2>&1 || offline=" "
+fi
+
 # Show the Wi-Fi icon
-echo " $wifi_status$ethernet_status "
+echo " $wifi_status$ethernet_status$offline "
 # printf "%s%s\u200A\n" " $wifi_status" "$ethernet_status"
 
