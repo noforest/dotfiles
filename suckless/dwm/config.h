@@ -14,10 +14,20 @@ static const int topbar             = 1;        /* 0 means bottom bar */
 // static const char *fonts[]          = { "LiterationMono Nerd Font:size=9" };
 // static const char dmenufont[]       = {"LiterationMono Nerd Font:size=9"};
 
+/* Text comes from plain Liberation Mono, icons fall through to the Nerd Font.
+ * Both share the same metrics, so only the icons move with fallbackyoffset. */
 static const char *fonts[] = {
+    "Liberation Mono:size=9:antialias=true:autohint=true",
     "LiterationMono Nerd Font Propo:size=9:antialias=true:autohint=true",
     "Noto Color Emoji:size=9:antialias=true:autohint=true"
 };
+/* pixels to lift every font after the first one (the icons) */
+const int fallbackyoffset = 0;
+/* pixels to lower the first font: centering uses the descent that digits and capitals
+ * never reach, so the text sits high in the bar */
+const int textyoffset = 1;
+/* character left out of textyoffset: the │ separator already fills the bar height */
+const long textyoffsetexempt = 0x2502;
 
 static const char dmenufont[] = "LiterationMono Nerd Font Propo:size=9:antialias=true:autohint=true";
 

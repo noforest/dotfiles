@@ -8,6 +8,9 @@
 #include "drw.h"
 #include "util.h"
 
+extern const int fallbackyoffset, textyoffset; /* config.h */
+extern const long textyoffsetexempt;
+
 #define UTF_INVALID 0xFFFD
 #define UTF_SIZ     4
 
@@ -249,7 +252,7 @@ drw_text(Drw *drw, int x, int y, unsigned int w, unsigned int h, unsigned int lp
 	FcPattern *fcpattern;
 	FcPattern *match;
 	XftResult result;
-	int charexists = 0, overflow = 0;
+	int charexists = 0, overflow = 0, exempt = 0;
 	/* keep track of a couple codepoints for which we have no match. */
 	enum { nomatches_len = 64 };
 	static struct { long codepoint[nomatches_len]; unsigned int idx; } nomatches;
@@ -279,6 +282,13 @@ drw_text(Drw *drw, int x, int y, unsigned int w, unsigned int h, unsigned int lp
 		nextfont = NULL;
 		while (*text) {
 			utf8charlen = utf8decode(text, &utf8codepoint, UTF_SIZ);
+			/* textyoffsetexempt gets a run of its own, drawn without textyoffset */
+			if (!utf8strlen)
+				exempt = utf8codepoint == textyoffsetexempt;
+			else if (exempt != (utf8codepoint == textyoffsetexempt)) {
+				nextfont = usedfont;
+				break;
+			}
 			for (curfont = drw->fonts; curfont; curfont = curfont->next) {
 				charexists = charexists || XftCharExists(drw->dpy, curfont->xfont, utf8codepoint);
 				if (charexists) {
@@ -318,7 +328,8 @@ drw_text(Drw *drw, int x, int y, unsigned int w, unsigned int h, unsigned int lp
 
 		if (utf8strlen) {
 			if (render) {
-				ty = y + (h - usedfont->h) / 2 + usedfont->xfont->ascent;
+				ty = y + (h - usedfont->h) / 2 + usedfont->xfont->ascent
+				     + (usedfont == drw->fonts ? (exempt ? 0 : textyoffset) : -fallbackyoffset);
 				XftDrawStringUtf8(d, &drw->scheme[invert ? ColBg : ColFg],
 				                  usedfont->xfont, x, ty, (XftChar8 *)utf8str, utf8strlen);
 			}
