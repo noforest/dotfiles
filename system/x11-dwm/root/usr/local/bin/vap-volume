@@ -14,6 +14,9 @@ esac
 
 vol="$(wpctl get-volume @DEFAULT_AUDIO_SINK@)"
 
+# PipeWire not up yet: show nothing rather than a false 0%.
+[ -z "$vol" ] && echo " │" && exit
+
 # If muted, print ð and exit.
 [ "$vol" != "${vol%\[MUTED\]}" ] && echo "    │ " && exit
 #[ "$vol" != "${vol%\[MUTED\]}" ] && echo " ^B14^^C0^ î»^B14^^C0^  Mute" && exit     ~~~~~~~~~~~default

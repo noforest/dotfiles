@@ -58,6 +58,13 @@ MACHINE_CONF="$HOME/.config/dwm/machine.d/$(hostname).sh"
 libinput-gestures-setup restart &
 dwmblocks &
 vap-internet-watch &
+# dwmblocks reads the volume once at startup, before PipeWire is up, and then
+# only when a volume key signals it: refresh the block as soon as wpctl answers.
+( for _ in $(seq 30); do
+      wpctl get-volume @DEFAULT_AUDIO_SINK@ >/dev/null 2>&1 && break
+      sleep 1
+  done
+  pkill -RTMIN+10 -x dwmblocks ) &
 
 
 # IMPORTANT: starts solaar in the background: keeps the logibolt receiver from
