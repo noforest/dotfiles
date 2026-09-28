@@ -166,7 +166,9 @@ static const char *prtscrcmd[] = { "flameshot", "gui", NULL};
 
 // static const char *termcmd2[] = { "alacritty", NULL };
 
-static const char *tmuxterm[] = { "alacritty", "-e", "tmux", "new-session", "-A", "-s", "main", NULL };
+/* The tmux server runs in a scope of the user manager, not in the login
+ * session: it still outlives dwm, but no longer keeps a dead session closing. */
+static const char *tmuxterm[] = { "alacritty", "-e", "systemd-run", "--user", "--scope", "--quiet", "tmux", "new-session", "-A", "-s", "main", NULL };
 
 // static const char *chrome_with_options[] = {
 //   "google-chrome-stable",
