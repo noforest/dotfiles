@@ -57,6 +57,7 @@ MACHINE_CONF="$HOME/.config/dwm/machine.d/$(hostname).sh"
 
 libinput-gestures-setup restart &
 dwmblocks &
+vap-internet-watch &
 
 
 # IMPORTANT: starts solaar in the background: keeps the logibolt receiver from

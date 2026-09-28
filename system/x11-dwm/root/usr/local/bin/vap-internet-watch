@@ -1,0 +1,33 @@
+#!/bin/sh
+# Refreshes the internet block of the bar as soon as something changes, while
+# costing as little as possible. vap-internet shows the warning icon while the
+# flag exists.
+
+flag="${XDG_RUNTIME_DIR:-/tmp}/internet-offline"
+refresh() { pkill -RTMIN+3 -x dwmblocks; }
+
+# Links: ip monitor sleeps in the kernel until an interface changes, so a cable
+# plugged in or pulled out shows at once and waiting costs nothing.
+# Both stop with dwmblocks, so a new X session does not pile up another pair.
+ip monitor link | while read -r _; do refresh || exit; done &
+monitor=$!
+
+# Internet: no event exists for it, so ping. Every 10 seconds while it answers,
+# the rate the bar refreshes at anyway, and every 2 while it does not, to clear
+# the warning quickly once it is back.
+while :; do
+    case "$(cat /sys/class/net/en*/operstate /sys/class/net/wl*/operstate 2>/dev/null)" in
+        *up*) ping -c1 -W1 1.1.1.1 >/dev/null 2>&1 ;;
+        *) true ;;  # no link: nothing to warn about, the icons already say it
+    esac
+    if [ $? -eq 0 ]; then
+        [ -e "$flag" ] && rm -f "$flag" && refresh
+        sleep 10
+    else
+        [ -e "$flag" ] || { touch "$flag"; refresh; }
+        sleep 2
+    fi
+    # Checked after a first sleep: .xinitrc starts dwmblocks just before this.
+    pgrep -x dwmblocks >/dev/null || break
+done
+kill "$monitor"

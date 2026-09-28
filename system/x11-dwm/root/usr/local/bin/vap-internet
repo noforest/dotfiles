@@ -74,10 +74,9 @@ for f in /sys/class/net/en*/operstate; do
     fi
 done
 
-# A link can be up without reaching the internet: warn when a ping fails
-if [ -n "$ethernet_status" ] || [ "$operstate" = "up" ]; then
-    ping -c1 -W1 1.1.1.1 >/dev/null 2>&1 || offline=" "
-fi
+# A link can be up without reaching the internet: vap-internet-watch pings
+# and leaves this flag while it fails
+[ -e "${XDG_RUNTIME_DIR:-/tmp}/internet-offline" ] && offline=" "
 
 # Show the Wi-Fi icon
 echo " $wifi_status$ethernet_status$offline "
