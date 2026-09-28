@@ -56,7 +56,7 @@ if [ -e "/sys/class/net/$interface/operstate" ]; then
         wifi_status="$wifi_icon${wifi_percentage}%"
     else
         # wifi_status=" "
-        wifi_status=" "
+        wifi_status=""
         # wifi_status="󰤮 "
     fi
 else
