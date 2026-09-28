@@ -15,11 +15,11 @@ static const int topbar             = 1;        /* 0 means bottom bar */
 // static const char dmenufont[]       = {"LiterationMono Nerd Font:size=9"};
 
 static const char *fonts[] = {
-    "LiterationMono Nerd Font:size=9:antialias=true:autohint=true",
+    "LiterationMono Nerd Font Propo:size=9:antialias=true:autohint=true",
     "Noto Color Emoji:size=9:antialias=true:autohint=true"
 };
 
-static const char dmenufont[] = "LiterationMono Nerd Font:size=9:antialias=true:autohint=true";
+static const char dmenufont[] = "LiterationMono Nerd Font Propo:size=9:antialias=true:autohint=true";
 
 
 // static const char *fonts[] = {

@@ -18,7 +18,7 @@ vol="$(wpctl get-volume @DEFAULT_AUDIO_SINK@)"
 [ -z "$vol" ] && echo " │" && exit
 
 # If muted, print ð and exit.
-[ "$vol" != "${vol%\[MUTED\]}" ] && echo "    │ " && exit
+[ "$vol" != "${vol%\[MUTED\]}" ] && echo "   │" && exit
 #[ "$vol" != "${vol%\[MUTED\]}" ] && echo " ^B14^^C0^ î»^B14^^C0^  Mute" && exit     ~~~~~~~~~~~default
 
 vol="${vol#Volume: }"
@@ -33,10 +33,10 @@ split() {
 vol="$(printf "%.0f" "$(split "$vol" ".")")"
 
 case 1 in
-	$((vol >= 60)) ) icon="  " ;;
-	$((vol >= 30)) ) icon="  " ;;
-    $((vol >= 1)) ) icon="  " ;;
-	$((vol == 0)) ) icon="  " ;;
+	$((vol >= 60)) ) icon=" " ;;
+	$((vol >= 30)) ) icon=" " ;;
+    $((vol >= 1)) ) icon=" " ;;
+	$((vol == 0)) ) icon=" " ;;
 	* )
 esac
 

@@ -77,6 +77,8 @@ done
 # A link can be up without reaching the internet: vap-internet-watch pings
 # and leaves this flag while it fails
 [ -e "${XDG_RUNTIME_DIR:-/tmp}/internet-offline" ] && offline=" "
+# offline=" "
+# offline=" 󰈿"
 
 # Show the Wi-Fi icon
 echo " $wifi_status$ethernet_status$offline "
