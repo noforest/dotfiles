@@ -31,6 +31,7 @@ rofi
 jq
 feh
 numlockx
+playerctl
 xss-lock
 xdotool
 xprintidle
@@ -38,10 +39,19 @@ wmctrl
 # Screenshots
 maim
 scrot
-swappy
 # Terminal and display
 alacritty
 ghostty
 arandr
 lxappearance
 papirus-icon-theme
+# Headers needed by `dot build-suckless` to compile dwm, st, dmenu, slock and
+# dwmblocks. Other packages pull most of them in, but nothing guarantees it.
+libx11
+libxft
+libxinerama
+libxrandr
+imlib2
+freetype2
+fontconfig
+harfbuzz

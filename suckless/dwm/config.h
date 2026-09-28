@@ -111,7 +111,6 @@ static const Rule rules[] = {
     { "Matplotlib",  	    NULL,       NULL,       0,       	    1,             	-1,        -1,-1,-1,-1,      	 0 },
     { "Thunar",  	        NULL,       "File Operation Progress",0,1,             	-1,        -1,-1,-1,-1,      	 0 },
     { "Thunar",             NULL,       "Rename",   0,              1,              -1,        -1,-1,-1,-1,         0 },
-    { "Swappy",             NULL,       NULL,       0,              1,              -1,        -1,-1,-1,-1,         0 },
     { "okular",             NULL,       NULL,       1 << 3,         0,              -1,         -1,-1,-1,-1,         0 },   // workspace 4
     { "code",               NULL,       NULL,       1 << 2,         0,              -1,         -1,-1,-1,-1,         0 },   // workspace 3
     { "Org.localsend.localsend_app", NULL, NULL, 0,          1,              -1,         -2,-2,900,720 ,      0 },
@@ -156,7 +155,6 @@ static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() 
 static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", col_gray1, "-nf", col_gray3, "-sb", col_cyan, "-sf", col_gray4, NULL };
 static const char *termcmd[]  = { "alacritty", NULL };
 static const char *prtscrcmd[] = { "flameshot", "gui", NULL};
-// static const char *prtscrcmd[] = { "maim_swappy_screenshot.sh", NULL};
 #include <X11/XF86keysym.h>
 #include "movestack.c"
 #include "patches/shiftview.c"
