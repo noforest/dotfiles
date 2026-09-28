@@ -645,7 +645,7 @@ sys_target() {
     printf '%s\n' "${rel#*/root}"
 }
 
-sys_mode()   { case "$1" in */bin/*|*/sbin/*|*/dispatcher.d/*) echo 755 ;; *) echo 644 ;; esac; }
+sys_mode()   { case "$1" in */bin/*|*/sbin/*) echo 755 ;; *) echo 644 ;; esac; }
 
 # Targets shipped by more than one active scope. Silence here would mean a file
 # deployed from a scope the reader did not expect.
