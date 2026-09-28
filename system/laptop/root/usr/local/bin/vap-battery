@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 count_file="/tmp/battery_count.txt"
 

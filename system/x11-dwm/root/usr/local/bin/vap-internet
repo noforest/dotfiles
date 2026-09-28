@@ -10,8 +10,8 @@ esac
 
 
 
-# Name of the Wi-Fi interface
-interface="wlp2s0"
+# Name of the Wi-Fi interface, the first wl* one (wlp2s0, wlan0... per machine)
+interface=$(ls /sys/class/net | grep -m1 '^wl')
 
 
 # Function returning the Wi-Fi signal percentage
@@ -60,7 +60,7 @@ if [ -e "/sys/class/net/$interface/operstate" ]; then
         # wifi_status="󰤮 "
     fi
 else
-    wifi_status="Wi-Fi interface not found"
+    wifi_status=""  # no Wi-Fi card, a tower on Ethernet
 fi
 
 # Check the Ethernet state on any en* interface (the USB adapter name changes with the port)
