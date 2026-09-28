@@ -13,8 +13,6 @@ esac
 # Name of the Wi-Fi interface
 interface="wlp2s0"
 
-# Name of the Ethernet interface (adjust if needed)
-# interface_eth="enp3s0f3u2u1"
 
 # Function returning the Wi-Fi signal percentage
 get_wifi_signal_percentage() {
@@ -58,25 +56,23 @@ if [ -e "/sys/class/net/$interface/operstate" ]; then
         wifi_status="$wifi_icon${wifi_percentage}%"
     else
         # wifi_status=" "
-        wifi_status=""
+        wifi_status=" "
         # wifi_status="󰤮 "
     fi
 else
     wifi_status="Wi-Fi interface not found"
 fi
 
-# Check the state of the Ethernet connection
-# if [ -e "/sys/class/net/$interface_eth/operstate" ]; then
-#     operstate_eth=$(cat /sys/class/net/$interface_eth/operstate)
-#
-#     if [ "$operstate_eth" = "up" ]; then
-#         ethernet_status="󰈀 "  # Ethernet connected
-#     else
-#         ethernet_status=" "  # Ethernet disconnected
-#     fi
-# else
-#     ethernet_status=" "  # Ethernet interface not found or not connected
-# fi
+# Check the Ethernet state on any en* interface (the USB adapter name changes with the port)
+ethernet_status=""  # Ethernet disconnected
+for f in /sys/class/net/en*/operstate; do
+    if [ "$(cat "$f" 2>/dev/null)" = "up" ]; then
+        ethernet_status="󰈀"  # Ethernet connected
+        wifi_status=""  # no Wi-Fi cross while online through Ethernet
+        [ "$operstate" = "up" ] && wifi_status="$wifi_icon${wifi_percentage}% "
+        break
+    fi
+done
 
 # Show the Wi-Fi icon
 echo " $wifi_status$ethernet_status "
