@@ -14,6 +14,7 @@ export PATH="$PYENV_ROOT/bin:$PYENV_ROOT/shims:$PATH"
 # - /etc/systemd/system/*
 # - /etc/acpi/events/*
 # - /usr/local/bin/*
+# - /usr/share/X11/xkb/symbols/inet
 #
 # ==> all these files are now versioned in system/ of the dotfiles repository,
 #     and deployed by `dot system-apply`.
