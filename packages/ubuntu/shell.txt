@@ -32,6 +32,9 @@ mediainfo
 chafa
 tealdeer
 fastfetch
+starship
+atuin
+pyenv
 #
 # Watch out, Debian renames two binaries. See packages/ubuntu/manual.md:
 #   bat      installs `batcat`, and ~/.zshrc has `alias cat=bat`

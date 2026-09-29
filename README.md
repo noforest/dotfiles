@@ -80,6 +80,7 @@ Ubuntu. Only the directory the package lists are read from changes.
 |---|---|---|
 | `minimal` | Server, VM, machine you pass through. No graphical session. | none |
 | `desktop` | Tower running dwm. No battery, backlight, touchpad or lid. | x11-dwm, peripherals |
+| `gnome` | Tower on the desktop its distribution ships (GNOME on Ubuntu). No dwm. | peripherals |
 | `laptop` | Laptop running dwm. | laptop, x11-dwm, peripherals |
 | `full` | Everything: development, XFCE, Hyprland, virtualisation. | laptop, x11-dwm, peripherals |
 
@@ -149,12 +150,11 @@ it: `git submodule update --init --recursive`.
 
 ### 3. After the bootstrap
 
-The bootstrap already enabled the system services of the profile (`ly@tty2`,
+The bootstrap already made zsh the login shell, enabled the system services of the profile (`ly@tty2`,
 `NetworkManager`…) and installed the nvim plugins. What is left needs you.
 `system/state.md` records the reference state of the original machine.
 
 ```sh
-chsh -s /bin/zsh                                   # default shell
 sudo usermod -aG docker "$USER"                    # plus vboxusers on the full profile
 pyenv install 3.11.11                              # the Python .zshrc puts on the PATH
 
@@ -212,14 +212,16 @@ Three things matter:
 ### 3. Bootstrap
 
 ```sh
-./dot status      # expect "distro ubuntu" and "profile desktop (from chassis)"
+echo gnome > machine.d/$(hostname).conf   # GNOME stays, no dwm
+./dot status      # expect "distro ubuntu" and "profile gnome"
 ./dot bootstrap
 ```
 
 ### 4. After the bootstrap
 
+The bootstrap already made zsh the login shell (`dot login-shell`).
+
 ```sh
-chsh -s /bin/zsh
 systemctl --user enable --now pipewire pipewire-pulse wireplumber ssh-agent.socket
 reboot
 ```

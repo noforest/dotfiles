@@ -2,6 +2,7 @@
 # dot - dotfiles management (dwm / Arch Linux)
 # See README.md for the full procedure.
 set -uo pipefail
+export LC_COLLATE=C   # comm and sort must agree on the order, whatever the locale
 
 REPO="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 MODULES="$REPO/modules"
@@ -865,8 +866,8 @@ cmd_nvim_patch() {
     [ -d "$dir" ] || { warn "no patch"; return 0; }
     # On a new machine the plugins are not there yet, and a patch needs them.
     if [ ! -d "$lazy" ] && command -v nvim >/dev/null; then
-        info "  ${D}installing the plugins first: nvim --headless +Lazy! sync${N}"
-        nvim --headless "+Lazy! sync" +qa >/dev/null 2>&1 && ok "plugins installed"
+        info "  ${D}installing the plugins first: nvim --headless +Lazy! install${N}"
+        nvim --headless "+Lazy! install" +qa >/dev/null 2>&1 && ok "plugins installed"
     fi
     local p name plug rc=0
     for p in "$dir"/*.patch; do
@@ -916,12 +917,21 @@ cmd_audit() {
     bash "$REPO/scripts/audit-usage.sh" "${1:-all}"
 }
 
+# === login-shell =============================================================
+# .zshrc holds the whole shell setup, but a fresh install still logs in to bash.
+cmd_login_shell() {
+    head_ "login-shell"
+    local zsh; zsh=$(command -v zsh) || { warn "zsh not installed, skipping"; return 0; }
+    if [ "$(getent passwd "$USER" | cut -d: -f7)" = "$zsh" ]; then ok "zsh is already the login shell"; return 0; fi
+    chsh -s "$zsh" && ok "login shell set to $zsh, effective at the next login"
+}
+
 # === bootstrap ===============================================================
 # The default chain assumes a suckless environment: build-suckless compiles dwm,
 # st, dmenu, slock and dwmblocks, which is pointless on a profile that runs none
 # of them. A profile overrides the chain with a `steps:` line rather than this
 # script testing for a module by name.
-BOOTSTRAP_STEPS="install link system-apply services fonts build-suckless nvim-patch yazi-plugins"
+BOOTSTRAP_STEPS="install login-shell link system-apply services fonts build-suckless nvim-patch yazi-plugins"
 
 cmd_bootstrap() {
     local profile="${1:-$DEFAULT_PROFILE}"
@@ -1054,6 +1064,7 @@ ${B}dot${N} - dotfiles management for dwm / Arch
   ${G}dot yazi-plugins${N}         Restore yazi plugins and flavors from package.toml
   ${G}dot build-suckless${N}       Build and install dwm, st, dmenu, slock, dwmblocks
   ${G}dot fonts${N}                Install the fonts that are not packaged
+  ${G}dot login-shell${N}          Make zsh the login shell (chsh)
   ${G}dot audit${N} [what]         What this machine really uses: packages, scripts, or all
   ${G}dot state${N}                Regenerate system/state.md
   ${G}dot bootstrap${N} [profile]  Chain everything: bare machine to full environment
@@ -1089,6 +1100,7 @@ case "$cmd" in
     system-pull)    cmd_system_pull "$@" ;;
     build-suckless) cmd_build_suckless "$@" ;;
     fonts)          cmd_fonts "$@" ;;
+    login-shell)    cmd_login_shell "$@" ;;
     services)       cmd_services "$@" ;;
     nvim-patch)     cmd_nvim_patch "$@" ;;
     yazi-plugins)   cmd_yazi_plugins "$@" ;;
