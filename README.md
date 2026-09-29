@@ -79,10 +79,10 @@ Ubuntu. Only the directory the package lists are read from changes.
 | Profile | For what | `system:` scopes |
 |---|---|---|
 | `minimal` | Server, VM, machine you pass through. No graphical session. | none |
-| `desktop` | Tower running dwm. No battery, backlight, touchpad or lid. | x11-dwm, peripherals |
+| `desktop` | Tower running dwm. No battery, backlight, touchpad or lid. | x11-dwm, peripherals, backup |
 | `gnome` | Tower on the desktop its distribution ships (GNOME on Ubuntu). No dwm. | peripherals |
-| `laptop` | Laptop running dwm. | laptop, x11-dwm, peripherals |
-| `full` | Everything: development, XFCE, Hyprland, virtualisation. | laptop, x11-dwm, peripherals |
+| `laptop` | Laptop running dwm. | laptop, x11-dwm, peripherals, backup |
+| `full` | Everything: development, XFCE, Hyprland, virtualisation. | laptop, x11-dwm, peripherals, backup |
 
 `common` and the detected distribution are always added, so no profile repeats
 them.
