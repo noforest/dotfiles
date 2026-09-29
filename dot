@@ -836,8 +836,13 @@ cmd_state() {
 
 # === fonts ===================================================================
 cmd_fonts() {
-    head_ "fonts"
-    bash "$REPO/scripts/fonts-manual.sh"
+    local profile="${1:-$DEFAULT_PROFILE}" suckless=0
+    head_ "fonts ($profile)"
+    # UnifontExMono and icons-in-terminal only serve st and dwmblocks. Elsewhere
+    # UnifontExMono even gets in the way: it comes before Noto Color Emoji in the
+    # fallback and turns the emoji monochrome.
+    profile_modules "$profile" | grep -qx x11-dwm && suckless=1
+    SUCKLESS_FONTS=$suckless bash "$REPO/scripts/fonts-manual.sh"
 }
 
 # === nvim ====================================================================
@@ -967,7 +972,7 @@ cmd_bootstrap() {
         case "$step" in
             # Only these take a profile; passing one to the others would be read
             # as their own argument (nvim-patch --save, audit <what>).
-            install|link|system-apply|system-pull|services) "$0" "$step" "$profile" ;;
+            install|link|system-apply|system-pull|services|fonts) "$0" "$step" "$profile" ;;
             *) "$0" "$step" ;;
         esac
     done
@@ -1063,7 +1068,7 @@ ${B}dot${N} - dotfiles management for dwm / Arch
   ${G}dot nvim-patch${N}           Apply the snacks patch that config cannot express
   ${G}dot yazi-plugins${N}         Restore yazi plugins and flavors from package.toml
   ${G}dot build-suckless${N}       Build and install dwm, st, dmenu, slock, dwmblocks
-  ${G}dot fonts${N}                Install the fonts that are not packaged
+  ${G}dot fonts${N} [profile]      Install the fonts that are not packaged
   ${G}dot login-shell${N}          Make zsh the login shell (chsh)
   ${G}dot audit${N} [what]         What this machine really uses: packages, scripts, or all
   ${G}dot state${N}                Regenerate system/state.md

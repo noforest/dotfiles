@@ -75,8 +75,12 @@ AppImage or flatpak.
 
 ## 5. Fonts
 
-The patched Nerd Fonts families are not packaged. `dot fonts` installs them, same
-as on Arch. `fonts-firacode`, `fonts-hack` and `fonts-jetbrains-mono` in
+The Nerd Fonts are not packaged. `dot fonts` downloads Symbols Nerd Font into
+`~/.local/share/fonts`, and `.config/fontconfig/fonts.conf` appends it to every
+family as a fallback. GNOME Terminal and the desktop keep the Ubuntu fonts and
+still show the icons. Emoji come from `fonts-noto-color-emoji`. alacritty, kitty
+and ghostty ask for RobotoMono Nerd Font, which is not installed here, so they
+fall back to the default monospace font. `fonts-firacode`, `fonts-hack` and `fonts-jetbrains-mono` in
 `fonts.txt` are the unpatched upstream families, they do not carry the icons.
 
 ## 6. Toolchains
