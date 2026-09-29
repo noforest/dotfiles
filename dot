@@ -940,8 +940,9 @@ cmd_login_shell() {
 }
 
 # === gnome-settings ==========================================================
-# GNOME ignores xset: under Wayland it does nothing, under Xorg GNOME resets it.
-# The same key repeat as `xset r rate 250 50` in .xinitrc goes through dconf.
+# GNOME ignores xset and setxkbmap: under Wayland they do nothing, under Xorg
+# GNOME resets them. The key repeat of `xset r rate 250 50` and the Caps Lock
+# as Escape of `setxkbmap -option caps:escape` go through dconf instead.
 cmd_gnome_settings() {
     head_ "gnome-settings"
     command -v gsettings >/dev/null || { warn "gsettings not installed, skipping"; return 0; }
@@ -950,6 +951,14 @@ cmd_gnome_settings() {
     gsettings set $k delay 250 &&
     gsettings set $k repeat-interval 20 &&   # 50 per second
     ok "key repeat: 250 ms delay, 50 per second"
+    # Added to the xkb options already there rather than replacing them
+    local src=org.gnome.desktop.input-sources opts add="'caps:escape', "
+    opts=$(gsettings get $src xkb-options)
+    case "$opts" in
+        *"'caps:escape'"*) ;;
+        "@as []"|"[]") gsettings set $src xkb-options "['caps:escape']" ;;
+        *) gsettings set $src xkb-options "${opts/\[/[$add}" ;;
+    esac && ok "Caps Lock is Escape"
 }
 
 # === bootstrap ===============================================================
@@ -1091,7 +1100,7 @@ ${B}dot${N} - dotfiles management for dwm / Arch
   ${G}dot build-suckless${N}       Build and install dwm, st, dmenu, slock, dwmblocks
   ${G}dot fonts${N} [profile]      Install the fonts that are not packaged
   ${G}dot login-shell${N}          Make zsh the login shell (chsh)
-  ${G}dot gnome-settings${N}       GNOME key repeat, same as xset r rate 250 50
+  ${G}dot gnome-settings${N}       GNOME key repeat and Caps Lock as Escape
   ${G}dot audit${N} [what]         What this machine really uses: packages, scripts, or all
   ${G}dot state${N}                Regenerate system/state.md
   ${G}dot bootstrap${N} [profile]  Chain everything: bare machine to full environment
