@@ -307,6 +307,20 @@ imagetopdf() {
     command img2pdf --fit into --pagesize "$page" "$tmp"/* -o "$out" && rm -rf "$tmp"
 }
 
+# images (any format ImageMagick can read, HEIC included) -> one <name>.jpg each,
+# resized to fit mail attachments
+# knobs: IMAGETOJPG_MAXPX (long edge cap), _QUALITY
+imagetojpg() {
+    (( $# < 1 )) && { echo "usage: imagetojpg <images...>" >&2; return 1; }
+    local maxpx=${IMAGETOJPG_MAXPX:-2000} q=${IMAGETOJPG_QUALITY:-85} f out
+    for f; do
+        out="${f:r}.jpg"
+        [[ -e "$out" ]] && { echo "imagetojpg: $out already exists, skipped" >&2; continue; }
+        magick "$f" -auto-orient -resize "${maxpx}x${maxpx}>" -quality $q "$out" &&
+            echo "$out ($(command du -h "$out" | cut -f1))"
+    done
+}
+
 # videos (any format ffmpeg can read) -> H.265 + AAC, one <name>_compressed file each
 # .mkv stays .mkv to keep every audio and subtitle track, anything else becomes
 # .mp4 (video + audio), which plays everywhere
