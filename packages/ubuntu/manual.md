@@ -21,17 +21,11 @@ replacement and removes nothing, so you can install what you need first. The
 Firefox script follows Mozilla's official instructions, including the fingerprint
 check and the deb822 `.sources` format that 26.04 expects.
 
-## 1. Two renamed binaries, to fix first
+## 1. Two renamed binaries
 
 Debian renames two commands, and `.zshrc` calls them by their upstream name.
-
-```sh
-mkdir -p ~/.local/bin
-ln -s "$(command -v batcat)" ~/.local/bin/bat
-ln -s "$(command -v fdfind)" ~/.local/bin/fd
-```
-
-Without this, `alias cat=bat` (`.zshrc:72`) fails on every prompt.
+`dot install` links them in `~/.local/bin` right after apt: `bat` to `batcat`,
+`fd` to `fdfind`. Without these links, `alias cat=bat` fails.
 
 `diff-so-fancy` has no package either. `git-delta` is installed instead and does
 the same job, but the binary is `delta`, so `alias diffu` (`.zshrc:65`) needs

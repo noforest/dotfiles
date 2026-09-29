@@ -36,7 +36,7 @@ starship
 atuin
 pyenv
 #
-# Watch out, Debian renames two binaries. See packages/ubuntu/manual.md:
+# Debian renames two binaries, `dot install` links the upstream names back:
 #   bat      installs `batcat`, and ~/.zshrc has `alias cat=bat`
 #   fd-find  installs `fdfind`
 #

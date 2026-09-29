@@ -753,7 +753,15 @@ cmd_install() {
                 [ -z "$failed" ] || warn "AUR packages that failed:$failed"
             fi ;;
         ubuntu|debian)
-            sudo apt-get install -y $native || warn "some packages failed" ;;
+            sudo apt-get install -y $native || warn "some packages failed"
+            # Debian renames two binaries the configs call by their upstream name
+            local pair
+            mkdir -p "$HOME/.local/bin"
+            for pair in batcat:bat fdfind:fd; do
+                command -v "${pair#*:}" >/dev/null && continue
+                command -v "${pair%%:*}" >/dev/null || continue
+                ln -s "$(command -v "${pair%%:*}")" "$HOME/.local/bin/${pair#*:}" && ok "${pair#*:} -> ${pair%%:*}"
+            done ;;
         *)  die "unsupported distribution: $(distro) (add packages/$(distro)/ and a case here)" ;;
     esac
 }

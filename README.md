@@ -204,7 +204,7 @@ replacement, so you can install what you need before losing it.
 Three things matter:
 
 - Debian renames two binaries. `bat` installs `batcat` and `fd-find` installs
-  `fdfind`, while `.zshrc` calls them by their upstream name. Two symlinks fix it.
+  `fdfind`, while `.zshrc` calls them by their upstream name. `dot install` links them in `~/.local/bin`.
 - `clipster`, `libinput-gestures` and `xidlehook` are called by `.xinitrc` and are
   not packaged. The session starts without them, minus clipboard and gestures.
 - `ly` is not packaged either. Use `lightdm`, or build ly from source.
