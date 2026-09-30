@@ -25,7 +25,7 @@ truncation_symbol = ''
 read_only = ''
 
 [git_branch]
-format = '  [\[$branch\]](211)'
+format = ' [\[$branch\]](211)'
 
 [git_state]
 format = '[\[$state( $progress_current/$progress_total)\]](211)'
