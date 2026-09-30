@@ -1,7 +1,7 @@
 # The stock Ubuntu prompt, user@host:path$, with the git branch and status
 # before the $ and the command duration on the right. For Ubuntu, see .zshrc.
 #
-#   user@host:~/dir main [!?]$                                 [9m25s]
+#   user@host:~/dir  [main][!?]$                                 [9m25s]
 
 format = '$username$hostname:$directory$git_branch$git_state$git_status$character'
 right_format = '$cmd_duration'
@@ -25,13 +25,13 @@ truncation_symbol = ''
 read_only = ''
 
 [git_branch]
-format = ' [$branch](211)'
+format = '  [\[$branch\]](211)'
 
 [git_state]
-format = ' [\($state( $progress_current/$progress_total)\)](211)'
+format = '[\[$state( $progress_current/$progress_total)\]](211)'
 
 [git_status]
-format = '( [\[$all_status$ahead_behind\]](211))'
+format = '([\[$all_status$ahead_behind\]](211))'
 
 [cmd_duration]
 min_time = 5000
