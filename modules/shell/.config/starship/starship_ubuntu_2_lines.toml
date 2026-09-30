@@ -1,0 +1,54 @@
+# Flat prompt on two lines: colored text and a few icons, no powerline segments or
+# background colors. For Ubuntu, see .zshrc.
+#
+#   user@host ~/dir  main !? 3s
+#   ❯
+
+format = """
+$username$hostname$directory$git_branch$git_state$git_status$cmd_duration
+$character"""
+
+add_newline = true
+palette = 'gruvbox'
+
+[palettes.gruvbox]
+fg = '#ebdbb2'
+gray = '#928374'
+red = '#fb4934'
+green = '#b8bb26'
+yellow = '#fabd2f'
+blue = '#83a598'
+purple = '#d3869b'
+aqua = '#8ec07c'
+
+# user@host only shows up over SSH, which is exactly when it matters.
+[username]
+format = '[$user](bold yellow)'
+
+[hostname]
+format = '[@$hostname](bold aqua) '
+ssh_symbol = ''
+
+[directory]
+format = '[$path](bold blue)[$read_only](red) '
+read_only = ' 󰌾'
+truncation_length = 3
+truncation_symbol = '…/'
+
+[git_branch]
+format = '[$symbol$branch](bold purple) '
+symbol = ' '
+
+[git_state]
+format = '[\($state( $progress_current/$progress_total)\)](bold yellow) '
+
+[git_status]
+format = '([$all_status$ahead_behind](red) )'
+
+[cmd_duration]
+format = '[$duration](gray)'
+
+[character]
+success_symbol = '[❯](bold green)'
+error_symbol = '[❯](bold red)'
+vimcmd_symbol = '[❮](bold green)'

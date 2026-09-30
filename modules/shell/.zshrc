@@ -217,6 +217,9 @@ eval "$(atuin init zsh --disable-up-arrow)"
 eval "$(starship init zsh)"
 # export STARSHIP_CONFIG=~/.config/starship/customstarship_purple.toml
 export STARSHIP_CONFIG=~/.config/starship/customstarship.toml
+# Flat prompt on Ubuntu, no powerline segments. starship_ubuntu_2_lines.toml
+# puts the cursor on its own line.
+grep -qx 'ID=ubuntu' /etc/os-release 2>/dev/null && export STARSHIP_CONFIG=~/.config/starship/starship_ubuntu_1_line.toml
 # export STARSHIP_CONFIG=~/.config/starship/starship.toml
 # export STARSHIP_CONFIG=~/.config/starship/templateFromInternet.toml
 
