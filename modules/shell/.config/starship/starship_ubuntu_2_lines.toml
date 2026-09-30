@@ -1,13 +1,14 @@
-# The stock Ubuntu prompt, user@host:path, with the git branch, the git
-# status and the command duration, then the $ on its own line. For Ubuntu,
-# see .zshrc.
+# The stock Ubuntu prompt, user@host:path, then the $ on its own line, with
+# the git branch, the git status and the command duration on the right of
+# it. For Ubuntu, see .zshrc.
 #
-#   user@host:~/dir main [!?] [3s]
-#   $
+#   user@host:~/dir
+#   $                                             main [!?] [3s]
 
 format = """
-$username$hostname:$directory$git_branch$git_state$git_status$cmd_duration
+$username$hostname:$directory
 $character"""
+right_format = '$git_branch$git_state$git_status$cmd_duration'
 
 add_newline = false
 
@@ -28,13 +29,13 @@ truncation_symbol = ''
 read_only = ''
 
 [git_branch]
-format = ' [$branch](bold green)'
+format = ' $branch'
 
 [git_state]
-format = ' [\($state( $progress_current/$progress_total)\)](bold green)'
+format = ' \($state( $progress_current/$progress_total)\)'
 
 [git_status]
-format = '( [\[$all_status$ahead_behind\]](bold green))'
+format = '( \[$all_status$ahead_behind\])'
 
 [cmd_duration]
 format = ' \[$duration\]'
