@@ -25,13 +25,13 @@ truncation_symbol = ''
 read_only = ''
 
 [git_branch]
-format = ' $branch'
+format = ' [$branch](208)'
 
 [git_state]
-format = ' \($state( $progress_current/$progress_total)\)'
+format = ' [\($state( $progress_current/$progress_total)\)](208)'
 
 [git_status]
-format = '( \[$all_status$ahead_behind\])'
+format = '( [\[$all_status$ahead_behind\]](208))'
 
 [cmd_duration]
 format = ' \[$duration\]'
