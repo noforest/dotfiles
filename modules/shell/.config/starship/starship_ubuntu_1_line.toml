@@ -1,41 +1,42 @@
-# Flat prompt on one line, in the terminal's own colors, no powerline
-# segments or background colors. For Ubuntu, see .zshrc.
+# The stock Ubuntu prompt, user@host:path$, with the git branch, the git
+# status and the command duration added before the $. For Ubuntu, see .zshrc.
 #
-#   user@host ~/dir  main [!?] 3s ❯
+#   user@host:~/dir main [!?] 3s$
 
-format = '$username$hostname$directory$git_branch$git_state$git_status$cmd_duration$character'
+format = '$username$hostname:$directory$git_branch$git_state$git_status$cmd_duration$character'
 
-add_newline = true
+add_newline = false
 
 [username]
 show_always = true
-format = '[$user](bold green)'
+format = '[$user@](bold green)'
 
 [hostname]
 ssh_only = false
 ssh_symbol = ''
-format = '[@$hostname](bold green) '
+format = '[$hostname](bold green)'
 
 [directory]
-format = '[$path](bold blue)[$read_only](red) '
-read_only = ' 󰌾'
-truncation_length = 8
+format = '[$path](bold blue)'
+truncate_to_repo = false
+truncation_length = 100
 truncation_symbol = ''
+read_only = ''
 
 [git_branch]
-format = '[$symbol$branch](bold purple) '
-symbol = ' '
+format = ' $branch'
 
 [git_state]
-format = '[\($state( $progress_current/$progress_total)\)](bold yellow) '
+format = ' \($state( $progress_current/$progress_total)\)'
 
 [git_status]
-format = '([\[$all_status$ahead_behind\]](bold red) )'
+format = '( \[$all_status$ahead_behind\])'
 
 [cmd_duration]
-format = '[$duration](yellow) '
+format = ' $duration'
 
 [character]
-success_symbol = '[❯](bold green)'
-error_symbol = '[❯](bold red)'
-vimcmd_symbol = '[❮](bold green)'
+format = '$symbol '
+success_symbol = '\$'
+error_symbol = '\$'
+vimcmd_symbol = '\$'
