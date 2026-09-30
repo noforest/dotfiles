@@ -38,6 +38,7 @@ format = ' [\($state( $progress_current/$progress_total)\)](208)'
 format = '( [\[$all_status$ahead_behind\]](208))'
 
 [cmd_duration]
+min_time = 5000
 format = ' \[$duration\]'
 
 [character]
