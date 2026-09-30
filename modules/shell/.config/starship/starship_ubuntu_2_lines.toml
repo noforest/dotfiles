@@ -2,7 +2,7 @@
 # status and the command duration, then the $ on its own line. For Ubuntu,
 # see .zshrc.
 #
-#   user@host:~/dir main [!?] 3s
+#   user@host:~/dir main [!?] [3s]
 #   $
 
 format = """
@@ -28,16 +28,16 @@ truncation_symbol = ''
 read_only = ''
 
 [git_branch]
-format = ' $branch'
+format = ' [$branch](bold green)'
 
 [git_state]
-format = ' \($state( $progress_current/$progress_total)\)'
+format = ' [\($state( $progress_current/$progress_total)\)](bold green)'
 
 [git_status]
-format = '( \[$all_status$ahead_behind\])'
+format = '( [\[$all_status$ahead_behind\]](bold green))'
 
 [cmd_duration]
-format = ' $duration'
+format = ' \[$duration\]'
 
 [character]
 format = '$symbol '
