@@ -63,10 +63,12 @@ else
     wifi_status=""  # no Wi-Fi card, a tower on Ethernet
 fi
 
-# Check the Ethernet state on any en* interface (the USB adapter name changes with the port)
+# Check the Ethernet state on any en* interface (the USB adapter name changes with the port).
+# A global address, not the carrier: a plugged cable whose connection was
+# deactivated in NetworkManager, or still waiting for DHCP, carries no traffic.
 ethernet_status=""  # Ethernet disconnected
-for f in /sys/class/net/en*/operstate; do
-    if [ "$(cat "$f" 2>/dev/null)" = "up" ]; then
+for d in /sys/class/net/en*; do
+    if [ -n "$(ip -o addr show dev "${d##*/}" scope global 2>/dev/null)" ]; then
         ethernet_status="󰈀"  # Ethernet connected
         wifi_status=""  # no Wi-Fi cross while online through Ethernet
         [ "$operstate" = "up" ] && wifi_status="$wifi_icon${wifi_percentage}% / "

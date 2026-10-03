@@ -6,10 +6,11 @@
 flag="${XDG_RUNTIME_DIR:-/tmp}/internet-offline"
 refresh() { pkill -RTMIN+3 -x dwmblocks; }
 
-# Links: ip monitor sleeps in the kernel until an interface changes, so a cable
-# plugged in or pulled out shows at once and waiting costs nothing.
+# Links and addresses: ip monitor sleeps in the kernel until an interface or
+# its addresses change, so a cable plugged in or pulled out, or a connection
+# (de)activated, shows at once and waiting costs nothing.
 # Both stop with dwmblocks, so a new X session does not pile up another pair.
-ip monitor link | while read -r _; do refresh || exit; done &
+ip monitor link address | while read -r _; do refresh || exit; done &
 monitor=$!
 
 # Internet: no event exists for it, so ping. Every 10 seconds while it answers,
