@@ -1,4 +1,4 @@
-# rclone filters for sync-gdrive: a whitelist.
+# rclone filters for sync-gdrive-enseirb: a whitelist.
 #
 # ~/sync-enseirb holds data science and course projects, which are mostly made of things
 # that must not travel: virtual environments, model weights, datasets, build
@@ -10,11 +10,11 @@
 #
 # The first matching rule wins, so the order is: directories to skip whatever
 # they hold, then secrets, then the accepted extensions, then "nothing else".
-# Matching ignores case (sync-gdrive passes --ignore-case), and sync-gdrive
+# Matching ignores case (sync-gdrive-enseirb passes --ignore-case), and sync-gdrive-enseirb
 # caps every file at MAX_SIZE on top of this.
 #
 # To change the list on one machine, copy this file to
-# ~/.config/sync-gdrive/filters. sync-gdrive notices the change and resyncs.
+# ~/.config/sync-gdrive-enseirb/filters. sync-gdrive-enseirb notices the change and resyncs.
 
 # --- Directories never synced ---
 # .git: a repository is synced by pushing it, and half synced git objects

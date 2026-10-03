@@ -3,10 +3,10 @@
 # never switched on together still end up with the same working files. Drive is
 # only the meeting point: each machine syncs with it, never with the others.
 #
-#   sync-gdrive             sync now
-#   sync-gdrive --dry-run   show what a sync would do, change nothing
-#   sync-gdrive --resync    rebuild the bisync state, merging both sides
-#   sync-gdrive --force     go through with a sync that deletes most of a side
+#   sync-gdrive-enseirb             sync now
+#   sync-gdrive-enseirb --dry-run   show what a sync would do, change nothing
+#   sync-gdrive-enseirb --resync    rebuild the bisync state, merging both sides
+#   sync-gdrive-enseirb --force     go through with a sync that deletes most of a side
 #
 # NOT the backup. backup-to-gdrive.sh mirrors ~/Documents one way into
 # gdrive:_BackupsLinux/<host>. This script shares nothing with it: another
@@ -15,12 +15,12 @@
 set -uo pipefail
 
 # === CONFIGURATION ===
-CONF_DIR="${SYNC_GDRIVE_CONF_DIR:-$HOME/.config/sync-gdrive}"
-STATE_DIR="$HOME/.local/state/sync-gdrive"
-TRASH="$HOME/.local/share/sync-gdrive/trash"
+CONF_DIR="${SYNC_GDRIVE_ENSEIRB_CONF_DIR:-$HOME/.config/sync-gdrive-enseirb}"
+STATE_DIR="$HOME/.local/state/sync-gdrive-enseirb"
+TRASH="$HOME/.local/share/sync-gdrive-enseirb/trash"
 
 LOCAL="$HOME/sync-enseirb"
-REMOTE="gdrive:sync-enseirb"
+REMOTE="gdrive-enseirb:sync-enseirb"
 # Per file cap. The filters allow csv and json, which are fine as course
 # material and useless as a 2 GB dataset.
 MAX_SIZE="20M"
@@ -30,7 +30,7 @@ MAX_SIZE="20M"
 
 # The whitelist shipped in /etc is generic. A machine may replace it as a whole.
 FILTERS="$CONF_DIR/filters"
-[ -r "$FILTERS" ] || FILTERS="/etc/sync-gdrive/filters"
+[ -r "$FILTERS" ] || FILTERS="/etc/sync-gdrive-enseirb/filters"
 
 DRY=""; FORCE_RESYNC=""; FORCE=""
 for arg in "$@"; do
@@ -38,16 +38,16 @@ for arg in "$@"; do
         --dry-run) DRY=1 ;;
         --resync)  FORCE_RESYNC=1 ;;
         --force)   FORCE=1 ;;
-        *) echo "usage: sync-gdrive [--dry-run] [--resync] [--force]" >&2; exit 2 ;;
+        *) echo "usage: sync-gdrive-enseirb [--dry-run] [--resync] [--force]" >&2; exit 2 ;;
     esac
 done
 
-say()  { printf 'sync-gdrive: %s\n' "$*" >&2; }
+say()  { printf 'sync-gdrive-enseirb: %s\n' "$*" >&2; }
 # Started by a timer, nobody reads stderr: a failure that needs a human is also
 # sent to the desktop.
 fail() {
     say "$*"
-    command -v notify-send >/dev/null && notify-send -u critical "sync-gdrive" "$*" 2>/dev/null
+    command -v notify-send >/dev/null && notify-send -u critical "sync-gdrive-enseirb" "$*" 2>/dev/null
     exit 1
 }
 
@@ -150,14 +150,14 @@ case "$rc" in
         exit 0 ;;
     2)  # Never resynced automatically: a resync brings back on each side what
         # the other one deleted, so a human should look first.
-        fail "bisync stopped on a critical error. Check ~/sync-enseirb, then run: sync-gdrive --resync" ;;
+        fail "bisync stopped on a critical error. Check ~/sync-enseirb, then run: sync-gdrive-enseirb --resync" ;;
     *)  # Retrying changes nothing here, every run would abort the same way.
         grep -q 'too many deletes' "$STATE_DIR/last.log" \
-            && fail "more than half of the files would be deleted. If that is intended: sync-gdrive --force"
+            && fail "more than half of the files would be deleted. If that is intended: sync-gdrive-enseirb --force"
         # One side lost every file while the other still has them. bisync will
         # not empty a whole side, a vanished folder looks exactly like this.
         grep -qi 'empty current Path[12] listing' "$STATE_DIR/last.log" \
-            && fail "one side is empty while the other is not, nothing was deleted. To bring the files back: sync-gdrive --resync"
+            && fail "one side is empty while the other is not, nothing was deleted. To bring the files back: sync-gdrive-enseirb --resync"
         say "bisync failed (exit $rc), the next run retries"
         exit "$rc" ;;
 esac

@@ -263,33 +263,33 @@ the xinput file nothing is loaded and the session still starts.
 ## Shared folder
 
 `~/sync-enseirb` is the same folder on every machine, kept in step through Google Drive
-by `sync-gdrive` (`rclone bisync`). Drive is only the meeting point, so the
+by `sync-gdrive-enseirb` (`rclone bisync`). Drive is only the meeting point, so the
 machines never need to be switched on together.
 
 ```sh
-rclone config                      # once per machine: a remote named gdrive
-sync-gdrive --dry-run              # what the first run would do
-sync-gdrive                        # the first run merges both sides, it deletes nothing
-systemctl --user enable --now sync-gdrive.timer sync-gdrive-logout.service
+rclone config                      # once per machine: a remote named gdrive-enseirb
+sync-gdrive-enseirb --dry-run      # what the first run would do
+sync-gdrive-enseirb                # the first run merges both sides, it deletes nothing
+systemctl --user enable --now sync-gdrive-enseirb.timer sync-gdrive-enseirb-logout.service
 ```
 
-It then runs at login, every ten minutes and at logout. Run `sync-gdrive` by hand
+It then runs at login, every ten minutes and at logout. Run `sync-gdrive-enseirb` by hand
 before leaving a machine if the last edit is less than ten minutes old.
 
 - **Only a whitelist of extensions travels**, each file capped at 20 MB: code,
   notebooks, documents, configuration, small csv and figures. Virtual
   environments, model weights, datasets and build output stay where they are.
-  The list is `/etc/sync-gdrive/filters`.
+  The list is `/etc/sync-gdrive-enseirb/filters`.
 - **A file edited on two machines between two runs** is kept twice: the newer one
   under its name, the other one as `notes.conflict1.md`.
 - **What a sync deletes or overwrites locally** goes to
-  `~/.local/share/sync-gdrive/trash`, and to the Google bin on the Drive side.
+  `~/.local/share/sync-gdrive-enseirb/trash`, and to the Google bin on the Drive side.
   A run that would delete more than half of a side stops and asks for
-  `sync-gdrive --force`.
+  `sync-gdrive-enseirb --force`.
 - **This is not the backup.** `backup-to-gdrive.sh` mirrors `~/Documents` one way
   into `gdrive:_BackupsLinux/<host>`. The two share no folder, local or remote.
 
-[`examples/sync-gdrive.config`](examples/sync-gdrive.config) lists the overrides.
+[`examples/sync-gdrive-enseirb.config`](examples/sync-gdrive-enseirb.config) lists the overrides.
 
 ---
 

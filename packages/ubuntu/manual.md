@@ -90,17 +90,17 @@ Install the version your projects need, or `clang` and `llvm` for the default.
 
 `paru` and `yay` are AUR helpers, they have no meaning here.
 
-## 7. rclone, for `sync-gdrive`
+## 7. rclone, for `sync-gdrive-enseirb`
 
 The archive ships rclone 1.60, where `bisync` is still experimental: no
 `--resilient`, no `--recover`, no `--conflict-resolve`, and one interrupted run
-demands a manual `--resync`. `sync-gdrive` refuses anything older than 1.66, so
+demands a manual `--resync`. `sync-gdrive-enseirb` refuses anything older than 1.66, so
 install the upstream package instead of the one from apt.
 
 ```sh
 curl -fsSLO https://downloads.rclone.org/rclone-current-linux-amd64.deb
 sudo apt install ./rclone-current-linux-amd64.deb
-rclone config          # create a remote named gdrive, the same account as the other machines
+rclone config          # create a remote named gdrive-enseirb, the same account as the other machines
 ```
 
 apt leaves it alone afterwards, its version being higher than the archive's.
@@ -110,9 +110,10 @@ rather than full access: the token then only reaches what rclone itself created
 with this client_id, which is `sync-enseirb` and nothing else on the Drive.
 
 ```sh
-rclone config update gdrive scope=drive.file
-rclone config reconnect gdrive:
-rclone lsd gdrive:     # must list sync-enseirb only
+rclone config update gdrive-enseirb scope=drive.file
+rclone config reconnect gdrive-enseirb:
+rclone lsd gdrive-enseirb:     # must list sync-enseirb only
 ```
 
-The laptop keeps the full `drive` scope, its backup folder predates the client_id.
+The backup has its own remote, `gdrive`, which keeps the full `drive` scope:
+its folder predates the client_id.
