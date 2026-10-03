@@ -99,3 +99,15 @@ rclone config          # create a remote named gdrive, the same account as the o
 ```
 
 apt leaves it alone afterwards, its version being higher than the archive's.
+
+On a machine other people administer, give the remote the `drive.file` scope
+rather than full access: the token then only reaches what rclone itself created
+with this client_id, which is `sync-enseirb` and nothing else on the Drive.
+
+```sh
+rclone config update gdrive scope=drive.file
+rclone config reconnect gdrive:
+rclone lsd gdrive:     # must list sync-enseirb only
+```
+
+The laptop keeps the full `drive` scope, its backup folder predates the client_id.

@@ -109,6 +109,7 @@ fi
 #   what a sync deletes is recoverable anyway. --force is the way through.
 # --backup-dir1: whatever a sync deletes or overwrites locally lands there
 #   instead of being lost. On the Drive side the Google bin does the same.
+bisync() {
 rclone bisync "$LOCAL" "$REMOTE" \
     "${resync[@]}" \
     ${DRY:+--dry-run} \
@@ -127,7 +128,20 @@ rclone bisync "$LOCAL" "$REMOTE" \
     --backup-dir1 "$TRASH" \
     --drive-skip-gdocs \
     --verbose 2>&1 | tee "$STATE_DIR/last.log"
-rc=${PIPESTATUS[0]}
+return "${PIPESTATUS[0]}"
+}
+bisync; rc=$?
+
+# bisync refuses to compare against an empty saved listing, which is exactly
+# what a folder leaves behind while it holds nothing in scope: the day it is
+# created, or after everything in it was removed. Every later run would fail,
+# including the one that should carry the first file. Nothing was listed last
+# time, so nothing can read as deleted now, and merging both sides is safe.
+if [ "$rc" -ne 0 ] && [ -z "${resync[*]}" ] && grep -qi 'empty prior Path[12] listing' "$STATE_DIR/last.log"; then
+    say "nothing was in sync yet: merging both sides (resync)"
+    resync=(--resync --resync-mode newer)
+    bisync; rc=$?
+fi
 
 case "$rc" in
     0)  # A dry run proves nothing about the saved listings, so it must not
@@ -140,6 +154,10 @@ case "$rc" in
     *)  # Retrying changes nothing here, every run would abort the same way.
         grep -q 'too many deletes' "$STATE_DIR/last.log" \
             && fail "more than half of the files would be deleted. If that is intended: sync-gdrive --force"
+        # One side lost every file while the other still has them. bisync will
+        # not empty a whole side, a vanished folder looks exactly like this.
+        grep -qi 'empty current Path[12] listing' "$STATE_DIR/last.log" \
+            && fail "one side is empty while the other is not, nothing was deleted. To bring the files back: sync-gdrive --resync"
         say "bisync failed (exit $rc), the next run retries"
         exit "$rc" ;;
 esac
