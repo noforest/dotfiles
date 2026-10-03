@@ -1430,6 +1430,7 @@ require("lazy").setup({
 
             -- Add or skip adding a new cursor by matching word/selection
             set({ "n", "x" }, "<leader>n", function() mc.matchAddCursor(1) end)
+            set({ "n", "x" }, "gb", function() mc.matchAddCursor(1) end) -- same as VSCodeVim
             set({ "n", "x" }, "<leader>N", function() mc.matchAddCursor(-1) end)
 
             set({ "n", "x" }, "<leader>s", function() mc.matchSkipCursor(1) end)
@@ -1544,13 +1545,16 @@ require("lazy").setup({
     {
         'numToStr/Comment.nvim',
         opts = {
+            -- Block comments on gC like VSCodeVim, instead of the default gb
+            toggler = { block = 'gCc' },
+            opleader = { block = 'gC' },
             pre_hook = function()
                 if vim.bo.filetype == 'tex' then
                     return '% %s'
                 end
                 -- Without a Treesitter parser for the buffer, Comment.ft.calculate()
                 -- calls parser:lang() on a nil (nvim >= 0.11 returns nil instead
-                -- of raising an error): gcc/gbc fail silently. Concrete case:
+                -- of raising an error): gcc/gCc fail silently. Concrete case:
                 -- the zsh filetype (.zshrc, .zshenv, .p10k.zsh), no zsh parser installed.
                 -- It then falls back to the buffer's 'commentstring'.
                 if not vim.treesitter.get_parser(0, nil, { error = false }) then

@@ -216,7 +216,7 @@ vim.api.nvim_set_keymap('x', 'p', '"_"+P`[v`]=<CR>`]', { noremap = true, silent 
 -- comment.nvim
 -- Keymap to yank without moving down a line
 vim.api.nvim_set_keymap('x', 'gyc', 'ygvgc', { silent = true })
-vim.api.nvim_set_keymap('x', 'gyb', 'ygvgb', { silent = true })
+vim.api.nvim_set_keymap('x', 'gyC', 'ygvgC', { silent = true })
 
 -- -- Keymap to yank without moving down a line
 -- vim.api.nvim_set_keymap('x', 'y', 'ygv<Esc>', { noremap = true, silent = true })

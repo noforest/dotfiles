@@ -16,8 +16,7 @@ opt.spelllang = { "en_us", "fr" }
 -- line numbers
 opt.relativenumber = false -- absolute line numbers only
 opt.number = true
-opt.cursorline = true
-opt.cursorlineopt = "number" -- highlight the cursor's line number only, not the whole line
+opt.cursorline = false
 
 -- tabs & indentation
 opt.tabstop = 4 -- 2 spaces for tabs (prettier default)
