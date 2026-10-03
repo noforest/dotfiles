@@ -1,0 +1,6 @@
+[Unit]
+Description=Sync ~/sync-enseirb with Google Drive (rclone bisync)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/sync-gdrive

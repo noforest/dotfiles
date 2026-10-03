@@ -36,6 +36,7 @@ name by name against the official archive.
 [Arch](#install-on-arch) ·
 [Ubuntu](#install-on-ubuntu) ·
 [Machine settings](#machine-specific-settings) ·
+[Shared folder](#shared-folder) ·
 [Another WM](#adding-a-graphical-environment) ·
 [Design](#design-choices)
 
@@ -79,10 +80,10 @@ Ubuntu. Only the directory the package lists are read from changes.
 | Profile | For what | `system:` scopes |
 |---|---|---|
 | `minimal` | Server, VM, machine you pass through. No graphical session. | none |
-| `desktop` | Tower running dwm. No battery, backlight, touchpad or lid. | x11-dwm, peripherals, backup |
-| `gnome` | Tower on the desktop its distribution ships (GNOME on Ubuntu). No dwm. | peripherals |
-| `laptop` | Laptop running dwm. | laptop, x11-dwm, peripherals, backup |
-| `full` | Everything: development, XFCE, Hyprland, virtualisation. | laptop, x11-dwm, peripherals, backup |
+| `desktop` | Tower running dwm. No battery, backlight, touchpad or lid. | x11-dwm, peripherals, backup, sync |
+| `gnome` | Tower on the desktop its distribution ships (GNOME on Ubuntu). No dwm. | peripherals, sync |
+| `laptop` | Laptop running dwm. | laptop, x11-dwm, peripherals, backup, sync |
+| `full` | Everything: development, XFCE, Hyprland, virtualisation. | laptop, x11-dwm, peripherals, backup, sync |
 
 `common` and the detected distribution are always added, so no profile repeats
 them.
@@ -168,6 +169,8 @@ reboot                                             # ly, udev rules and groups t
 On a laptop, also install auto-cpufreq, see
 [packages/arch/manual.md](packages/arch/manual.md).
 
+To share `~/sync-enseirb` with the other machines, see [Shared folder](#shared-folder).
+
 Then see [Machine specific settings](#machine-specific-settings).
 
 ---
@@ -229,6 +232,10 @@ reboot
 The bootstrap enables NetworkManager and skips ly, which Ubuntu does not package.
 The display manager Ubuntu installed (gdm3, or lightdm) stays in charge.
 
+To share `~/sync-enseirb` with the other machines, see [Shared folder](#shared-folder).
+It needs a newer rclone than apt provides, see
+[packages/ubuntu/manual.md](packages/ubuntu/manual.md).
+
 Then see [Machine specific settings](#machine-specific-settings).
 
 `packages/ubuntu/` has no `dev.txt` nor `extra.txt` yet, so the `full` profile
@@ -250,6 +257,39 @@ Five files, and that is all that stays machine specific.
 
 The two `~/.*local` files live in `$HOME`, neither linked nor versioned. Without
 the xinput file nothing is loaded and the session still starts.
+
+---
+
+## Shared folder
+
+`~/sync-enseirb` is the same folder on every machine, kept in step through Google Drive
+by `sync-gdrive` (`rclone bisync`). Drive is only the meeting point, so the
+machines never need to be switched on together.
+
+```sh
+rclone config                      # once per machine: a remote named gdrive
+sync-gdrive --dry-run              # what the first run would do
+sync-gdrive                        # the first run merges both sides, it deletes nothing
+systemctl --user enable --now sync-gdrive.timer sync-gdrive-logout.service
+```
+
+It then runs at login, every ten minutes and at logout. Run `sync-gdrive` by hand
+before leaving a machine if the last edit is less than ten minutes old.
+
+- **Only a whitelist of extensions travels**, each file capped at 20 MB: code,
+  notebooks, documents, configuration, small csv and figures. Virtual
+  environments, model weights, datasets and build output stay where they are.
+  The list is `/etc/sync-gdrive/filters`.
+- **A file edited on two machines between two runs** is kept twice: the newer one
+  under its name, the other one as `notes.conflict1.md`.
+- **What a sync deletes or overwrites locally** goes to
+  `~/.local/share/sync-gdrive/trash`, and to the Google bin on the Drive side.
+  A run that would delete more than half of a side stops and asks for
+  `sync-gdrive --force`.
+- **This is not the backup.** `backup-to-gdrive.sh` mirrors `~/Documents` one way
+  into `gdrive:_BackupsLinux/<host>`. The two share no folder, local or remote.
+
+[`examples/sync-gdrive.config`](examples/sync-gdrive.config) lists the overrides.
 
 ---
 

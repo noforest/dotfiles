@@ -1,0 +1,145 @@
+#!/usr/bin/env bash
+# Two way sync of ~/sync-enseirb with Google Drive, so that several machines which are
+# never switched on together still end up with the same working files. Drive is
+# only the meeting point: each machine syncs with it, never with the others.
+#
+#   sync-gdrive             sync now
+#   sync-gdrive --dry-run   show what a sync would do, change nothing
+#   sync-gdrive --resync    rebuild the bisync state, merging both sides
+#   sync-gdrive --force     go through with a sync that deletes most of a side
+#
+# NOT the backup. backup-to-gdrive.sh mirrors ~/Documents one way into
+# gdrive:_BackupsLinux/<host>. This script shares nothing with it: another
+# local folder, another remote folder, another config directory. Keep it so,
+# a two way sync pointed at a backup would propagate deletions into it.
+set -uo pipefail
+
+# === CONFIGURATION ===
+CONF_DIR="${SYNC_GDRIVE_CONF_DIR:-$HOME/.config/sync-gdrive}"
+STATE_DIR="$HOME/.local/state/sync-gdrive"
+TRASH="$HOME/.local/share/sync-gdrive/trash"
+
+LOCAL="$HOME/sync-enseirb"
+REMOTE="gdrive:sync-enseirb"
+# Per file cap. The filters allow csv and json, which are fine as course
+# material and useless as a 2 GB dataset.
+MAX_SIZE="20M"
+
+# Optional local overrides: LOCAL, REMOTE, MAX_SIZE (see examples/ in the repository)
+[ -r "$CONF_DIR/config" ] && . "$CONF_DIR/config"
+
+# The whitelist shipped in /etc is generic. A machine may replace it as a whole.
+FILTERS="$CONF_DIR/filters"
+[ -r "$FILTERS" ] || FILTERS="/etc/sync-gdrive/filters"
+
+DRY=""; FORCE_RESYNC=""; FORCE=""
+for arg in "$@"; do
+    case "$arg" in
+        --dry-run) DRY=1 ;;
+        --resync)  FORCE_RESYNC=1 ;;
+        --force)   FORCE=1 ;;
+        *) echo "usage: sync-gdrive [--dry-run] [--resync] [--force]" >&2; exit 2 ;;
+    esac
+done
+
+say()  { printf 'sync-gdrive: %s\n' "$*" >&2; }
+# Started by a timer, nobody reads stderr: a failure that needs a human is also
+# sent to the desktop.
+fail() {
+    say "$*"
+    command -v notify-send >/dev/null && notify-send -u critical "sync-gdrive" "$*" 2>/dev/null
+    exit 1
+}
+
+# === CHECKS ===
+command -v rclone >/dev/null || fail "rclone is not installed"
+
+# bisync only became dependable in 1.66: --resilient, --recover and
+# --conflict-resolve do not exist before. Ubuntu ships 1.60, where a single
+# interrupted run demands a manual --resync.
+ver=$(rclone version 2>/dev/null | sed -n '1s/^rclone v\([0-9]*\)\.\([0-9]*\).*/\1 \2/p')
+read -r major minor <<<"${ver:-0 0}"
+if [ "$major" -lt 1 ] || { [ "$major" -eq 1 ] && [ "$minor" -lt 66 ]; }; then
+    fail "rclone 1.66 or newer is required, found ${major}.${minor} (see packages/ubuntu/manual.md)"
+fi
+
+[ -r "$FILTERS" ] || fail "missing filters file: $FILTERS (run 'dot system-apply')"
+
+rclone listremotes 2>/dev/null | grep -qx "${REMOTE%%:*}:" \
+    || fail "remote '${REMOTE%%:*}:' is not configured, run 'rclone config'"
+
+# The timer fires every ten minutes and at logout, when the network may already
+# be gone. Being offline is not an error, the next run catches up.
+getent hosts www.googleapis.com >/dev/null 2>&1 || { say "offline, skipped"; exit 0; }
+
+mkdir -p "$LOCAL" "$STATE_DIR" "$TRASH"
+
+# The timer and the logout unit may fire together. bisync would refuse the
+# second one over its own lock file and report an error for nothing.
+exec 9>"$STATE_DIR/lock"
+flock -w 60 9 || { say "another run is still going, skipped"; exit 0; }
+
+rclone mkdir "$REMOTE" --contimeout 15s 2>/dev/null \
+    || fail "cannot reach $REMOTE, the Drive token may have expired: rclone config reconnect ${REMOTE%%:*}:"
+
+# === FIRST RUN, OR SETTINGS CHANGED ===
+# bisync compares each side with the listing it saved last time. Whatever
+# changes which files are in scope (the filters, the size cap, either path)
+# makes that listing lie: a file newly filtered out would read as deleted, and
+# the deletion would be propagated. The fingerprint of those settings is kept,
+# and a mismatch triggers a resync, which merges both sides and deletes nothing.
+stamp="$STATE_DIR/stamp"
+print=$( { cat "$FILTERS"; printf '%s\n' "$LOCAL" "$REMOTE" "$MAX_SIZE"; } | sha256sum | cut -d' ' -f1)
+resync=()
+if [ -n "$FORCE_RESYNC" ] || [ "$(cat "$stamp" 2>/dev/null)" != "$print" ]; then
+    resync=(--resync --resync-mode newer)
+    say "first run or settings changed: merging both sides (resync)"
+fi
+
+# === SYNC ===
+# --filter-from and not --filters-file: the latter writes an .md5 next to the
+#   filters file, which lives in /etc. The stamp above does that job.
+# --ignore-case: a scanner writes .PDF, R scripts end in .R.
+# --conflict-resolve newer: the same file edited on two machines between two
+#   runs. The newer one keeps the name, the other one stays as notes.conflict1.md.
+#   The extension is kept last so the loser still passes the whitelist: filtered
+#   out, it would read as deleted on both sides and stop being synced.
+# No --max-delete: bisync already aborts when more than half of a side would
+#   vanish at once. A lower bar keeps tripping on a folder of ten files, and
+#   what a sync deletes is recoverable anyway. --force is the way through.
+# --backup-dir1: whatever a sync deletes or overwrites locally lands there
+#   instead of being lost. On the Drive side the Google bin does the same.
+rclone bisync "$LOCAL" "$REMOTE" \
+    "${resync[@]}" \
+    ${DRY:+--dry-run} \
+    ${FORCE:+--force} \
+    --filter-from "$FILTERS" \
+    --ignore-case \
+    --max-size "$MAX_SIZE" \
+    --compare size,modtime \
+    --conflict-resolve newer \
+    --conflict-loser num \
+    --conflict-suffix conflict \
+    --suffix-keep-extension \
+    --resilient \
+    --recover \
+    --max-lock 5m \
+    --backup-dir1 "$TRASH" \
+    --drive-skip-gdocs \
+    --verbose 2>&1 | tee "$STATE_DIR/last.log"
+rc=${PIPESTATUS[0]}
+
+case "$rc" in
+    0)  # A dry run proves nothing about the saved listings, so it must not
+        # mark the resync as done.
+        [ -n "${resync[*]}" ] && [ -z "$DRY" ] && printf '%s\n' "$print" > "$stamp"
+        exit 0 ;;
+    2)  # Never resynced automatically: a resync brings back on each side what
+        # the other one deleted, so a human should look first.
+        fail "bisync stopped on a critical error. Check ~/sync-enseirb, then run: sync-gdrive --resync" ;;
+    *)  # Retrying changes nothing here, every run would abort the same way.
+        grep -q 'too many deletes' "$STATE_DIR/last.log" \
+            && fail "more than half of the files would be deleted. If that is intended: sync-gdrive --force"
+        say "bisync failed (exit $rc), the next run retries"
+        exit "$rc" ;;
+esac

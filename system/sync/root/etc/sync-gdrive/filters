@@ -1,0 +1,108 @@
+# rclone filters for sync-gdrive: a whitelist.
+#
+# ~/sync-enseirb holds data science and course projects, which are mostly made of things
+# that must not travel: virtual environments, model weights, datasets, build
+# output. Listing what to refuse never ends, so this lists what to accept and
+# refuses the rest.
+#
+# A file that is filtered out is not deleted anywhere. It simply stays on the
+# machine it is on.
+#
+# The first matching rule wins, so the order is: directories to skip whatever
+# they hold, then secrets, then the accepted extensions, then "nothing else".
+# Matching ignores case (sync-gdrive passes --ignore-case), and sync-gdrive
+# caps every file at MAX_SIZE on top of this.
+#
+# To change the list on one machine, copy this file to
+# ~/.config/sync-gdrive/filters. sync-gdrive notices the change and resyncs.
+
+# --- Directories never synced ---
+# .git: a repository is synced by pushing it, and half synced git objects
+# corrupt it. The sources inside the repository still travel.
+- .git/**
+- node_modules/**
+- .venv/**
+- venv/**
+- env/**
+- __pycache__/**
+- .ipynb_checkpoints/**
+- .mypy_cache/**
+- .pytest_cache/**
+- .ruff_cache/**
+- .cache/**
+- build/**
+- dist/**
+- target/**
+- wandb/**
+- mlruns/**
+- checkpoints/**
+- .idea/**
+- .vscode/**
+
+# --- Secrets, even though their extension would pass ---
+- .env
+- .env.*
+- *.pem
+- *.key
+
+# --- The losing side of a conflict, kept whatever its name ---
+# notes.conflict1.md passes on its extension, Makefile.conflict1 has none.
++ *.conflict[0-9]*
+
+# --- Code ---
++ *.py
++ *.ipynb
++ *.r
++ *.rmd
++ *.sh
++ *.c
++ *.h
++ *.cpp
++ *.hpp
++ *.java
++ *.js
++ *.ts
++ *.html
++ *.css
++ *.sql
++ *.lua
++ *.rs
++ *.go
++ Makefile
++ Dockerfile
++ .gitignore
+
+# --- Documents ---
++ *.pdf
++ *.txt
++ *.md
++ *.tex
++ *.bib
++ *.odt
++ *.ods
++ *.odp
++ *.docx
++ *.xlsx
++ *.pptx
+
+# --- Configuration ---
++ *.toml
++ *.yaml
++ *.yml
++ *.json
++ *.ini
++ *.cfg
+
+# --- Small data, under MAX_SIZE ---
++ *.csv
++ *.tsv
+
+# --- Figures, under MAX_SIZE ---
++ *.png
++ *.jpg
++ *.jpeg
++ *.svg
+
+# --- Nothing else ---
+# Compiled objects, .pyc, parquet, npy, pkl, h5, model weights, archives, video.
+- *

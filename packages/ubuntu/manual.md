@@ -84,3 +84,18 @@ fall back to the default monospace font. `fonts-firacode`, `fonts-hack` and `fon
 Install the version your projects need, or `clang` and `llvm` for the default.
 
 `paru` and `yay` are AUR helpers, they have no meaning here.
+
+## 7. rclone, for `sync-gdrive`
+
+The archive ships rclone 1.60, where `bisync` is still experimental: no
+`--resilient`, no `--recover`, no `--conflict-resolve`, and one interrupted run
+demands a manual `--resync`. `sync-gdrive` refuses anything older than 1.66, so
+install the upstream package instead of the one from apt.
+
+```sh
+curl -fsSLO https://downloads.rclone.org/rclone-current-linux-amd64.deb
+sudo apt install ./rclone-current-linux-amd64.deb
+rclone config          # create a remote named gdrive, the same account as the other machines
+```
+
+apt leaves it alone afterwards, its version being higher than the archive's.

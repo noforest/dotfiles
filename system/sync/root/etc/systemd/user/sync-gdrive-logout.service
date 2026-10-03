@@ -1,0 +1,15 @@
+[Unit]
+Description=Sync ~/sync-enseirb with Google Drive one last time when the session ends
+
+# A unit that does nothing when started and syncs when stopped: the user manager
+# stops it at logout, which is the last moment the work of this session can
+# leave the machine before someone else sits down at the other one.
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/true
+ExecStop=/usr/local/bin/sync-gdrive
+TimeoutStopSec=120
+
+[Install]
+WantedBy=default.target

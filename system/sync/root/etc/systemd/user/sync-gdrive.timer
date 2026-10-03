@@ -1,0 +1,11 @@
+[Unit]
+Description=Sync ~/sync-enseirb with Google Drive at login, then every ten minutes
+
+[Timer]
+# The user manager starts with the session, so this is "shortly after login":
+# the machine picks up what the other ones did before any work starts here.
+OnStartupSec=30s
+OnUnitInactiveSec=10min
+
+[Install]
+WantedBy=timers.target
