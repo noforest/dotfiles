@@ -35,9 +35,16 @@ ok "key imported"
 step "3. fingerprint check"
 # Must be 35BAA0B33E9EB396F59CA838C0BA5CE6DC6315A3. A mismatch means the key was
 # tampered with in transit, so this aborts rather than warns.
-FPR=$(gpg -n -q --import --import-options import-show \
+# gpg runs in a throwaway home: on an account that never used gpg, ~/.gnupg does
+# not exist, a dry run does not create it and exits 2, and with `set -e` and
+# pipefail the script then stopped right here without a word, key downloaded
+# and nothing installed. `|| true` for the same reason: an empty FPR must reach
+# the mismatch branch below, which says what happened.
+GPGHOME=$(mktemp -d)
+FPR=$(GNUPGHOME="$GPGHOME" gpg -n -q --import --import-options import-show \
         /etc/apt/keyrings/packages.mozilla.org.asc 2>/dev/null \
-      | awk '/pub/{getline; gsub(/^ +| +$/,""); print; exit}')
+      | awk '/pub/{getline; gsub(/^ +| +$/,""); print; exit}') || true
+rm -rf "$GPGHOME"
 if [ "$FPR" = "35BAA0B33E9EB396F59CA838C0BA5CE6DC6315A3" ]; then
     ok "fingerprint matches ($FPR)"
 else
