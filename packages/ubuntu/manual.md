@@ -31,6 +31,11 @@ Debian renames two commands, and `.zshrc` calls them by their upstream name.
 the same job, but the binary is `delta`, so `alias diffu` (`.zshrc:65`) needs
 adapting.
 
+`vimpager` and `git-graph` are not packaged. `.zshrc` checks for both: without
+`vimpager`, `$PAGER` is `less`, and without `git-graph`, `git glog` is the plain
+`log --graph --oneline` alias of `.gitconfig`. To get the originals back,
+`cargo install git-graph`, and `make install` from the vimpager repository.
+
 ## 2. Called by `.xinitrc`, so the session needs them
 
 | Tool | Where it is used | How to get it |

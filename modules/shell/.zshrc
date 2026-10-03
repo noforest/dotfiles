@@ -21,7 +21,13 @@ export LC_ALL=en_US.UTF-8
 export LC_TIME=en_US.UTF-8
 export VIMPAGER_VIM=vim
 # export VIMPAGER_OPTIONS="--cmd 'set mouse=a'"
-export PAGER="vimpager"
+# vimpager only exists in the AUR. git runs $PAGER without checking it, so on a
+# machine without vimpager `git log` died with "unable to execute pager".
+if (( $+commands[vimpager] )); then
+  export PAGER="vimpager"
+else
+  export PAGER="less"
+fi
 # vim's :MANPAGER, replaced by modules/vim/.vim/plugin/manpager.vim
 export MANPAGER="vim +MANPAGER --not-a-term -"
 # export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
@@ -137,7 +143,9 @@ bindkey "^[[1;5C" forward-word     # Ctrl + right arrow
 # bindkey -s '^f' 'fuzzy_cd\n'
 
 git() {
-  if [[ "$1" == "glog" ]]; then
+  # Without git-graph (cargo only, not packaged on Ubuntu) glog falls through to
+  # the last branch, where git finds the plain `glog` alias of .gitconfig.
+  if [[ "$1" == "glog" ]] && (( $+commands[git-graph] )); then
     shift
     # command git-graph --format "$(echo "%h \033[90m%ad\033[0m \033[34m%an\033[0m →  %s")" 
     
