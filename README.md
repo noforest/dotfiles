@@ -276,6 +276,11 @@ systemctl --user enable --now sync-gdrive-enseirb.timer sync-gdrive-enseirb-logo
 It then runs at login, every ten minutes and at logout. Run `sync-gdrive-enseirb` by hand
 before leaving a machine if the last edit is less than ten minutes old.
 
+After an update of `sync-gdrive-enseirb-logout.service`, run
+`systemctl --user reenable --now sync-gdrive-enseirb-logout.service`: its `[Install]`
+section names two targets and `enable` on an already enabled unit does not add
+the missing link.
+
 - **Only a whitelist of extensions travels**, each file capped at 20 MB: code,
   notebooks, documents, configuration, small csv and figures. Virtual
   environments, model weights, datasets and build output stay where they are.

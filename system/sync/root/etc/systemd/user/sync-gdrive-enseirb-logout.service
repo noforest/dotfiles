@@ -1,9 +1,19 @@
 [Unit]
 Description=Sync ~/sync-enseirb with Google Drive one last time when the session ends
 
-# A unit that does nothing when started and syncs when stopped: the user manager
-# stops it at logout, which is the last moment the work of this session can
-# leave the machine before someone else sits down at the other one.
+# The stop of the user manager is not a dependable signal for "logged out": with
+# lingering on (loginctl enable-linger, which some machines have for user
+# timers) the manager is started at boot and survives every logout, so this
+# unit was never stopped and the last sync never ran. A desktop that runs its
+# session through systemd (GNOME, Plasma) stops graphical-session.target at
+# logout, lingering or not, and PartOf= passes that stop on to this unit.
+# Under startx (dwm) the target is never started and nothing changes: the unit
+# is still stopped along with the manager.
+PartOf=graphical-session.target
+
+# A unit that does nothing when started and syncs when stopped, which is the
+# last moment the work of this session can leave the machine before someone
+# else sits down at the other one.
 [Service]
 Type=oneshot
 RemainAfterExit=yes
@@ -11,5 +21,9 @@ ExecStart=/bin/true
 ExecStop=/usr/local/bin/sync-gdrive-enseirb
 TimeoutStopSec=120
 
+# default.target starts it where there is no graphical-session.target (startx).
+# graphical-session.target starts it again at the second login of a lingering
+# manager, where default.target was reached once at boot and the unit has
+# stayed stopped since the first logout.
 [Install]
-WantedBy=default.target
+WantedBy=default.target graphical-session.target
