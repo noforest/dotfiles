@@ -753,6 +753,10 @@ cmd_install() {
                 [ -z "$failed" ] || warn "AUR packages that failed:$failed"
             fi ;;
         ubuntu|debian)
+            # apt resolves versions from its local index. On a machine that has
+            # not refreshed it for a while, the index names a .deb the archive
+            # has since replaced, one 404 follows and apt installs nothing at all.
+            sudo apt-get update || warn "apt-get update failed, the index may be stale"
             sudo apt-get install -y $native || warn "some packages failed"
             # Debian renames two binaries the configs call by their upstream name
             local pair
