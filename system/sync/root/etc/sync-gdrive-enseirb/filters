@@ -39,6 +39,16 @@
 - .idea/**
 - .vscode/**
 
+# --- Opting a directory out by its name ---
+# A git repository is synced by pushing it. With .git skipped and the sources
+# synced, the other machine sees them as uncommitted changes and refuses to
+# pull. Name the directory tps-git or free-tps and nothing in it travels,
+# at any depth.
+- *-git/**
+- free-*/**
+# Summer exercises, of no use on the other machines.
+- /s9/summer/**
+
 # --- Secrets, even though their extension would pass ---
 - .env
 - .env.*
