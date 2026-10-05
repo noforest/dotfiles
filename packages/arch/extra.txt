@@ -71,6 +71,7 @@ openbsd-netcat
 openvpn
 openfortivpn
 wireguard-tools
+tailscale
 proton-vpn-gtk-app
 torbrowser-launcher
 qutebrowser
