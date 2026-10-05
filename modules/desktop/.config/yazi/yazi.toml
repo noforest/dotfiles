@@ -27,9 +27,13 @@ image = [
 	{ run = 'ristretto.sh %s1',  desc = "Ristretto",       orphan = true, for = "linux" },
 	{ run = 'firefox %s1',       desc = "Firefox",         orphan = true, for = "linux" },
 ]
+html = [
+	{ run = 'firefox %s', desc = "Firefox (default)", orphan = true, for = "linux" },
+]
 
 [open]
 prepend_rules = [
+	{ mime = "text/html",       use = ["html", "edit", "reveal"] },
 	{ mime = "application/pdf", use = ["pdf", "reveal"] },
 	{ mime = "image/*",         use = ["image", "reveal"] },
 ]
