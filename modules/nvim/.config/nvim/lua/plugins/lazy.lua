@@ -3729,12 +3729,14 @@ require("lazy").setup({
                 require('blink.cmp').setup(opts)
 
                 -- The signature window lists every overload (4 for np.random.choice,
-                -- each wrapping over 3 lines) and hides the code above: keep the active one.
+                -- each wrapping over 3 lines) and hides the code above: keep the active
+                -- one. In Python it is also reworded like the hover, see lua/lsp_hover.lua.
                 local window = require('blink.cmp.signature.window')
                 local open = window.open_with_signature_help
                 window.open_with_signature_help = function(context, help)
                     local active = help and help.signatures and help.signatures[(help.activeSignature or 0) + 1]
-                    if active and #help.signatures > 1 then
+                    if active then
+                        if vim.bo.filetype == 'python' then active = require('lsp_hover').signature(active) end
                         help = vim.tbl_extend('force', help, { signatures = { active }, activeSignature = 0 })
                     end
                     return open(context, help)

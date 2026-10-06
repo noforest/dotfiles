@@ -41,14 +41,16 @@ def to_markdown(doc):
         elif m := re.fullmatch(r"\.\. ([\w-]+)::\s*(.*)", text):
             out.append(f"***{m[1]}*** {inline(m[2])}".rstrip())
         elif m := re.fullmatch(r"(\*{0,2}\w[\w, ]*?) : (.+)", line):
+            if out and out[-1] and not out[-1].startswith("### "):
+                out.append("")  # set each parameter apart from the previous one
             out.append("**{}** : *{}*".format(m[1].replace("*", r"\*"), m[2]))
         else:
-            # indented text would render as a code block: flatten it
-            out.append(inline(text))
+            # keep what was indented under its entry, with 2 spaces: 4 would render as a code block
+            out.append(("  " if line[:1].isspace() else "") + inline(text))
         i += 1
     if in_code:
         out.append("```")
-    return "\n".join(out).strip()
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(out)).strip()
 
 
 def check():
@@ -61,12 +63,12 @@ def check():
     )
     assert md.startswith("Generates a sample"), md
     assert "***versionadded*** 1.7.0" in md, md
-    assert "***note***\nUse `random-quick-start` and `rng`." in md, md
-    assert "### Parameters\n**a** : *1-D array-like or int*\nIf an ndarray, a sample." in md, md
-    assert r"**\*args** : *tuple*" in md, md
+    assert "***note***\n  Use `random-quick-start` and `rng`." in md, md
+    assert "### Parameters\n**a** : *1-D array-like or int*\n  If an ndarray, a sample.\n\n" in md, md
+    assert "\n\n" + r"**\*args** : *tuple*" + "\n  Extra." in md, md
     assert "```python\n>>> np.random.choice(5, 3)\narray([0, 3, 4]) # random\n```\n\nDone." in md, md
     assert "----" not in md and "::" not in md, md
-    assert to_markdown("plain text\n  kept") == "plain text\nkept"
+    assert to_markdown("plain text\n    kept") == "plain text\n  kept"
     print("ok")
 
 
