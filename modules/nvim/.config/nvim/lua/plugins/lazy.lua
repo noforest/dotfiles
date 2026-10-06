@@ -3370,6 +3370,28 @@ require("lazy").setup({
                             module = "blink.cmp.sources.lsp",
                             -- min_keyword_length = 1,
                             score_offset = 90, -- the higher the number, the higher the priority
+                            -- colorful-menu has no renderer for pyrefly and shows the item's raw
+                            -- detail next to its name (_UFunc_Nin1_Nout1[Literal['positive'],
+                            -- Literal[19], None]). Give it a short word instead, through
+                            -- labelDetails which it reads first: the kind of a callable, class
+                            -- or module, the type without its generic arguments for a value.
+                            -- `detail` itself is left alone for the documentation window.
+                            transform_items = function(_, items)
+                                local words = { Function = "function", Method = "method", Class = "class", Module = "module" }
+                                local values = { Field = true, Variable = true, Property = true, Constant = true, Value = true, EnumMember = true }
+                                local kinds = vim.lsp.protocol.CompletionItemKind
+                                for _, item in ipairs(items) do
+                                    if item.client_name == "pyrefly" then
+                                        local kind, detail = kinds[item.kind], item.detail
+                                        local short = words[kind]
+                                        if values[kind] and type(detail) == "string" and not detail:find("\n") then
+                                            short = detail:gsub("%b[]", "")
+                                        end
+                                        if short then item.labelDetails = { detail = short } end
+                                    end
+                                end
+                                return items
+                            end,
                         },
                         path = {
                             name = "Path",
@@ -3562,38 +3584,44 @@ require("lazy").setup({
 
                         draw = {
                             treesitter = { "lsp" },
-                            -- name | short type of a value | icon and kind in full
-                            columns = { { "label" }, { "type" }, { "kind_icon", "kind", gap = 1 } },
+                            columns = { { "kind_icon" }, { "label", gap = 1 } },
+                            -- components = {
+                            --     label = {
+                            --         text = function(ctx)
+                            --             return require("colorful-menu").blink_components_text(ctx)
+                            --         end,
+                            --         highlight = function(ctx)
+                            --             return require("colorful-menu").blink_components_highlight(ctx)
+                            --         end,
+                            --     },
+                            -- },
 
                             components = {
                                 label = {
                                     text = function(ctx)
-                                        -- pyrefly: the name alone. colorful-menu has no renderer for it and
-                                        -- would append its raw detail (_UFunc_Nin1_Nout1[Literal['absolute'], ...]).
-                                        if ctx.item.client_name == "pyrefly" then return ctx.label end
                                         return require("colorful-menu").blink_components_text(ctx)
                                     end,
                                     highlight = function(ctx)
-                                        if ctx.item.client_name == "pyrefly" then
-                                            return { { 0, #ctx.label, group = "BlinkCmpLabel" } }
-                                        end
-                                        return require("colorful-menu").blink_components_highlight(ctx) or {}
+                                        -- Gets the colorful-menu highlights
+                                        local highlights = require("colorful-menu").blink_components_highlight(ctx) or {}
+
+                                        -- Adds highlighting for the characters matched by the fuzzy matching (at the end)
+
+                                        -- vim.api.nvim_set_hl(0, "MyErrorMsg", { fg = "#f38ba8", bold = true })
+                                        -- vim.api.nvim_set_hl(0, "MyInfoMsg", { fg = "#94e2d5", bold = true })
+                                        --
+                                        -- for _, idx in ipairs(ctx.label_matched_indices or {}) do
+                                        --     table.insert(highlights, { idx, idx + 1, group = 'MyErrorMsg' }) -- Check whether this forces the change
+                                        -- end
+
+
+                                        return highlights
                                     end,
-                                },
-                                -- The type of what holds a value (np.pi: float), without its generic
-                                -- arguments. Callables, classes and modules say enough with their kind.
-                                type = {
-                                    width = { max = 24 },
-                                    text = function(ctx)
-                                        local detail = ctx.item.detail
-                                        local value = ctx.kind == "Field" or ctx.kind == "Variable" or ctx.kind == "Property"
-                                            or ctx.kind == "Constant" or ctx.kind == "Value" or ctx.kind == "EnumMember"
-                                        if not value or type(detail) ~= "string" or detail:find("\n") then return "" end
-                                        return (detail:gsub("%b[]", ""))
-                                    end,
-                                    highlight = "BlinkCmpLabelDescription",
                                 },
                             },
+
+
+
                         },
                     },
 

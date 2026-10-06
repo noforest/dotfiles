@@ -20,7 +20,7 @@ local expanded_width = 100 -- once expanded
 local expand_hint = ' <leader>gh: expand '
 local ns = vim.api.nvim_create_namespace('lsp_hover')
 local hover_doc = vim.fn.stdpath('config') .. '/hover_doc.py'
-local signature_header = true -- name the callee above its signatures in the signature help
+local signature_header = false -- true names the callee above its signatures in the signature help
 
 -- ---------------------------------------------------------------------------
 -- Signatures. pyrefly words them after its internals: a constructor is its
@@ -242,7 +242,7 @@ end
 ---  np.random.randint
 ---  (low, high=None, size=None)
 ---  (low, high=None, size=None, dtype=...)
----the callee, then one line per overload with the names of its parameters and
+---the callee (when signature_header is on), then one line per overload with the names of its parameters and
 ---their defaults, without annotations or return type. Overloads that take the
 ---same parameters differ only by what was just dropped and fold into one line.
 ---`marks` locates the active parameter on each line: { row, start_col, end_col }.
@@ -477,6 +477,7 @@ function M._check()
         for _, m in ipairs(view.marks) do shown[#shown + 1] = ("%d:%s"):format(m[1], view.lines[m[1] + 1]:sub(m[2] + 1, m[3])) end
         return table.concat(view.lines, "\n") .. "  |  " .. table.concat(shown, " ")
     end
+    local header = signature_header
     signature_header = false
     eq(help(0, "(cls: type[range], stop: SupportsIndex, /) -> range",
         "(cls: type[range], start: SupportsIndex, stop: SupportsIndex, step: SupportsIndex = 1, /) -> range"),
@@ -493,7 +494,7 @@ function M._check()
     eq(help(1, "def f(a: dict[str, int] = {'x': 1, 'y': 2}, b: Callable[[int], bool] = lambda v: v == 1, **kwargs: Any) -> None"),
         "(a={'x': 1, 'y': 2}, b=lambda v: v == 1, **kwargs)  |  0:b=lambda v: v == 1")
     eq(help(0, "def make() -> MDP: ..."), "()  |  ")
-    signature_header = true
+    signature_header = header
     print("ok")
 end
 
