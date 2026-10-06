@@ -3562,44 +3562,38 @@ require("lazy").setup({
 
                         draw = {
                             treesitter = { "lsp" },
-                            columns = { { "kind_icon" }, { "label", gap = 1 } },
-                            -- components = {
-                            --     label = {
-                            --         text = function(ctx)
-                            --             return require("colorful-menu").blink_components_text(ctx)
-                            --         end,
-                            --         highlight = function(ctx)
-                            --             return require("colorful-menu").blink_components_highlight(ctx)
-                            --         end,
-                            --     },
-                            -- },
+                            -- name | short type of a value | icon and kind in full
+                            columns = { { "label" }, { "type" }, { "kind_icon", "kind", gap = 1 } },
 
                             components = {
                                 label = {
                                     text = function(ctx)
+                                        -- pyrefly: the name alone. colorful-menu has no renderer for it and
+                                        -- would append its raw detail (_UFunc_Nin1_Nout1[Literal['absolute'], ...]).
+                                        if ctx.item.client_name == "pyrefly" then return ctx.label end
                                         return require("colorful-menu").blink_components_text(ctx)
                                     end,
                                     highlight = function(ctx)
-                                        -- Gets the colorful-menu highlights
-                                        local highlights = require("colorful-menu").blink_components_highlight(ctx) or {}
-
-                                        -- Adds highlighting for the characters matched by the fuzzy matching (at the end)
-
-                                        -- vim.api.nvim_set_hl(0, "MyErrorMsg", { fg = "#f38ba8", bold = true })
-                                        -- vim.api.nvim_set_hl(0, "MyInfoMsg", { fg = "#94e2d5", bold = true })
-                                        --
-                                        -- for _, idx in ipairs(ctx.label_matched_indices or {}) do
-                                        --     table.insert(highlights, { idx, idx + 1, group = 'MyErrorMsg' }) -- Check whether this forces the change
-                                        -- end
-
-
-                                        return highlights
+                                        if ctx.item.client_name == "pyrefly" then
+                                            return { { 0, #ctx.label, group = "BlinkCmpLabel" } }
+                                        end
+                                        return require("colorful-menu").blink_components_highlight(ctx) or {}
                                     end,
                                 },
+                                -- The type of what holds a value (np.pi: float), without its generic
+                                -- arguments. Callables, classes and modules say enough with their kind.
+                                type = {
+                                    width = { max = 24 },
+                                    text = function(ctx)
+                                        local detail = ctx.item.detail
+                                        local value = ctx.kind == "Field" or ctx.kind == "Variable" or ctx.kind == "Property"
+                                            or ctx.kind == "Constant" or ctx.kind == "Value" or ctx.kind == "EnumMember"
+                                        if not value or type(detail) ~= "string" or detail:find("\n") then return "" end
+                                        return (detail:gsub("%b[]", ""))
+                                    end,
+                                    highlight = "BlinkCmpLabelDescription",
+                                },
                             },
-
-
-
                         },
                     },
 
@@ -3728,15 +3722,30 @@ require("lazy").setup({
             config = function(_, opts)
                 require('blink.cmp').setup(opts)
 
-                -- The signature window lists every overload (4 for np.random.choice,
-                -- each wrapping over 3 lines) and hides the code above: keep the active
-                -- one. In Python it is also reworded like the hover, see lua/lsp_hover.lua.
+                -- Signature help. In Python it is drawn the way the Signature Hints
+                -- extension for VS Code does, see lua/lsp_hover.lua: the callee, then one
+                -- line per distinct overload with names and defaults only. Elsewhere only
+                -- the active overload is kept, the window otherwise lists them all.
                 local window = require('blink.cmp.signature.window')
+                local highlight_ns = require('blink.cmp.config').appearance.highlight_ns
                 local open = window.open_with_signature_help
                 window.open_with_signature_help = function(context, help)
-                    local active = help and help.signatures and help.signatures[(help.activeSignature or 0) + 1]
+                    local signatures = help and help.signatures or {}
+                    local view = vim.bo.filetype == 'python' and #signatures > 0 and require('lsp_hover').signature_help(help)
+                    if view then
+                        open(context, {
+                            signatures = vim.tbl_map(function(line) return { label = line } end, view.lines),
+                            activeSignature = 0,
+                        })
+                        -- blink would highlight the active parameter on the first line only
+                        for _, mark in ipairs(view.marks) do
+                            vim.api.nvim_buf_set_extmark(window.win:get_buf(), highlight_ns, mark[1], mark[2],
+                                { end_col = mark[3], hl_group = 'BlinkCmpSignatureHelpActiveParameter' })
+                        end
+                        return
+                    end
+                    local active = signatures[(help and help.activeSignature or 0) + 1]
                     if active then
-                        if vim.bo.filetype == 'python' then active = require('lsp_hover').signature(active) end
                         help = vim.tbl_extend('force', help, { signatures = { active }, activeSignature = 0 })
                     end
                     return open(context, help)

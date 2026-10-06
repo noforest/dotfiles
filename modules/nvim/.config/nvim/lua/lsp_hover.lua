@@ -6,9 +6,11 @@
 -- closes it from either side.
 --
 -- Python gets two extras: the signatures pyrefly sends are rewritten the way
--- Pylance words them, here and in the signature help (M.signature), and the
--- docstring comes from the interpreter when the server has none (compiled
--- modules such as numpy.random), through hover_doc.py.
+-- Pylance words them, and the docstring comes from the interpreter when the
+-- server has none (compiled modules such as numpy.random), through hover_doc.py.
+--
+-- The signature help shown while typing a call is prepared here too
+-- (M.signature_help), since it reads the same signatures.
 
 local M = {}
 
@@ -18,6 +20,7 @@ local expanded_width = 100 -- once expanded
 local expand_hint = ' <leader>gh: expand '
 local ns = vim.api.nvim_create_namespace('lsp_hover')
 local hover_doc = vim.fn.stdpath('config') .. '/hover_doc.py'
+local signature_header = true -- name the callee above its signatures in the signature help
 
 -- ---------------------------------------------------------------------------
 -- Signatures. pyrefly words them after its internals: a constructor is its
@@ -181,9 +184,9 @@ local function tidy_hover(lines, word)
     return out
 end
 
----The name of the function whose call the cursor is in: the identifier before
----the parenthesis left open on the cursor's left. pyrefly does not name the
----callee in the signatures of constructors.
+---The function whose call the cursor is in, as written: `np.random.randint`.
+---It is what stands before the parenthesis left open on the cursor's left;
+---the server does not name the callee in its signatures.
 ---ponytail: brackets inside string literals are counted too, use treesitter if
 ---that ever picks the wrong call.
 ---@return string?
@@ -199,41 +202,79 @@ local function callee()
         elseif (ch == "(" or ch == "[" or ch == "{") and depth > 0 then
             depth = depth - 1
         elseif ch == "(" then
-            return text:sub(1, i - 1):match("([%a_][%w_]*)%s*$")
+            return text:sub(1, i - 1):match("([%a_][%w_%.]*)%s*$")
         end
     end
 end
 
----Rewrites one signature of a signatureHelp answer the way Pylance words it:
----  (cls: type[range], stop: SupportsIndex, /) -> range        ->  range(stop: SupportsIndex, /) -> range
----  def play(self: MDP, state: int, action: int) -> int: ...   ->  play(state: int, action: int) -> int
----Its parameters become offsets into the new label, which is what makes the
----client highlight the active one whatever the label starts with.
----@param sig lsp.SignatureInformation
----@param name string? of the callee, read from the code when nil
----@return lsp.SignatureInformation
-function M.signature(sig, name)
-    local parsed = parse(sig.label)
-    if not parsed then return sig end
-    name = name or callee() or parsed.name or ""
-    -- a class called by its name builds an instance of it, whatever __init__ returns
-    local ret = name == parsed.class and parsed.class or parsed.ret
-    local label = name .. "(" .. table.concat(parsed.params, ", ") .. ")" .. (ret and (" -> " .. ret) or "")
-
-    local out = vim.deepcopy(sig)
-    out.label = label
-    local from = #name + 1
-    for _, param in ipairs(out.parameters or {}) do
-        if type(param.label) == "string" then
-            local text = vim.trim(param.label:gsub("%s+", " ")):gsub("(%S) :", "%1:")
-            local first, last = label:find(text, from, true)
-            if first then
-                param.label = { first - 1, last }
-                from = last + 1
+---`name: Type = default` becomes `name=default`. Returns that and the bare
+---name, or nil for the `/` and `*` markers.
+---@return string?, string?
+local function compact_param(text)
+    if text == "/" or text == "*" then return end
+    local depth, quote, colon, equals = 0, nil, nil, nil
+    for i = 1, #text do
+        local ch = text:sub(i, i)
+        if quote then
+            if ch == quote then quote = nil end
+        elseif ch == "'" or ch == '"' then
+            quote = ch
+        elseif ch == "(" or ch == "[" or ch == "{" then
+            depth = depth + 1
+        elseif ch == ")" or ch == "]" or ch == "}" then
+            depth = depth - 1
+        elseif depth == 0 and not equals then
+            if ch == ":" then
+                colon = colon or i
+            elseif ch == "=" and not text:sub(i - 1, i - 1):match("[=!<>]") and text:sub(i + 1, i + 1) ~= "=" then
+                equals = i
             end
         end
     end
-    return out
+    local name = vim.trim(text:sub(1, (colon or equals or #text + 1) - 1))
+    if name == "" then return end
+    local default = equals and vim.trim(text:sub(equals + 1)) or ""
+    return default ~= "" and (name .. "=" .. default) or name, name
+end
+
+---Lays a signatureHelp answer out the way the Signature Hints extension for
+---VS Code does:
+---  np.random.randint
+---  (low, high=None, size=None)
+---  (low, high=None, size=None, dtype=...)
+---the callee, then one line per overload with the names of its parameters and
+---their defaults, without annotations or return type. Overloads that take the
+---same parameters differ only by what was just dropped and fold into one line.
+---`marks` locates the active parameter on each line: { row, start_col, end_col }.
+---@param help lsp.SignatureHelp
+---@return { lines: string[], marks: integer[][] }?
+function M.signature_help(help)
+    local lines, marks, seen = {}, {}, {}
+    local name = signature_header and callee() or nil
+    if name then lines[1] = name end
+    for _, sig in ipairs(help.signatures) do
+        local parsed = parse(sig.label)
+        -- the server counts neither the receiver nor the `/` and `*` markers, like the list built here
+        local active = tonumber(sig.activeParameter) or tonumber(help.activeParameter)
+        local text, names, mark = "(", {}, nil
+        for _, param in ipairs(parsed and parsed.params or {}) do
+            local piece, param_name = compact_param(param)
+            if piece then
+                if #names > 0 then text = text .. ", " end
+                if #names == active then mark = { #text, #text + #piece } end
+                names[#names + 1] = param_name
+                text = text .. piece
+            end
+        end
+        local key = table.concat(names, ",")
+        if parsed and not seen[key] then
+            seen[key] = true
+            lines[#lines + 1] = text .. ")"
+            if mark then marks[#marks + 1] = { #lines - 1, mark[1], mark[2] } end
+        end
+    end
+    if #lines == (name and 1 or 0) then return end -- nothing this module can read
+    return { lines = lines, marks = marks }
 end
 
 local function set_lines(buf, first, last, lines)
@@ -427,25 +468,32 @@ function M._check()
         eq(hover("x", text), text)
     end
 
-    -- signature help
-    local function sig(name, label, params)
-        local out = M.signature({ label = label, parameters = vim.tbl_map(function(p) return { label = p } end, params) }, name)
+    -- signature help: names and defaults, overloads stacked, repeats folded
+    local function help(active, ...)
+        local signatures = {}
+        for i, label in ipairs({ ... }) do signatures[i] = { label = label, activeParameter = active } end
+        local view = M.signature_help({ signatures = signatures, activeParameter = active })
         local shown = {}
-        for i, p in ipairs(out.parameters) do shown[i] = type(p.label) == "table" and out.label:sub(p.label[1] + 1, p.label[2]) or "?" end
-        return out.label .. "  |  " .. table.concat(shown, " ; ")
+        for _, m in ipairs(view.marks) do shown[#shown + 1] = ("%d:%s"):format(m[1], view.lines[m[1] + 1]:sub(m[2] + 1, m[3])) end
+        return table.concat(view.lines, "\n") .. "  |  " .. table.concat(shown, " ")
     end
-    eq(sig("range", "(cls: type[range], stop: SupportsIndex, /) -> range", { "stop: SupportsIndex" }),
-        "range(stop: SupportsIndex, /) -> range  |  stop: SupportsIndex")
-    eq(sig("play", "def play(self: Self@MDP, state: Unknown, action: Unknown) -> Unknown: ...", { "state: Unknown", "action: Unknown" }),
-        "play(state: Unknown, action: Unknown) -> Unknown  |  state: Unknown ; action: Unknown")
-    eq(sig("MDP", "(self: MDP, n_states: int, gamma: float = 0.9) -> Unknown", { "n_states: int", "gamma: float = 0.9" }),
-        "MDP(n_states: int, gamma: float = 0.9) -> MDP  |  n_states: int ; gamma: float = 0.9")
-    eq(sig("append", "def append(self: list[Unknown], object: Unknown, /) -> None: ...", { "object: Unknown" }),
-        "append(object: Unknown, /) -> None  |  object: Unknown")
-    eq(sig("zeros", "(self: _ConstructorEmpty, /, shape: SupportsIndex, dtype: None = None) -> ndarray", { "shape: SupportsIndex", "dtype: None = None" }),
-        "zeros(shape: SupportsIndex, dtype: None = None) -> ndarray  |  shape: SupportsIndex ; dtype: None = None")
-    eq(sig("helper", "def helper(a: Unknown, b: int | Unknown = 2) -> Unknown: ...", { "a: Unknown", "b: int | Unknown = 2" }),
-        "helper(a: Unknown, b: int | Unknown = 2) -> Unknown  |  a: Unknown ; b: int | Unknown = 2")
+    signature_header = false
+    eq(help(0, "(cls: type[range], stop: SupportsIndex, /) -> range",
+        "(cls: type[range], start: SupportsIndex, stop: SupportsIndex, step: SupportsIndex = 1, /) -> range"),
+        "(stop)\n(start, stop, step=1)  |  0:stop 1:start")
+    eq(help(1, "(self: RandomState, low: int, high: int | None = None, size: None = None) -> int",
+        "(self: RandomState, low: int, high: int | None = None, size: _ShapeLike | None = None) -> ndarray",
+        "(self: RandomState, low: int, high: int | None = None, size: None = None, dtype: type[bool] = ...) -> bool"),
+        "(low, high=None, size=None)\n(low, high=None, size=None, dtype=...)  |  0:high=None 1:high=None")
+    eq(help(1, "def play(self: Self@MDP, state: Unknown, action: Unknown) -> Unknown: ..."), "(state, action)  |  0:action")
+    eq(help(2, [[def print(*values: object, sep: str | None = " ", end: str | None = "\n", file: SupportsWrite[str] | None = None, flush: Literal[False] = False) -> None: ...]]),
+        [[(*values, sep=" ", end="\n", file=None, flush=False)  |  0:end="\n"]])
+    eq(help(0, "(self: _ConstructorEmpty, /, shape: SupportsIndex, dtype: None = None, *, device: Literal['cpu'] | None = None) -> ndarray"),
+        "(shape, dtype=None, device=None)  |  0:shape")
+    eq(help(1, "def f(a: dict[str, int] = {'x': 1, 'y': 2}, b: Callable[[int], bool] = lambda v: v == 1, **kwargs: Any) -> None"),
+        "(a={'x': 1, 'y': 2}, b=lambda v: v == 1, **kwargs)  |  0:b=lambda v: v == 1")
+    eq(help(0, "def make() -> MDP: ..."), "()  |  ")
+    signature_header = true
     print("ok")
 end
 
