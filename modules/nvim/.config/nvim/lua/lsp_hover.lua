@@ -20,7 +20,7 @@ local expanded_width = 100 -- once expanded
 local expand_hint = ' <leader>gh: expand '
 local ns = vim.api.nvim_create_namespace('lsp_hover')
 local hover_doc = vim.fn.stdpath('config') .. '/hover_doc.py'
-local signature_header = false -- true names the callee above its signatures in the signature help
+local signature_header = true -- name the callee above its signatures in the signature help
 
 -- ---------------------------------------------------------------------------
 -- Signatures. pyrefly words them after its internals: a constructor is its
@@ -242,16 +242,20 @@ end
 ---  np.random.randint
 ---  (low, high=None, size=None)
 ---  (low, high=None, size=None, dtype=...)
----the callee (when signature_header is on), then one line per overload with the names of its parameters and
+---the callee over a rule (when signature_header is on), then one line per overload with the names of its parameters and
 ---their defaults, without annotations or return type. Overloads that take the
 ---same parameters differ only by what was just dropped and fold into one line.
 ---`marks` locates the active parameter on each line: { row, start_col, end_col }.
+---`rule` is the row of the blank line left for the rule, if any.
 ---@param help lsp.SignatureHelp
----@return { lines: string[], marks: integer[][] }?
+---@return { lines: string[], marks: integer[][], rule: integer? }?
 function M.signature_help(help)
     local lines, marks, seen = {}, {}, {}
     local name = signature_header and callee() or nil
-    if name then lines[1] = name end
+    -- The blank line is where the caller draws a rule under the name (`rule`).
+    -- A space rather than nothing: blink drops empty lines.
+    if name then lines = { name, " " } end
+    local head = #lines
     for _, sig in ipairs(help.signatures) do
         local parsed = parse(sig.label)
         -- the server counts neither the receiver nor the `/` and `*` markers, like the list built here
@@ -273,8 +277,8 @@ function M.signature_help(help)
             if mark then marks[#marks + 1] = { #lines - 1, mark[1], mark[2] } end
         end
     end
-    if #lines == (name and 1 or 0) then return end -- nothing this module can read
-    return { lines = lines, marks = marks }
+    if #lines == head then return end -- nothing this module can read
+    return { lines = lines, marks = marks, rule = name and 1 or nil }
 end
 
 local function set_lines(buf, first, last, lines)

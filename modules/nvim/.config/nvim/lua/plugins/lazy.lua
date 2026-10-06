@@ -3452,9 +3452,11 @@ require("lazy").setup({
                         -- Show the signature help automatically
                         enabled = true,
                         -- Show the signature help window after typing any of alphanumerics, `-` or `_`
-                        -- Off: it sends one request per keystroke, and pyright takes ~4 s per
-                        -- signatureHelp on np.random.choice, which starves completion.
-                        show_on_keyword = false,
+                        -- One request per keystroke: fine with pyrefly (2 ms), it keeps the
+                        -- active parameter right when a comma and a space arrive together.
+                        -- Turn it off for a slow server: pyright took ~4 s per signatureHelp
+                        -- on np.random.choice and starved completion.
+                        show_on_keyword = true,
                         blocked_trigger_characters = {},
                         blocked_retrigger_characters = {},
                         -- Show the signature help window after typing a trigger character
@@ -3765,10 +3767,22 @@ require("lazy").setup({
                             signatures = vim.tbl_map(function(line) return { label = line } end, view.lines),
                             activeSignature = 0,
                         })
+                        local buf = window.win:get_buf()
                         -- blink would highlight the active parameter on the first line only
                         for _, mark in ipairs(view.marks) do
-                            vim.api.nvim_buf_set_extmark(window.win:get_buf(), highlight_ns, mark[1], mark[2],
+                            vim.api.nvim_buf_set_extmark(buf, highlight_ns, mark[1], mark[2],
                                 { end_col = mark[3], hl_group = 'BlinkCmpSignatureHelpActiveParameter' })
+                        end
+                        -- A rule between the callee and its signatures. Virtual text over an
+                        -- empty line, like blink's own separator: the buffer is highlighted
+                        -- as Python and a line of dashes in it would be a syntax error.
+                        if view.rule then
+                            local width = 0
+                            for _, line in ipairs(view.lines) do width = math.max(width, vim.fn.strdisplaywidth(line)) end
+                            vim.api.nvim_buf_set_extmark(buf, highlight_ns, view.rule, 0, {
+                                virt_text = { { ("─"):rep(width), 'BlinkCmpDocSeparator' } },
+                                virt_text_pos = 'overlay',
+                            })
                         end
                         return
                     end
