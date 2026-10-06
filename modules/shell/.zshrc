@@ -64,7 +64,8 @@ alias yay='PATH=/usr/bin:$PATH yay'
 
 
 alias vlc="vlc-resume"
-alias pdftoimage="pdftoppm"
+# alias pdftoimage="pdftoppm"
+alias pdf2image="pdftoppm"
 alias pdf2ocr="ocrmypdf -l fra+eng"
 alias okular="pdf"  # NOTE: script located at /usr/local/bin/pdf
 alias sudo='sudo '
@@ -118,6 +119,9 @@ alias dotgit="git -C $DOTFILES_DIR"
 
 
 
+# emacs keymap, to avoid entering vi normal mode. Must come before the bindkey
+# lines: with EDITOR=nvim inherited, zsh starts in viins and they would land there
+bindkey -e
 bindkey "^[[3~" delete-char
 bindkey "^[[1;3D" backward-word    # Alt + left arrow
 bindkey "^[[1;3C" forward-word     # Alt + right arrow
@@ -282,8 +286,8 @@ image() {
 # images (any format ImageMagick can read) -> a single PDF
 # the trailing .pdf is optional: without it, the first input name is reused
 # knobs: IMAGETOPDF_MAXPX (long edge cap), _QUALITY, _PAGESIZE
-imagetopdf() {
-    local usage="usage: imagetopdf <images...> [output.pdf]"
+image2pdf() {
+    local usage="usage: image2pdf <images...> [output.pdf]"
     (( $# < 1 )) && { echo "$usage" >&2; return 1; }
     local maxpx=${IMAGETOPDF_MAXPX:-2200} q=${IMAGETOPDF_QUALITY:-88}
     local page=${IMAGETOPDF_PAGESIZE:-A4}
@@ -295,7 +299,7 @@ imagetopdf() {
     else
         out="${1:r}.pdf"
         # img2pdf overwrites without asking, and this name was never typed
-        [[ -e "$out" ]] && { echo "imagetopdf: $out already exists, name the output explicitly" >&2; return 1; }
+        [[ -e "$out" ]] && { echo "image2pdf: $out already exists, name the output explicitly" >&2; return 1; }
     fi
     tmp=$(mktemp -d)
     for f; do
@@ -321,12 +325,12 @@ imagetopdf() {
 # images (any format ImageMagick can read, HEIC included) -> one <name>.jpg each,
 # resized to fit mail attachments
 # knobs: IMAGETOJPG_MAXPX (long edge cap), _QUALITY
-imagetojpg() {
-    (( $# < 1 )) && { echo "usage: imagetojpg <images...>" >&2; return 1; }
+image2jpg() {
+    (( $# < 1 )) && { echo "usage: image2jpg <images...>" >&2; return 1; }
     local maxpx=${IMAGETOJPG_MAXPX:-2000} q=${IMAGETOJPG_QUALITY:-85} f out
     for f; do
         out="${f:r}.jpg"
-        [[ -e "$out" ]] && { echo "imagetojpg: $out already exists, skipped" >&2; continue; }
+        [[ -e "$out" ]] && { echo "image2jpg: $out already exists, skipped" >&2; continue; }
         magick "$f" -auto-orient -resize "${maxpx}x${maxpx}>" -quality $q "$out" &&
             echo "$out ($(command du -h "$out" | cut -f1))"
     done
@@ -363,9 +367,9 @@ compressvideo() {
     done
 }
 
-# shadow img2pdf in favour of imagetopdf (which calls it via "command img2pdf")
+# shadow img2pdf in favour of image2pdf (which calls it via "command img2pdf")
 img2pdf() {
-    print -u2 "img2pdf is shadowed: use \"imagetopdf <images...> <output.pdf>\"."
+    print -u2 "img2pdf is shadowed: use \"image2pdf <images...> <output.pdf>\"."
     print -u2 "It also handles heic/webp/avif/raw, and leaves jpg/png untouched."
     print -u2 "For the raw tool anyway: command img2pdf $*"
     return 1
@@ -377,9 +381,6 @@ img2pdf() {
 # export TERM="tmux-256color"
 export TERM="xterm-256color"
 export COLORTERM=truecolor
-
-# used for tmux, mainly to avoid entering normal mode
-set -o emacs
 
 # if [[ -z $TMUX ]] && [[ -z $DISPLAY ]]; then
 #    exec tmux
