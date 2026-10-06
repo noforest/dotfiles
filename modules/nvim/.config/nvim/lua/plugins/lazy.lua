@@ -3430,7 +3430,9 @@ require("lazy").setup({
                         -- Show the signature help automatically
                         enabled = true,
                         -- Show the signature help window after typing any of alphanumerics, `-` or `_`
-                        show_on_keyword = true,
+                        -- Off: it sends one request per keystroke, and pyright takes ~4 s per
+                        -- signatureHelp on np.random.choice, which starves completion.
+                        show_on_keyword = false,
                         blocked_trigger_characters = {},
                         blocked_retrigger_characters = {},
                         -- Show the signature help window after typing a trigger character
