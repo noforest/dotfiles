@@ -3724,6 +3724,22 @@ require("lazy").setup({
 
                 return opts
             end,
+
+            config = function(_, opts)
+                require('blink.cmp').setup(opts)
+
+                -- The signature window lists every overload (4 for np.random.choice,
+                -- each wrapping over 3 lines) and hides the code above: keep the active one.
+                local window = require('blink.cmp.signature.window')
+                local open = window.open_with_signature_help
+                window.open_with_signature_help = function(context, help)
+                    local active = help and help.signatures and help.signatures[(help.activeSignature or 0) + 1]
+                    if active and #help.signatures > 1 then
+                        help = vim.tbl_extend('force', help, { signatures = { active }, activeSignature = 0 })
+                    end
+                    return open(context, help)
+                end
+            end,
         },
 
 
@@ -3794,7 +3810,9 @@ require("lazy").setup({
                         }
                     },
 
-                    pyright = {},
+                    -- pyrefly rather than pyright: on np.random.choice pyright takes 3-4 s
+                    -- per hover / signatureHelp, uncached, and completion waits behind it.
+                    pyrefly = {},
 
                     rust_analyzer = {
                         settings = {
@@ -3897,10 +3915,98 @@ require("lazy").setup({
 
                 end
 
-                -- Borders for diagnostics
-                local hover = vim.lsp.buf.hover
+                -- Hover like VS Code: the float opens on the signatures alone and the
+                -- documentation sits below the fold (press the key again to enter
+                -- the float and scroll).
+                local hover_max_width = 80
+                local function show_hover(lines)
+                    local sig_end = #lines
+                    for i = 2, #lines do
+                        if lines[i]:match("^```") then sig_end = i break end
+                    end
+                    local fbuf, win = vim.lsp.util.open_floating_preview(lines, 'markdown', {
+                        border = 'rounded',
+                        focus_id = 'textDocument/hover',
+                        max_width = hover_max_width,
+                    })
+                    if not win then return end
+                    -- stop before the closing fence: treesitter conceals that line
+                    local sig_height = vim.api.nvim_win_text_height(win, { end_row = sig_end - 2 }).all
+                    vim.api.nvim_win_set_height(win, math.min(sig_height, vim.api.nvim_win_get_height(win)))
+                    return fbuf
+                end
+
+                -- Type servers have no docstring for compiled modules (numpy.random...),
+                -- unlike Pylance which bundles them: ask the interpreter instead.
+                -- ponytail: only single-line imports are replayed, parse with ast if
+                -- multi-line `from x import (...)` ever matters.
+                local hover_doc = vim.fn.stdpath('config') .. '/hover_doc.py'
+
                 vim.lsp.buf.hover = function()
-                    hover({border = 'rounded',})
+                    -- already open: enter it right away instead of asking the server again
+                    for _, w in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+                        if vim.w[w]['textDocument/hover'] then return vim.api.nvim_set_current_win(w) end
+                    end
+                    local bufnr = vim.api.nvim_get_current_buf()
+                    local expr = vim.fn.expand('<cexpr>')
+
+                    -- The interpreter runs alongside the LSP request and its docstring is
+                    -- appended below the fold whenever it lands, so the float never waits for it.
+                    local fbuf, doc
+                    local function append_doc()
+                        local win = fbuf and doc and vim.fn.bufwinid(fbuf) or -1
+                        if win == -1 then return end
+                        local doc_lines = vim.split(doc, "\n")
+                        local width = vim.api.nvim_win_get_width(win)
+                        for _, l in ipairs(doc_lines) do width = math.max(width, vim.fn.strdisplaywidth(l)) end
+                        width = math.min(width, hover_max_width, vim.o.columns - 4)
+                        vim.api.nvim_win_set_width(win, width)
+                        local lines = { ("─"):rep(width) }
+                        vim.list_extend(lines, doc_lines)
+                        vim.bo[fbuf].modifiable = true
+                        vim.api.nvim_buf_set_lines(fbuf, -1, -1, false, lines)
+                        vim.bo[fbuf].modifiable = false
+                    end
+
+                    if vim.bo[bufnr].filetype == 'python' and expr:match("^[%a_][%w_%.]*$") then
+                        vim.system({ 'python3', hover_doc, expr }, {
+                            stdin = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false),
+                            text = true,
+                            timeout = 5000,
+                        }, vim.schedule_wrap(function(out)
+                            local text = vim.trim(out.stdout or "")
+                            if out.code == 0 and text ~= "" then
+                                doc = text
+                                append_doc()
+                            end
+                        end))
+                    end
+
+                    vim.lsp.buf_request_all(bufnr, 'textDocument/hover', function(client)
+                        return vim.lsp.util.make_position_params(0, client.offset_encoding)
+                    end, function(results)
+                        local lines, in_code = {}, false
+                        for _, r in pairs(results) do
+                            local contents = r.result and r.result.contents
+                            for _, l in ipairs(contents and vim.lsp.util.convert_input_to_markdown_lines(contents) or {}) do
+                                if l:match("^```") then in_code = not in_code end
+                                -- pyrefly pads its signatures into columns, which pushes the
+                                -- defaults far off to the right, and ends on a line of file links
+                                if in_code then l = l:gsub("(%S)%s+:", "%1:"):gsub("(%S)%s%s+=", "%1 =") end
+                                if not l:match("^Go to %[") then lines[#lines + 1] = l end
+                            end
+                        end
+                        while lines[#lines] == "" do lines[#lines] = nil end
+                        if #lines == 0 then
+                            return vim.notify('No information available', vim.log.levels.INFO)
+                        end
+                        local buf = show_hover(lines)
+                        -- the server sent no documentation of its own
+                        if lines[#lines]:match("^```") then
+                            fbuf = buf
+                            append_doc()
+                        end
+                    end)
                 end
 
                 -- Borders for diagnostics
@@ -3919,6 +4025,8 @@ require("lazy").setup({
                 require('mason-lspconfig').setup({
                     ensure_installed = vim.tbl_keys(opts.servers),
                     automatic_installation = true,
+                    -- a pyright left installed in mason would attach next to pyrefly
+                    automatic_enable = { exclude = { "pyright" } },
                 })
 
 
