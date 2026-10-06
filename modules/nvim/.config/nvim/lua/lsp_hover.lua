@@ -281,7 +281,8 @@ end
 
 ---The function whose call the cursor is in, as written: `np.random.randint`.
 ---It is what stands before the parenthesis left open on the cursor's left;
----the server does not name the callee in its signatures.
+---the server does not name the callee in its signatures. Empty when nothing
+---nameable stands there (`f()(`, `(1, `), nil when no parenthesis is open.
 ---ponytail: brackets inside string literals are counted too, use treesitter if
 ---that ever picks the wrong call.
 ---@return string?
@@ -297,7 +298,7 @@ local function callee()
         elseif (ch == "(" or ch == "[" or ch == "{") and depth > 0 then
             depth = depth - 1
         elseif ch == "(" then
-            return text:sub(1, i - 1):match("([%a_][%w_%.]*)%s*$")
+            return text:sub(1, i - 1):match("([%a_][%w_%.]*)%s*$") or ""
         end
     end
 end
@@ -322,14 +323,21 @@ end
 ---same parameters differ only by what was just dropped and fold into one line.
 ---`marks` locates the active parameter on each line: { row, start_col, end_col }.
 ---`rule` is the row of the blank line left for the rule, if any.
+---Returns false when the cursor is in no call: pyrefly still answers right
+---before the opening parenthesis, where there is no callee to name, and the
+---popup has no business staying open there. Returns nil when it cannot read
+---the signatures, which are then the caller's to show.
 ---@param help lsp.SignatureHelp
----@return { lines: string[], marks: integer[][], rule: integer? }?
-function M.signature_help(help)
+---@param name string? of the callee, read from the code when nil
+---@return { lines: string[], marks: integer[][], rule: integer? }|false|nil
+function M.signature_help(help, name)
     local lines, marks, seen = {}, {}, {}
-    local name = signature_header and callee() or nil
+    name = name or callee()
+    if not name then return false end
+    local header = signature_header and name ~= ""
     -- The blank line is where the caller draws a rule under the name (`rule`).
     -- A space rather than nothing: blink drops empty lines.
-    if name then lines = { name, " " } end
+    if header then lines = { name, " " } end
     local head = #lines
     for _, sig in ipairs(help.signatures) do
         local parsed = parse(sig.label)
@@ -353,7 +361,12 @@ function M.signature_help(help)
         end
     end
     if #lines == head then return end -- nothing this module can read
-    return { lines = lines, marks = marks, rule = name and 1 or nil }
+    return { lines = lines, marks = marks, rule = header and 1 or nil }
+end
+
+---Whether the cursor sits between the parentheses of a call.
+function M.in_call()
+    return callee() ~= nil
 end
 
 local function set_lines(buf, first, last, lines)
@@ -393,6 +406,9 @@ local function expand(win)
     local buf = vim.api.nvim_win_get_buf(win)
     local width = math.min(expanded_width, vim.o.columns - 4)
     vim.api.nvim_set_current_win(win)
+    -- render-markdown turns wrap off in an LSP float whose text fits, which the
+    -- small float does: the full annotations put back below would run off the window
+    vim.wo[win].wrap = true
     -- the reading window has room for the annotations shortened in the small one
     local full_block = vim.b[buf].lsp_hover_full
     if full_block then
@@ -472,6 +488,7 @@ function M.hover()
         local lines = { ("─"):rep(vim.api.nvim_win_get_width(win)) }
         vim.list_extend(lines, vim.split(doc, "\n"))
         set_lines(fbuf, -1, -1, lines)
+        vim.wo[win].wrap = true -- see expand(): the docstring is wider than the signature
         decorate(fbuf)
         if vim.api.nvim_get_current_win() == win then
             expand(win) -- already entered: fit the new text
@@ -579,7 +596,7 @@ function M._check()
     local function help(active, ...)
         local signatures = {}
         for i, label in ipairs({ ... }) do signatures[i] = { label = label, activeParameter = active } end
-        local view = M.signature_help({ signatures = signatures, activeParameter = active })
+        local view = M.signature_help({ signatures = signatures, activeParameter = active }, "f")
         local shown = {}
         for _, m in ipairs(view.marks) do shown[#shown + 1] = ("%d:%s"):format(m[1], view.lines[m[1] + 1]:sub(m[2] + 1, m[3])) end
         return table.concat(view.lines, "\n") .. "  |  " .. table.concat(shown, " ")
