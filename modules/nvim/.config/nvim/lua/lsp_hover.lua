@@ -2,7 +2,8 @@
 --
 -- The float opens on the signature alone and never moves afterwards. The
 -- documentation sits below the fold: calling the hover again enters the float
--- and expands it into a reading window (the border footer says so). <Esc>
+-- and expands it into a reading window (the border footer says so), where the
+-- long type annotations shortened in the small float are spelled out. <Esc>
 -- closes it from either side.
 --
 -- Python gets two extras: the signatures pyrefly sends are rewritten the way
@@ -16,6 +17,7 @@ local M = {}
 
 local focus_id = 'textDocument/hover'
 local max_width = 80       -- of the float as it first opens
+local max_annotation = 48  -- longer type annotations are shortened in that first float
 local expanded_width = 100 -- once expanded
 local expand_hint = ' <leader>gh: expand '
 local ns = vim.api.nvim_create_namespace('lsp_hover')
@@ -98,37 +100,118 @@ local function parse(text)
     return sig
 end
 
----The lines of one signature in a hover: on one line up to one parameter, one
----parameter per line beyond.
-local function layout(head, sig, ret)
-    local tail = ")" .. (ret and (" -> " .. ret) or "")
-    if #sig.params <= 1 then return { head .. "(" .. (sig.params[1] or "") .. tail } end
-    local lines = { head .. "(" }
-    for i, param in ipairs(sig.params) do
-        lines[#lines + 1] = "    " .. param .. (i < #sig.params and "," or "")
+---Cuts `name: Type = default` into its three parts; the last two may be nil.
+---@return string, string?, string?
+local function split_param(text)
+    local depth, quote, colon, equals = 0, nil, nil, nil
+    for i = 1, #text do
+        local ch = text:sub(i, i)
+        if quote then
+            if ch == quote then quote = nil end
+        elseif ch == "'" or ch == '"' then
+            quote = ch
+        elseif ch == "(" or ch == "[" or ch == "{" then
+            depth = depth + 1
+        elseif ch == ")" or ch == "]" or ch == "}" then
+            depth = depth - 1
+        elseif depth == 0 and not equals then
+            if ch == ":" then
+                colon = colon or i
+            elseif ch == "=" and not text:sub(i - 1, i - 1):match("[=!<>]") and text:sub(i + 1, i + 1) ~= "=" then
+                equals = i
+            end
+        end
     end
-    lines[#lines + 1] = tail
-    return lines
+    local name = vim.trim(text:sub(1, (colon or equals or #text + 1) - 1))
+    local annotation = colon and vim.trim(text:sub(colon + 1, (equals or #text + 1) - 1)) or nil
+    local default = equals and vim.trim(text:sub(equals + 1)) or nil
+    return name, annotation ~= "" and annotation or nil, default ~= "" and default or nil
+end
+
+---An annotation longer than max_annotation is cut there and ends on `…`. The
+---brackets and the string left open by the cut are closed after it: the hover
+---is highlighted as Python, and unbalanced brackets would cost the lines below
+---their colours.
+---  _NestedSequence[_SupportsArray[dtype[numpy.bool | floating | integer]]] | float
+---  _NestedSequence[_SupportsArray[dtype[numpy.bool…]]]
+local function shorten(annotation)
+    if #annotation <= max_annotation then return annotation end
+    local cut, closers, quote = annotation:sub(1, max_annotation), {}, nil
+    -- not in the middle of a name: `dtype[…` rather than `dtype[num…`
+    if annotation:sub(max_annotation + 1, max_annotation + 1):match("[%w_]") then
+        local whole = cut:gsub("[%w_]+$", "")
+        if whole ~= "" then cut = whole end
+    end
+    cut = cut:gsub("%s+$", "")
+    for i = 1, #cut do
+        local ch = cut:sub(i, i)
+        if quote then
+            if ch == quote then quote = nil end
+        elseif ch == "'" or ch == '"' then
+            quote = ch
+        elseif ch == "(" or ch == "[" or ch == "{" then
+            table.insert(closers, 1, ch == "(" and ")" or ch == "[" and "]" or "}")
+        elseif ch == ")" or ch == "]" or ch == "}" then
+            table.remove(closers, 1)
+        end
+    end
+    return cut .. "…" .. (quote or "") .. table.concat(closers)
+end
+
+---A parameter with its annotation shortened.
+local function short_param(text)
+    local name, annotation, default = split_param(text)
+    if not annotation or #annotation <= max_annotation then return text end
+    return name .. ": " .. shorten(annotation) .. (default and (" = " .. default) or "")
+end
+
+---The lines of one signature in a hover, in full and with its long annotations
+---shortened (same number of lines in both). It stays on one line up to one
+---parameter when that fits the float, and takes one line per parameter otherwise.
+---@param suffix string appended after the return type: ": ..." in a list of overloads
+---@return string[], string[]
+local function layout(head, sig, ret, suffix)
+    local function build(params, tail, one_line)
+        if one_line then return { head .. "(" .. (params[1] or "") .. tail } end
+        local lines = { head .. "(" }
+        for i, param in ipairs(params) do
+            lines[#lines + 1] = "    " .. param .. (i < #params and "," or "")
+        end
+        lines[#lines + 1] = tail
+        return lines
+    end
+    local full_tail = ")" .. (ret and (" -> " .. ret) or "") .. suffix
+    local short_tail = ")" .. (ret and (" -> " .. shorten(ret)) or "") .. suffix
+    local one_line = #sig.params <= 1 and #head + #(sig.params[1] or "") + #full_tail + 1 <= max_width
+    return build(sig.params, full_tail, one_line), build(vim.tbl_map(short_param, sig.params), short_tail, one_line)
 end
 
 ---Rewrites the code block of a hover, given as its lines without the fences.
 ---`word` is the hovered name.
 ---  (method) __new__: def __new__(cls: type[range], stop, /) -> range: ...   ->  class range(stop, /)
 ---  (method) play: def play(self: MDP, state: int, action: int) -> int: ...  ->  (method) def play(...) -> int
----Returns nil for anything that is not a pyrefly signature (variables, modules,
----another server): the block is then shown as it came.
+---A list of overloads is laid out the way Pylance does, which also keeps every
+---`def` valid Python for the highlighter:
+---  (method)
+---  def choice(...) -> int: ...
+---
+---  def choice(...) -> Any: ...
+---Returns the block in full and with its long annotations shortened, or nil for
+---anything that is not a pyrefly signature (variables, modules, another
+---server): the block is then shown as it came.
 ---@param block string[]
 ---@param word string
----@return string[]?
+---@return string[]?, string[]?
 local function render_hover(block, word)
     local kind, header_name, rest = (block[1] or ""):match("^%((%a+)%) ([%w_]+):%s*(.*)$")
     if kind ~= "function" and kind ~= "method" and kind ~= "class" then return end
     if kind == "class" and #block == 1 then
         local class = rest:match("^type%[([%w_%.]+)%]$") -- (class) MDP: type[MDP]
-        return class and { "class " .. class:match("([%w_]+)$") } or nil
+        local line = class and { "class " .. class:match("([%w_]+)$") } or nil
+        return line, line
     end
 
-    -- one chunk per signature: several `def` follow each other for an overloaded class
+    -- one chunk per signature: several `def` follow each other for an overloaded callable
     local chunks = {}
     for i, line in ipairs(block) do
         local text = i == 1 and rest or line
@@ -139,39 +222,51 @@ local function render_hover(block, word)
         end
     end
 
-    local out = {}
-    for _, chunk in ipairs(chunks) do
+    local full, short = {}, {}
+    for i, chunk in ipairs(chunks) do
         local sig = parse(chunk)
         if not sig then return end
         local name = sig.name or header_name
-        local lines
+        local head, ret, suffix
         -- a constructor shows the class being built, unless the hover is on the dunder itself
         if kind == "class" or ((name == "__new__" or name == "__init__") and word ~= name) then
             local class = (kind == "class" and not header_name:match("^__") and header_name) or sig.class or word
-            lines = layout("class " .. class, sig, nil)
+            head, ret, suffix = "class " .. class, nil, ""
         else
             if name == "__call__" and word ~= name then name = word end
-            lines = layout(("(%s) def %s"):format(kind, name), sig, sig.ret)
+            if #chunks == 1 then
+                head, ret, suffix = ("(%s) def %s"):format(kind, name), sig.ret, ""
+            else
+                head, ret, suffix = "def " .. name, sig.ret, ": ..."
+                if i == 1 then full[1], short[1] = ("(%s)"):format(kind), ("(%s)"):format(kind) end
+            end
         end
-        vim.list_extend(out, lines)
+        if i > 1 then full[#full + 1], short[#short + 1] = "", "" end
+        local full_lines, short_lines = layout(head, sig, ret, suffix)
+        vim.list_extend(full, full_lines)
+        vim.list_extend(short, short_lines)
     end
-    return #out > 0 and out or nil
+    if #full == 0 then return end
+    return full, short
 end
 
 ---Rewrites the first code block of a hover with render_hover and drops
----pyrefly's line of "Go to" file links.
+---pyrefly's line of "Go to" file links. Returns the hover to show, and the
+---lines of its signature block in full when some annotations were shortened.
 ---@param lines string[]
 ---@param word string
----@return string[]
+---@return string[], string[]?
 local function tidy_hover(lines, word)
-    local out, block, blocks, in_code = {}, {}, 0, false
+    local out, block, blocks, in_code, full_block = {}, {}, 0, false, nil
     for _, l in ipairs(lines) do
         if l:match("^```") then
             in_code = not in_code
             if in_code then
                 blocks = blocks + 1
             elseif blocks == 1 then
-                vim.list_extend(out, render_hover(block, word) or block)
+                local full, short = render_hover(block, word)
+                vim.list_extend(out, short or block)
+                if full and table.concat(full, "\n") ~= table.concat(short, "\n") then full_block = full end
             end
             out[#out + 1] = l
         elseif in_code and blocks == 1 then
@@ -181,7 +276,7 @@ local function tidy_hover(lines, word)
         end
     end
     while out[#out] == "" do out[#out] = nil end
-    return out
+    return out, full_block
 end
 
 ---The function whose call the cursor is in, as written: `np.random.randint`.
@@ -212,29 +307,9 @@ end
 ---@return string?, string?
 local function compact_param(text)
     if text == "/" or text == "*" then return end
-    local depth, quote, colon, equals = 0, nil, nil, nil
-    for i = 1, #text do
-        local ch = text:sub(i, i)
-        if quote then
-            if ch == quote then quote = nil end
-        elseif ch == "'" or ch == '"' then
-            quote = ch
-        elseif ch == "(" or ch == "[" or ch == "{" then
-            depth = depth + 1
-        elseif ch == ")" or ch == "]" or ch == "}" then
-            depth = depth - 1
-        elseif depth == 0 and not equals then
-            if ch == ":" then
-                colon = colon or i
-            elseif ch == "=" and not text:sub(i - 1, i - 1):match("[=!<>]") and text:sub(i + 1, i + 1) ~= "=" then
-                equals = i
-            end
-        end
-    end
-    local name = vim.trim(text:sub(1, (colon or equals or #text + 1) - 1))
+    local name, _, default = split_param(text)
     if name == "" then return end
-    local default = equals and vim.trim(text:sub(equals + 1)) or ""
-    return default ~= "" and (name .. "=" .. default) or name, name
+    return default and (name .. "=" .. default) or name, name
 end
 
 ---Lays a signatureHelp answer out the way the Signature Hints extension for
@@ -318,6 +393,12 @@ local function expand(win)
     local buf = vim.api.nvim_win_get_buf(win)
     local width = math.min(expanded_width, vim.o.columns - 4)
     vim.api.nvim_set_current_win(win)
+    -- the reading window has room for the annotations shortened in the small one
+    local full_block = vim.b[buf].lsp_hover_full
+    if full_block then
+        set_lines(buf, 1, 1 + #full_block, full_block)
+        vim.b[buf].lsp_hover_full = nil
+    end
     vim.api.nvim_win_set_width(win, width)
     -- the separator above the interpreter's docstring was drawn at the old width
     for i, l in ipairs(vim.api.nvim_buf_get_lines(buf, 0, -1, false)) do
@@ -340,8 +421,10 @@ local function expand(win)
     })
 end
 
+---@param lines string[] the hover, with its long annotations shortened
+---@param full_block string[]? its signature block in full, put back by expand()
 ---@return integer? bufnr of the float
-local function show(lines)
+local function show(lines, full_block)
     local sig_end = #lines
     for i = 2, #lines do
         if lines[i]:match("^```") then sig_end = i break end
@@ -355,7 +438,8 @@ local function show(lines)
     -- stop before the closing fence: treesitter conceals that line
     local sig_height = vim.api.nvim_win_text_height(win, { end_row = sig_end - 2 }).all
     vim.api.nvim_win_set_height(win, math.min(sig_height, vim.api.nvim_win_get_height(win)))
-    if #lines > sig_end then set_expand_hint(win) end
+    vim.b[buf].lsp_hover_full = full_block
+    if #lines > sig_end or full_block then set_expand_hint(win) end
     decorate(buf)
 
     -- <Esc> closes the float, whether the cursor is in the code or inside it
@@ -422,11 +506,12 @@ function M.hover()
                 vim.list_extend(lines, vim.lsp.util.convert_input_to_markdown_lines(contents))
             end
         end
-        if vim.bo[bufnr].filetype == 'python' then lines = tidy_hover(lines, word) end
+        local full_block
+        if vim.bo[bufnr].filetype == 'python' then lines, full_block = tidy_hover(lines, word) end
         if #lines == 0 then
             return vim.notify('No information available', vim.log.levels.INFO)
         end
-        local buf = show(lines)
+        local buf = show(lines, full_block)
         -- the server sent no documentation of its own
         if lines[#lines]:match("^```") then
             fbuf = buf
@@ -440,8 +525,11 @@ function M._check()
     local function eq(got, want)
         assert(got == want, ("\n--- got\n%s\n--- want\n%s"):format(got, want))
     end
-    local function hover(word, text)
-        return table.concat(tidy_hover(vim.split("```python\n" .. text .. "\n```", "\n"), word), "\n"):sub(11, -5)
+    -- the signature block of a hover: as the small float shows it, and in full
+    local function hover(word, text, full)
+        local short, full_block = tidy_hover(vim.split("```python\n" .. text .. "\n```", "\n"), word)
+        if full then return table.concat(full_block or {}, "\n") end
+        return table.concat(short, "\n"):sub(11, -5)
     end
     -- constructors, however pyrefly lays them out
     eq(hover("range", "(method) __new__: def __new__(\n    cls: type[range],\n    stop: SupportsIndex,\n    /\n) -> range: ..."),
@@ -453,7 +541,7 @@ function M._check()
         "class zip(\n    iter1: Iterable[_T1],\n    iter2: Iterable[_T2],\n    /\n)")
     eq(hover("dict", "(class) __init__: type[dict]"), "class dict")
     eq(hover("list", "(class) list: \n@overload\ndef __init__() -> list[Unknown]: ...\ndef __init__(iterable: Iterable[Unknown], /) -> list[Unknown]: ..."),
-        "class list()\nclass list(\n    iterable: Iterable[Unknown],\n    /\n)")
+        "class list()\n\nclass list(\n    iterable: Iterable[Unknown],\n    /\n)")
     -- the dunder at its own definition is a method like any other
     eq(hover("__init__", "(method) __init__: def __init__(\n    self : Self@Agent,\n    env  : Unknown\n) -> Unknown: ..."),
         "(method) def __init__(env: Unknown) -> Unknown")
@@ -466,6 +554,21 @@ function M._check()
     eq(hover("print", "(function) print: def print(\n    *values: object,\n    sep    : str | None = ' ',\n    end    : str | None = '\\n'\n) -> None: ..."),
         "(function) def print(\n    *values: object,\n    sep: str | None = ' ',\n    end: str | None = '\\n'\n) -> None")
     eq(hover("make", "(method) make: def make() -> MDP: ..."), "(method) def make() -> MDP")
+    -- several overloads: Pylance's layout, each def valid Python
+    eq(hover("choice", "(method) choice: \n@overload\ndef choice(\n    self: RandomState,\n    a   : int\n) -> int: ...\ndef choice(\n    self: RandomState,\n    a   : ArrayLike,\n    size: None = None\n) -> Any: ..."),
+        "(method)\ndef choice(a: int) -> int: ...\n\ndef choice(\n    a: ArrayLike,\n    size: None = None\n) -> Any: ...")
+    -- long annotations: shortened with their brackets closed, default kept, spelled out in full on expand
+    local long = "(method) choice: def choice(\n    self: RandomState,\n    a: ArrayLike,\n    p: _NestedSequence[_SupportsArray[dtype[numpy.bool | floating | integer]]] | float | None = None\n) -> ndarray[tuple[Any, ...], dtype[signedinteger[_NBitLong]]]: ..."
+    eq(hover("choice", long),
+        "(method) def choice(\n    a: ArrayLike,\n    p: _NestedSequence[_SupportsArray[dtype[numpy.bool…]]] = None\n) -> ndarray[tuple[Any, ...], dtype[signedinteger[…]]]")
+    eq(hover("choice", long, true),
+        "(method) def choice(\n    a: ArrayLike,\n    p: _NestedSequence[_SupportsArray[dtype[numpy.bool | floating | integer]]] | float | None = None\n) -> ndarray[tuple[Any, ...], dtype[signedinteger[_NBitLong]]]")
+    eq(shorten("Literal['a very long string literal that goes on and on', 'b'] | None"), "Literal['a very long string literal that goes on…']")
+    -- nothing to shorten: no second version kept
+    eq(hover("play", "(method) play: def play(self: MDP, state: int) -> int: ...", true), "")
+    -- one parameter, but too long for one line: laid out like the others, so it gets shortened too
+    eq(hover("seed", "(method) seed: def seed(self: RandomState, seed: _NestedSequence[_SupportsArray[dtype[numpy.bool | floating | integer]]] | int | None = None) -> None: ..."),
+        "(method) def seed(\n    seed: _NestedSequence[_SupportsArray[dtype[numpy.bool…]]] = None\n) -> None")
     -- not signatures, or not pyrefly's shape: untouched
     for _, text in ipairs({ "(variable) m: MDP", "(class) NoneType: None", "(module) np: Module[numpy]", "(keyword) in",
         "(variable) f: (int) -> str", "bool | Unknown", "(function) def f(\n    a: int\n) -> int" }) do
