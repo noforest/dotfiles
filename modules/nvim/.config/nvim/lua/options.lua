@@ -12,6 +12,9 @@ vim.g.loaded_netrwPlugin = 1
 
 -- languages for the spell checker
 opt.spelllang = { "en_us", "fr" }
+-- A missing dictionary is fetched without asking: the prompt cannot open while
+-- neogit sets 'spell' on its commit buffer, and the commit editor breaks
+require("nvim.spellfile").config({ confirm = false })
 
 -- line numbers
 opt.relativenumber = false -- absolute line numbers only
