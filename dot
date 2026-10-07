@@ -1095,6 +1095,9 @@ cmd_gnome_settings() {
         gsettings set $term exec alacritty &&
         gsettings set $term exec-arg -e &&
         ok "alacritty is the default terminal"
+        # dwm's terminal key, next to the one GNOME ships
+        gsettings set org.gnome.settings-daemon.plugins.media-keys terminal "['<Primary><Alt>t', '<Super><Shift>Return']" &&
+        ok "Super+Shift+Enter opens a terminal, as Ctrl+Alt+T does"
     else
         warn "alacritty not installed, default terminal left alone ${D}(dot install, then dot gnome-settings)${N}"
     fi
