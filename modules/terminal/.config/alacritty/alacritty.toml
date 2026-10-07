@@ -2,8 +2,7 @@
 
 padding = { x = 0, y = 0 }
 # dynamic_padding = true
-# No title bar on GNOME. dwm draws none anyway, so this changes nothing there.
-decorations = "None"
+# decorations = "None"
 # Opens filling the screen on GNOME, as a lone window does under dwm, which
 # ignores this.
 startup_mode = "Maximized"

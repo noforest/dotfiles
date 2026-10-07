@@ -1079,7 +1079,7 @@ cmd_gnome_settings() {
     gsettings set org.gnome.desktop.wm.keybindings unmaximize "['<Super>f']" &&
     ok "Super+M maximizes the window, Super+F restores it"
     # Super+left drag moves a window out of the box, Super+right drag resizes it
-    # with this, as in dwm. The only handles of a window without a title bar.
+    # with this, as in dwm.
     gsettings set org.gnome.desktop.wm.preferences resize-with-right-button true &&
     ok "Super+right drag resizes the window"
     # GNOME refuses to resize a maximized window. This extension of the gnome
