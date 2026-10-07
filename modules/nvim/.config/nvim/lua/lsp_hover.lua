@@ -26,7 +26,7 @@ local hover_doc = vim.fn.stdpath('config') .. '/hover_doc.py'
 --   'left'   np.random.randint(low, high=None, size=None)   before each signature
 --   'top'    on a line of its own, over a rule
 --   false    nowhere, the signatures start at their parenthesis like the server's
-local signature_name = 'left'
+local signature_name = false
 -- Calls whose signature help is never shown. Globs, tested against the name as
 -- written (`trajectory.append`) and against its last part (`append`): `*` stops
 -- at a dot, `**` does not. { "print", "logging.*", "np.random.**" }

@@ -355,10 +355,11 @@ Two files hold everything that is specific to Python, under
   closes it. Signatures are worded the way Pylance does, without `self` or `cls`,
   and annotations longer than 48 characters are shortened until the float is
   expanded.
-- **Signature help.** One line per overload, the callee followed by its
-  parameter names and defaults only, after the Signature Hints extension for
-  VS Code. It is open exactly while the cursor is between the parentheses of a
-  call, except for the calls listed in `signature_exclude`.
+- **Signature help.** One line per overload with its parameter names and
+  defaults only, after the Signature Hints extension for VS Code. It is open
+  exactly while the cursor is between the parentheses of a call, except for the
+  calls listed in `signature_exclude`. `signature_name` can put the callee
+  before each line or above them.
 - **Completion menu.** A short word on the right of each name (`function`,
   `method`, `class`, `module`, or the type of a value).
 
