@@ -525,8 +525,7 @@ function M.hover()
         end
     end
 
-    -- ponytail: hover_doc.py only replays single-line imports, parse with ast
-    -- there if multi-line `from x import (...)` ever matters.
+    -- hover_doc.py replays the imports of the buffer and nothing else of it
     if vim.bo[bufnr].filetype == 'python' and expr:match("^[%a_][%w_%.]*$") and vim.fn.executable('python3') == 1 then
         vim.system({ 'python3', hover_doc, expr }, {
             stdin = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false),

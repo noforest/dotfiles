@@ -1,10 +1,17 @@
 #!/usr/bin/env python3
 """Print the docstring of a Python expression as Markdown, for the nvim hover float.
 
-usage: hover_doc.py EXPR < buffer    the buffer's import lines are replayed to resolve EXPR
+usage: hover_doc.py EXPR < buffer    the buffer's imports are replayed to resolve EXPR
        hover_doc.py --check          run the self-check
+
+A hover must not run the code of the file under the cursor. Only its import
+statements are replayed, taken from the syntax tree so that nothing else on
+their line comes along, and only against the packages installed for the
+interpreter: the directory of the project is taken off the import path.
 """
+import ast
 import inspect
+import os
 import re
 import sys
 
@@ -69,21 +76,65 @@ def check():
     assert "```python\n>>> np.random.choice(5, 3)\narray([0, 3, 4]) # random\n```\n\nDone." in md, md
     assert "----" not in md and "::" not in md, md
     assert to_markdown("plain text\n    kept") == "plain text\n  kept"
+
+    # only imports are replayed: what shares their line, or sits elsewhere, never runs
+    marker = "hover_doc_check_marker"
+    source = (
+        f"import sys; sys.modules['{marker}'] = 1\n"
+        "from os import (\n    path,\n    sep,\n)\n"
+        f"sys.modules['{marker}'] = 2\n"
+        "from . import sibling\n"
+    )
+    ns = replay_imports(source)
+    assert marker not in sys.modules, "code next to an import was executed"
+    assert set(ns) - {"__builtins__"} == {"sys", "path", "sep"}, sorted(ns)
+    # a buffer that does not parse still gives its one-line imports
+    ns = replay_imports(f"import os; sys.modules['{marker}'] = 3\ndef broken(:\n")
+    assert marker not in sys.modules and "os" in ns, sorted(ns)
     print("ok")
+
+
+def import_nodes(source):
+    """The top-level import statements of `source`, as syntax nodes.
+
+    A buffer being edited often does not parse as a whole. Its lines are then
+    read one by one, which still finds every import written on a single line.
+    """
+    try:
+        body = ast.parse(source).body
+    except SyntaxError:
+        body = []
+        for line in source.splitlines():
+            if line.startswith(("import ", "from ")):
+                try:
+                    body += ast.parse(line).body
+                except SyntaxError:
+                    pass
+    # level > 0 is a relative import, which has no meaning outside its package
+    return [n for n in body if isinstance(n, ast.Import) or (isinstance(n, ast.ImportFrom) and n.level == 0)]
+
+
+def replay_imports(source):
+    """Runs the imports of `source`, and only them. Returns the resulting namespace."""
+    ns = {}
+    for node in import_nodes(source):
+        try:
+            exec(compile(ast.Module(body=[node], type_ignores=[]), "<imports>", "exec"), ns)
+        except Exception:
+            pass
+    return ns
 
 
 def main():
     if sys.argv[1:] == ["--check"]:
         return check()
-    sys.path[0] = ""  # resolve the buffer's local imports from the cwd, not from this script's folder
-    ns = {}
-    for line in sys.stdin.read().splitlines():
-        if line.startswith(("import ", "from ")):
-            try:
-                exec(line, ns)
-            except Exception:
-                pass
-    print(to_markdown(inspect.getdoc(eval(sys.argv[1], ns)) or ""))
+    expr = sys.argv[1]
+    if not re.fullmatch(r"[A-Za-z_][\w.]*", expr):
+        return  # a dotted name and nothing else is evaluated
+    # no code of the project: neither the cwd nor this script's folder on the import path
+    here = os.path.dirname(os.path.abspath(__file__))
+    sys.path[:] = [p for p in sys.path if p and os.path.abspath(p) not in (here, os.getcwd())]
+    print(to_markdown(inspect.getdoc(eval(expr, replay_imports(sys.stdin.read()))) or ""))
 
 
 if __name__ == "__main__":
