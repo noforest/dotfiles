@@ -1,0 +1,36 @@
+# What the nvim config needs to install and run its plugins, language servers
+# and treesitter parsers. `dot nvim-setup` checks for these before it starts.
+# Ubuntu 26.04 LTS (resolute). Some names repeat other lists on purpose: this one
+# has to be enough on its own.
+#
+# neovim itself is not here: the archive has 0.11.6 and the config needs 0.12.
+# `dot install` runs scripts/ubuntu-install-neovim.sh, which puts the official
+# release in ~/.local.
+# lazy.nvim clones the plugins, mason downloads and unpacks the servers
+git
+curl
+unzip
+# treesitter parsers are compiled on the machine
+build-essential
+tree-sitter-cli
+# mason: the TypeScript server is an npm package, pyrefly a Python one in a venv,
+# and Debian ships venv apart from python3
+nodejs
+npm
+python3
+python3-venv
+# mason builds sqls with `go install`
+golang-go
+# jdtls is a Java program
+default-jdk-headless
+# rust_analyzer asks rustc where the standard library is as soon as a .rs opens
+rustc
+cargo
+# telescope, snacks
+ripgrep
+fd-find
+lazygit
+zoxide
+# system clipboard, X11 and Wayland
+xclip
+wl-clipboard

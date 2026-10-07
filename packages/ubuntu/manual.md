@@ -21,7 +21,15 @@ replacement and removes nothing, so you can install what you need first. The
 Firefox script follows Mozilla's official instructions, including the fingerprint
 check and the deb822 `.sources` format that 26.04 expects.
 
-## 1. Two renamed binaries
+## 1. neovim comes from its own release
+
+The archive has neovim 0.11.6 and the config needs 0.12. `dot install` runs
+`scripts/ubuntu-install-neovim.sh`, which downloads the official release, checks
+its SHA256 against the sum pinned in the script and unpacks it under
+`~/.local/opt`, with a link in `~/.local/bin`. No sudo, nothing outside `$HOME`.
+To move to a newer release, change the version and the two sums in the script.
+
+## 1b. Two renamed binaries
 
 Debian renames two commands, and `.zshrc` calls them by their upstream name.
 `dot install` links them in `~/.local/bin` right after apt: `bat` to `batcat`,

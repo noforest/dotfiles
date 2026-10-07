@@ -1,0 +1,29 @@
+# What the nvim config needs to install and run its plugins, language servers
+# and treesitter parsers. `dot nvim-setup` checks for these before it starts.
+# Some names repeat other lists on purpose: this one has to be enough on its own.
+neovim
+# lazy.nvim clones the plugins, mason downloads and unpacks the servers
+git
+curl
+unzip
+# treesitter parsers are compiled on the machine
+base-devel
+tree-sitter-cli
+# mason: the TypeScript server is an npm package, pyrefly a Python one in a venv
+nodejs
+npm
+python
+# mason builds sqls with `go install`
+go
+# jdtls is a Java program
+jdk-openjdk
+# rust_analyzer asks rustc where the standard library is as soon as a .rs opens
+rust
+# telescope, snacks
+ripgrep
+fd
+lazygit
+zoxide
+# system clipboard, X11 and Wayland
+xclip
+wl-clipboard

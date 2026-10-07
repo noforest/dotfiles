@@ -18,7 +18,6 @@ git
 gh
 lazygit
 git-delta
-neovim
 vim-runtime
 htop
 btop
@@ -39,6 +38,9 @@ pyenv
 # Debian renames two binaries, `dot install` links the upstream names back:
 #   bat      installs `batcat`, and ~/.zshrc has `alias cat=bat`
 #   fd-find  installs `fdfind`
+#
+# Not from apt:
+#   neovim        -> the archive has 0.11.6, the config needs 0.12. See nvim.txt.
 #
 # No equivalent in the archive:
 #   diff-so-fancy -> git-delta above, same job, different binary (`delta`)
