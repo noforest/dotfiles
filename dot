@@ -926,6 +926,10 @@ cmd_nvim_setup() {
     fi
     ok "tools present"
 
+    # Restoring to a lock that nvim rewrote on this machine pins nothing.
+    local lock="modules/nvim/.config/nvim/lazy-lock.json"
+    git -C "$REPO" diff --quiet -- "$lock" \
+        || warn "lazy-lock.json differs from the committed one, plugins follow the local copy ${D}(dotgit restore $lock)${N}"
     info "  ${D}plugins: nvim --headless +Lazy! restore${N}"
     nvim --headless "+Lazy! restore" +qall >/dev/null 2>&1 || warn "lazy.nvim reported an error, open nvim and run :Lazy"
     ok "plugins restored from lazy-lock.json"
