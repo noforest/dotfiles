@@ -1070,6 +1070,10 @@ cmd_gnome_settings() {
     gnome_key flameshot "<Super><Shift>s" "flameshot gui" && ok "Super+Shift+S opens flameshot"
     gsettings set org.gnome.desktop.wm.keybindings close "['<Super><Shift>c', '<Alt>F4']" &&
     ok "Super+Shift+C closes the window"
+    # Super+left drag moves a window out of the box, Super+right drag resizes it
+    # with this, as in dwm. The only handles of a window without a title bar.
+    gsettings set org.gnome.desktop.wm.preferences resize-with-right-button true &&
+    ok "Super+right drag resizes the window"
     # alacritty as on the dwm machines, for whatever GNOME itself opens a
     # terminal for (Ctrl+Alt+T). The tmux window of the session start is
     # modules/terminal/.config/autostart/tmux.desktop.
