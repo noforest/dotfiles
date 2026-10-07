@@ -12,9 +12,21 @@ vim.g.loaded_netrwPlugin = 1
 
 -- languages for the spell checker
 opt.spelllang = { "en_us", "fr" }
--- A missing dictionary is fetched without asking: the prompt cannot open while
--- neogit sets 'spell' on its commit buffer, and the commit editor breaks
+-- A missing dictionary is fetched without asking, and only once the event is
+-- over: neogit sets 'spell' on its commit buffer from an RPC request, where
+-- neither the prompt nor a notification can open, and the commit editor breaks.
+-- This replaces the autocommand of runtime/plugin/spellfile.lua.
+vim.g.loaded_spellfile_plugin = true
 require("nvim.spellfile").config({ confirm = false })
+vim.api.nvim_create_autocmd("SpellFileMissing", {
+    callback = function(args)
+        vim.schedule(function()
+            local spell = vim.wo.spell -- the download leaves it toggled
+            require("nvim.spellfile").get(args.match)
+            vim.wo.spell = spell
+        end)
+    end,
+})
 
 -- line numbers
 opt.relativenumber = false -- absolute line numbers only
