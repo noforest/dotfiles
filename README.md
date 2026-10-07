@@ -333,6 +333,12 @@ Three traps:
   xfconfd rewrites and watches through inotify, so `NEVER_LINK` refuses it and
   `dot link` says so rather than corrupting it.
 
+A milder case is a settings file the application also writes state into.
+flameshot keeps the directory of the last saved screenshot as `savePath=` in
+`flameshot.ini`, an absolute path that differs on every machine. The file stays
+linked, and `.gitattributes` sends it through a clean filter that drops that
+line before it reaches the index. `dot link` registers the filter in the clone.
+
 ---
 
 ## nvim

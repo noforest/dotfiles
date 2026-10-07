@@ -1,0 +1,4 @@
+# State an application writes into its own settings file, dropped on the way
+# into the index. The filter commands are registered by `dot link` (see
+# git_filters in dot); without them git ignores these lines.
+modules/desktop/.config/flameshot/flameshot.ini filter=flameshot

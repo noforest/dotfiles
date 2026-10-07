@@ -145,6 +145,14 @@ Anything already sitting at a target path is renamed to
 before the link is made, so nothing is ever destroyed. Rerun it freely. It refuses
 to do anything at all if two modules claim the same path.
 .IP
+It also registers, in the configuration of this clone, the git filters named by
+.IR .gitattributes .
+They keep the state an application writes into its own settings file out of the
+index: the
+.B savePath
+of flameshot, which is the last directory a screenshot went to and differs on
+every machine.
+.IP
 .B Use it
 after a
 .BR "git pull" ,
