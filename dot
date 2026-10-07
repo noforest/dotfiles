@@ -1013,7 +1013,8 @@ cmd_login_shell() {
 # === gnome-settings ==========================================================
 # GNOME ignores xset and setxkbmap: under Wayland they do nothing, under Xorg
 # GNOME resets them. The key repeat of `xset r rate 250 50` and the Caps Lock
-# as Escape of `setxkbmap -option caps:escape` go through dconf instead.
+# as Escape of `setxkbmap -option caps:escape` go through dconf instead. So do
+# the terminal font and the flameshot key that dwm sets in its config.h.
 cmd_gnome_settings() {
     head_ "gnome-settings"
     command -v gsettings >/dev/null || { warn "gsettings not installed, skipping"; return 0; }
@@ -1030,6 +1031,20 @@ cmd_gnome_settings() {
         "@as []"|"[]") gsettings set $src xkb-options "['caps:escape']" ;;
         *) gsettings set $src xkb-options "${opts/\[/[$add}" ;;
     esac && ok "Caps Lock is Escape"
+    # Super+Shift+S opens flameshot, as in dwm (suckless/dwm/config.h). Added to
+    # the custom shortcuts already there rather than replacing them
+    local mk=org.gnome.settings-daemon.plugins.media-keys list
+    local path=/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/flameshot/
+    list=$(gsettings get $mk custom-keybindings)
+    case "$list" in
+        *"'$path'"*) ;;
+        "@as []"|"[]") gsettings set $mk custom-keybindings "['$path']" ;;
+        *) add="'$path', "; gsettings set $mk custom-keybindings "${list/\[/[$add}" ;;
+    esac &&
+    gsettings set "$mk.custom-keybinding:$path" name flameshot &&
+    gsettings set "$mk.custom-keybinding:$path" command "flameshot gui" &&
+    gsettings set "$mk.custom-keybinding:$path" binding "<Super><Shift>s" &&
+    ok "Super+Shift+S opens flameshot"
     # The font of the terminals on the other machines. Not its Mono variant,
     # which shrinks every icon to one cell: too small to read.
     # ponytail: the system monospace font, which a terminal profile with its own
@@ -1182,7 +1197,7 @@ ${B}dot${N} - dotfiles management for dwm / Arch
   ${G}dot build-suckless${N}       Build and install dwm, st, dmenu, slock, dwmblocks
   ${G}dot fonts${N} [profile]      Install the fonts that are not packaged
   ${G}dot login-shell${N}          Make zsh the login shell (chsh)
-  ${G}dot gnome-settings${N}       GNOME key repeat and Caps Lock as Escape
+  ${G}dot gnome-settings${N}       GNOME key repeat, Caps Lock as Escape, font, flameshot key
   ${G}dot audit${N} [what]         What this machine really uses: packages, scripts, or all
   ${G}dot state${N}                Regenerate system/state.md
   ${G}dot bootstrap${N} [profile]  Chain everything: bare machine to full environment
