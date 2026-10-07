@@ -109,6 +109,8 @@ fi
 #   what a sync deletes is recoverable anyway. --force is the way through.
 # --backup-dir1: whatever a sync deletes or overwrites locally lands there
 #   instead of being lost. On the Drive side the Google bin does the same.
+#   One directory per run, or a file removed twice would only keep its last
+#   copy. A run that moves nothing creates no directory.
 bisync() {
 rclone bisync "$LOCAL" "$REMOTE" \
     "${resync[@]}" \
@@ -125,7 +127,7 @@ rclone bisync "$LOCAL" "$REMOTE" \
     --resilient \
     --recover \
     --max-lock 5m \
-    --backup-dir1 "$TRASH" \
+    --backup-dir1 "$TRASH/$(date +%F_%H%M%S)" \
     --drive-skip-gdocs \
     --verbose 2>&1 | tee "$STATE_DIR/last.log"
 return "${PIPESTATUS[0]}"

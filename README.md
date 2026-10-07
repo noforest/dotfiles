@@ -288,7 +288,9 @@ the missing link.
 - **A file edited on two machines between two runs** is kept twice: the newer one
   under its name, the other one as `notes.conflict1.md`.
 - **What a sync deletes or overwrites locally** goes to
-  `~/.local/share/sync-gdrive-enseirb/trash`, and to the Google bin on the Drive side.
+  `~/.local/share/sync-gdrive-enseirb/trash/<date_time>/`, one directory per run with the
+  original tree inside, and to the Google bin on the Drive side for 30 days.
+  The local trash is never emptied, on any machine.
   A run that would delete more than half of a side stops and asks for
   `sync-gdrive-enseirb --force`.
 - **This is not the backup.** `backup-to-gdrive.sh` mirrors `~/Documents` one way
