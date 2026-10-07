@@ -1,4 +1,6 @@
 # Graphical applications
+# The terminal of modules/terminal/, on dwm and on GNOME alike
+alacritty
 thunar
 thunar-archive-plugin
 thunar-media-tags-plugin

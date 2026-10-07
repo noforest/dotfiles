@@ -21,7 +21,6 @@ wmctrl
 playerctl
 maim
 scrot
-alacritty
 arandr
 lxappearance
 papirus-icon-theme

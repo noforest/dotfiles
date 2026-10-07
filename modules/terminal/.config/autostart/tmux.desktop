@@ -1,0 +1,8 @@
+# The tmux window dwm opens at session start (tmuxterm in suckless/dwm/config.h),
+# for the desktops that read ~/.config/autostart. dwm does not, so this never
+# doubles its own.
+[Desktop Entry]
+Type=Application
+Name=tmux
+Exec=alacritty -e systemd-run --user --scope --quiet tmux new-session -A -s main
+OnlyShowIn=GNOME;
