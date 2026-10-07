@@ -335,6 +335,46 @@ Three traps:
 
 ---
 
+## Python in nvim
+
+The Python server is [pyrefly](https://pyrefly.org). Nothing is installed by
+hand: lazy.nvim restores the plugins pinned in `lazy-lock.json`, and mason
+installs pyrefly the first time nvim starts with a window (about half a minute,
+it needs the network). A headless start installs no server.
+
+Two files hold everything that is specific to Python, under
+`modules/nvim/.config/nvim/`:
+
+| File | Role |
+|---|---|
+| `lua/lsp_hover.lua` | The hover (`<leader>gh`, `K`) and the signature help shown while typing a call |
+| `hover_doc.py` | Reads a docstring from the interpreter when the server has none, as for `numpy.random` |
+
+- **Hover.** The float opens on the signature alone. A second `<leader>gh` enters
+  it and expands it into a reading window with the documentation, `q` or `<Esc>`
+  closes it. Signatures are worded the way Pylance does, without `self` or `cls`,
+  and annotations longer than 48 characters are shortened until the float is
+  expanded.
+- **Signature help.** The callee, a rule, then one line per overload with
+  parameter names and defaults only, after the Signature Hints extension for
+  VS Code. It is open exactly while the cursor is between the parentheses of a
+  call.
+- **Completion menu.** A short word on the right of each name (`function`,
+  `method`, `class`, `module`, or the type of a value).
+
+`hover_doc.py` runs `python3` from the PATH and imports the packages of the
+project being edited, so they have to be installed for that interpreter. Without
+`python3` the hover shows what the server sends and nothing more.
+
+The settings sit at the top of `lua/lsp_hover.lua` (`signature_header`,
+`rule_char`, `max_annotation`, `max_width`, `expanded_width`). After changing
+either file:
+
+```sh
+nvim --headless -c "lua require('lsp_hover')._check()" -c q
+python3 ~/.config/nvim/hover_doc.py --check
+```
+
 ## Design choices
 
 **One repository, not one per machine.** `shell`, `git`, `nvim`, `vim` and
@@ -369,7 +409,10 @@ suspending from acpid needs a polkit rule.
 **The nvim plugins are patched only where their API cannot reach.** Customisations
 go through the API each plugin provides, because patches against third party code
 rot at the first update. One line of snacks.nvim is the exception, its patch header
-says why, and `dot nvim-patch` reports when upstream moved.
+says why, and `dot nvim-patch` reports when upstream moved. The signature help of
+blink.cmp is the other place with no API to go through: `lua/lsp_hover.lua` wraps
+its window function at run time, without touching its files, and steps aside with
+a warning if an update moves that function.
 
 **`codediff` is a separate repo.** It is a real project (C and Lua, CMake, tests),
 not a configuration file, so it is a submodule with a relative URL.
