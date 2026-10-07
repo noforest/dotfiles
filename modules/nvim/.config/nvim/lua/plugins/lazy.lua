@@ -3753,68 +3753,9 @@ require("lazy").setup({
 
             config = function(_, opts)
                 require('blink.cmp').setup(opts)
-
-                -- Signature help. In Python it is drawn the way the Signature Hints
-                -- extension for VS Code does, see lua/lsp_hover.lua: the callee, then one
-                -- line per distinct overload with names and defaults only. Elsewhere only
-                -- the active overload is kept, the window otherwise lists them all.
-                local window = require('blink.cmp.signature.window')
-                local trigger = require('blink.cmp.signature.trigger')
-                local highlight_ns = require('blink.cmp.config').appearance.highlight_ns
-                -- drawn at the top of its cell, so right under the name; "─" sits in the middle
-                local rule_char = "▔"
-                local open = window.open_with_signature_help
-                window.open_with_signature_help = function(context, help)
-                    local signatures = help and help.signatures or {}
-                    local view = nil
-                    if vim.bo.filetype == 'python' and #signatures > 0 then
-                        view = require('lsp_hover').signature_help(help)
-                        -- the cursor left the call: close, rather than keep a nameless popup
-                        if view == false then return trigger.hide() end
-                    end
-                    if view then
-                        open(context, {
-                            signatures = vim.tbl_map(function(line) return { label = line } end, view.lines),
-                            activeSignature = 0,
-                        })
-                        local buf = window.win:get_buf()
-                        -- blink would highlight the active parameter on the first line only
-                        for _, mark in ipairs(view.marks) do
-                            vim.api.nvim_buf_set_extmark(buf, highlight_ns, mark[1], mark[2],
-                                { end_col = mark[3], hl_group = 'BlinkCmpSignatureHelpActiveParameter' })
-                        end
-                        -- A rule between the callee and its signatures. Virtual text over an
-                        -- empty line, like blink's own separator: the buffer is highlighted
-                        -- as Python and a line of dashes in it would be a syntax error.
-                        if view.rule then
-                            local width = 0
-                            for _, line in ipairs(view.lines) do width = math.max(width, vim.fn.strdisplaywidth(line)) end
-                            vim.api.nvim_buf_set_extmark(buf, highlight_ns, view.rule, 0, {
-                                virt_text = { { rule_char:rep(width), 'FloatBorder' } },
-                                virt_text_pos = 'overlay',
-                            })
-                        end
-                        return
-                    end
-                    local active = signatures[(help and help.activeSignature or 0) + 1]
-                    if active then
-                        help = vim.tbl_extend('force', help, { signatures = { active }, activeSignature = 0 })
-                    end
-                    return open(context, help)
-                end
-
-                -- blink opens the signature on a typed "(" or "," and only refreshes it
-                -- on a cursor move. In Python the popup follows the cursor instead: it
-                -- opens as soon as the cursor is between the parentheses of a call
-                -- (the wrapper above closes it when the cursor leaves).
-                vim.api.nvim_create_autocmd('CursorMovedI', {
-                    group = vim.api.nvim_create_augroup('PythonSignatureFollowsCursor', { clear = true }),
-                    callback = function()
-                        if vim.bo.filetype ~= 'python' then return end
-                        local cmp = require('blink.cmp')
-                        if not cmp.is_signature_visible() and require('lsp_hover').in_call() then cmp.show_signature() end
-                    end,
-                })
+                -- The Python signature help: what it shows, when it opens and how
+                -- it looks. Everything is in lua/lsp_hover.lua.
+                require('lsp_hover').setup_signature()
             end,
         },
 

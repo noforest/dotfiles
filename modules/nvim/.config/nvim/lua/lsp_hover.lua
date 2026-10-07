@@ -23,6 +23,10 @@ local expand_hint = ' <leader>gh: expand '
 local ns = vim.api.nvim_create_namespace('lsp_hover')
 local hover_doc = vim.fn.stdpath('config') .. '/hover_doc.py'
 local signature_header = true -- name the callee above its signatures in the signature help
+-- The rule under that name. A thin line sits in the middle of its cell: the thin
+-- ones drawn at the top (U+203E, U+23BA) are missing from most monospace fonts,
+-- and the block drawn at the top (U+2594) is three times as thick.
+local rule_char = "─"
 
 -- ---------------------------------------------------------------------------
 -- Signatures. pyrefly words them after its internals: a constructor is its
@@ -189,9 +193,10 @@ end
 ---Rewrites the code block of a hover, given as its lines without the fences.
 ---`word` is the hovered name.
 ---  (method) __new__: def __new__(cls: type[range], stop, /) -> range: ...   ->  class range(stop, /)
----  (method) play: def play(self: MDP, state: int, action: int) -> int: ...  ->  (method) def play(...) -> int
----A list of overloads is laid out the way Pylance does, which also keeps every
----`def` valid Python for the highlighter:
+---  (method) play: def play(self: MDP, state: int, action: int) -> int: ...  ->  (method)
+---                                                                             def play(...) -> int
+---A list of overloads is laid out the way Pylance does, each def closed by a
+---body so that it stays valid Python for the highlighter:
 ---  (method)
 ---  def choice(...) -> int: ...
 ---
@@ -234,12 +239,10 @@ local function render_hover(block, word)
             head, ret, suffix = "class " .. class, nil, ""
         else
             if name == "__call__" and word ~= name then name = word end
-            if #chunks == 1 then
-                head, ret, suffix = ("(%s) def %s"):format(kind, name), sig.ret, ""
-            else
-                head, ret, suffix = "def " .. name, sig.ret, ": ..."
-                if i == 1 then full[1], short[1] = ("(%s)"):format(kind), ("(%s)"):format(kind) end
-            end
+            -- the kind on a line of its own, then the def: with one signature or several.
+            -- A list of overloads needs each def closed by a body to stay valid Python.
+            head, ret, suffix = "def " .. name, sig.ret, #chunks > 1 and ": ..." or ""
+            if i == 1 then full[1], short[1] = ("(%s)"):format(kind), ("(%s)"):format(kind) end
         end
         if i > 1 then full[#full + 1], short[#short + 1] = "", "" end
         local full_lines, short_lines = layout(head, sig, ret, suffix)
@@ -386,14 +389,19 @@ local function set_expand_hint(win)
     set_footer(win, fits and expand_hint or ' ▼ ')
 end
 
----Shows the documentation's `### Section` lines as titles, without their marker.
+---Shows the documentation's `### Section` lines as titles, without their marker,
+---and colours the name of each `def`: a signature shown alone has no body, which
+---is not valid Python, and the highlighter then leaves its name uncoloured.
 local function decorate(buf)
     vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
     local in_code = false
     for i, l in ipairs(vim.api.nvim_buf_get_lines(buf, 0, -1, false)) do
         local marker = l:match("^#+ ")
+        local def_name = in_code and l:match("^def ([%w_]+)")
         if l:match("^```") then
             in_code = not in_code
+        elseif def_name then
+            vim.api.nvim_buf_set_extmark(buf, ns, i - 1, 4, { end_col = 4 + #def_name, hl_group = '@function', priority = 200 })
         elseif marker and not in_code then
             vim.api.nvim_buf_set_extmark(buf, ns, i - 1, 0, { end_col = #marker, conceal = "" })
             vim.api.nvim_buf_set_extmark(buf, ns, i - 1, #marker, { end_col = #l, hl_group = 'Title' })
@@ -414,6 +422,7 @@ local function expand(win)
     if full_block then
         set_lines(buf, 1, 1 + #full_block, full_block)
         vim.b[buf].lsp_hover_full = nil
+        decorate(buf) -- the marks of the lines just replaced went with them
     end
     vim.api.nvim_win_set_width(win, width)
     -- the separator above the interpreter's docstring was drawn at the old width
@@ -499,7 +508,7 @@ function M.hover()
 
     -- ponytail: hover_doc.py only replays single-line imports, parse with ast
     -- there if multi-line `from x import (...)` ever matters.
-    if vim.bo[bufnr].filetype == 'python' and expr:match("^[%a_][%w_%.]*$") then
+    if vim.bo[bufnr].filetype == 'python' and expr:match("^[%a_][%w_%.]*$") and vim.fn.executable('python3') == 1 then
         vim.system({ 'python3', hover_doc, expr }, {
             stdin = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false),
             text = true,
@@ -537,6 +546,79 @@ function M.hover()
     end)
 end
 
+-- ---------------------------------------------------------------------------
+-- The signature help popup, shown by blink.cmp while a call is being typed.
+-- ---------------------------------------------------------------------------
+
+---Takes over the signature help of blink.cmp in Python buffers. Call it once,
+---after `require('blink.cmp').setup()`.
+---  * what it shows: M.signature_help, instead of the labels of the server
+---  * when: exactly while the cursor is between the parentheses of a call.
+---    blink opens it on a typed "(" or "," and only refreshes it on a cursor move.
+---  * elsewhere: only the active overload, the window otherwise lists them all.
+---blink has no API for any of this, so its window function is wrapped at run
+---time. Should an update move what the wrapper needs, it warns once and steps
+---aside: the stock popup of blink keeps working.
+function M.setup_signature()
+    local ok, cmp, window, trigger, config = pcall(function()
+        return require('blink.cmp'), require('blink.cmp.signature.window'),
+            require('blink.cmp.signature.trigger'), require('blink.cmp.config')
+    end)
+    local highlight_ns = ok and config.appearance and config.appearance.highlight_ns
+    if not (ok and highlight_ns and type(window.open_with_signature_help) == 'function' and window.win
+            and type(trigger.hide) == 'function' and cmp.show_signature and cmp.is_signature_visible) then
+        return vim.notify_once('lsp_hover: blink.cmp changed, its own signature help is used as is', vim.log.levels.WARN)
+    end
+
+    local open = window.open_with_signature_help
+    window.open_with_signature_help = function(context, help)
+        local signatures = help and help.signatures or {}
+        local view = nil
+        if vim.bo.filetype == 'python' and #signatures > 0 then
+            view = M.signature_help(help)
+            -- the cursor left the call: close, rather than keep a nameless popup
+            if view == false then return trigger.hide() end
+        end
+        if not view then
+            local active = signatures[(help and help.activeSignature or 0) + 1]
+            if active then
+                help = vim.tbl_extend('force', help, { signatures = { active }, activeSignature = 0 })
+            end
+            return open(context, help)
+        end
+
+        open(context, {
+            signatures = vim.tbl_map(function(line) return { label = line } end, view.lines),
+            activeSignature = 0,
+        })
+        local buf = window.win:get_buf()
+        -- blink would highlight the active parameter on the first line only
+        for _, mark in ipairs(view.marks) do
+            vim.api.nvim_buf_set_extmark(buf, highlight_ns, mark[1], mark[2],
+                { end_col = mark[3], hl_group = 'BlinkCmpSignatureHelpActiveParameter' })
+        end
+        -- A rule between the callee and its signatures, in the colour of the border.
+        -- Virtual text over a blank line, like blink's own separator: the buffer is
+        -- highlighted as Python and a line of dashes in it would be a syntax error.
+        if view.rule then
+            local width = 0
+            for _, line in ipairs(view.lines) do width = math.max(width, vim.fn.strdisplaywidth(line)) end
+            vim.api.nvim_buf_set_extmark(buf, highlight_ns, view.rule, 0, {
+                virt_text = { { rule_char:rep(width), 'FloatBorder' } },
+                virt_text_pos = 'overlay',
+            })
+        end
+    end
+
+    vim.api.nvim_create_autocmd('CursorMovedI', {
+        group = vim.api.nvim_create_augroup('LspHoverSignature', { clear = true }),
+        callback = function()
+            if vim.bo.filetype ~= 'python' then return end
+            if not cmp.is_signature_visible() and M.in_call() then cmp.show_signature() end
+        end,
+    })
+end
+
 ---Self-check of the signature rewriting: nvim --headless -c "lua require('lsp_hover')._check()" -c q
 function M._check()
     local function eq(got, want)
@@ -561,31 +643,31 @@ function M._check()
         "class list()\n\nclass list(\n    iterable: Iterable[Unknown],\n    /\n)")
     -- the dunder at its own definition is a method like any other
     eq(hover("__init__", "(method) __init__: def __init__(\n    self : Self@Agent,\n    env  : Unknown\n) -> Unknown: ..."),
-        "(method) def __init__(env: Unknown) -> Unknown")
+        "(method)\ndef __init__(env: Unknown) -> Unknown")
     -- methods and functions: no receiver, on one line or several alike
-    eq(hover("get_gamma", "(method) get_gamma: def get_gamma(self: Self@MDP) -> Unknown: ..."), "(method) def get_gamma() -> Unknown")
+    eq(hover("get_gamma", "(method) get_gamma: def get_gamma(self: Self@MDP) -> Unknown: ..."), "(method)\ndef get_gamma() -> Unknown")
     eq(hover("play", "(method) play: def play(\n    self: MDP,\n    state: int,\n    action: int\n) -> tuple[int, float]: ..."),
-        "(method) def play(\n    state: int,\n    action: int\n) -> tuple[int, float]")
+        "(method)\ndef play(\n    state: int,\n    action: int\n) -> tuple[int, float]")
     eq(hover("zeros", "(method) __call__: def __call__(\n    self  : _ConstructorEmpty,\n    /,\n    shape : SupportsIndex,\n    dtype : None                      = None\n) -> ndarray: ..."),
-        "(method) def zeros(\n    shape: SupportsIndex,\n    dtype: None = None\n) -> ndarray")
+        "(method)\ndef zeros(\n    shape: SupportsIndex,\n    dtype: None = None\n) -> ndarray")
     eq(hover("print", "(function) print: def print(\n    *values: object,\n    sep    : str | None = ' ',\n    end    : str | None = '\\n'\n) -> None: ..."),
-        "(function) def print(\n    *values: object,\n    sep: str | None = ' ',\n    end: str | None = '\\n'\n) -> None")
-    eq(hover("make", "(method) make: def make() -> MDP: ..."), "(method) def make() -> MDP")
+        "(function)\ndef print(\n    *values: object,\n    sep: str | None = ' ',\n    end: str | None = '\\n'\n) -> None")
+    eq(hover("make", "(method) make: def make() -> MDP: ..."), "(method)\ndef make() -> MDP")
     -- several overloads: Pylance's layout, each def valid Python
     eq(hover("choice", "(method) choice: \n@overload\ndef choice(\n    self: RandomState,\n    a   : int\n) -> int: ...\ndef choice(\n    self: RandomState,\n    a   : ArrayLike,\n    size: None = None\n) -> Any: ..."),
         "(method)\ndef choice(a: int) -> int: ...\n\ndef choice(\n    a: ArrayLike,\n    size: None = None\n) -> Any: ...")
     -- long annotations: shortened with their brackets closed, default kept, spelled out in full on expand
     local long = "(method) choice: def choice(\n    self: RandomState,\n    a: ArrayLike,\n    p: _NestedSequence[_SupportsArray[dtype[numpy.bool | floating | integer]]] | float | None = None\n) -> ndarray[tuple[Any, ...], dtype[signedinteger[_NBitLong]]]: ..."
     eq(hover("choice", long),
-        "(method) def choice(\n    a: ArrayLike,\n    p: _NestedSequence[_SupportsArray[dtype[numpy.bool…]]] = None\n) -> ndarray[tuple[Any, ...], dtype[signedinteger[…]]]")
+        "(method)\ndef choice(\n    a: ArrayLike,\n    p: _NestedSequence[_SupportsArray[dtype[numpy.bool…]]] = None\n) -> ndarray[tuple[Any, ...], dtype[signedinteger[…]]]")
     eq(hover("choice", long, true),
-        "(method) def choice(\n    a: ArrayLike,\n    p: _NestedSequence[_SupportsArray[dtype[numpy.bool | floating | integer]]] | float | None = None\n) -> ndarray[tuple[Any, ...], dtype[signedinteger[_NBitLong]]]")
+        "(method)\ndef choice(\n    a: ArrayLike,\n    p: _NestedSequence[_SupportsArray[dtype[numpy.bool | floating | integer]]] | float | None = None\n) -> ndarray[tuple[Any, ...], dtype[signedinteger[_NBitLong]]]")
     eq(shorten("Literal['a very long string literal that goes on and on', 'b'] | None"), "Literal['a very long string literal that goes on…']")
     -- nothing to shorten: no second version kept
     eq(hover("play", "(method) play: def play(self: MDP, state: int) -> int: ...", true), "")
     -- one parameter, but too long for one line: laid out like the others, so it gets shortened too
     eq(hover("seed", "(method) seed: def seed(self: RandomState, seed: _NestedSequence[_SupportsArray[dtype[numpy.bool | floating | integer]]] | int | None = None) -> None: ..."),
-        "(method) def seed(\n    seed: _NestedSequence[_SupportsArray[dtype[numpy.bool…]]] = None\n) -> None")
+        "(method)\ndef seed(\n    seed: _NestedSequence[_SupportsArray[dtype[numpy.bool…]]] = None\n) -> None")
     -- not signatures, or not pyrefly's shape: untouched
     for _, text in ipairs({ "(variable) m: MDP", "(class) NoneType: None", "(module) np: Module[numpy]", "(keyword) in",
         "(variable) f: (int) -> str", "bool | Unknown", "(function) def f(\n    a: int\n) -> int" }) do
