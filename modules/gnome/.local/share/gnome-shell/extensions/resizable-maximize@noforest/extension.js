@@ -14,11 +14,10 @@ function isMaximized(win) {
 }
 
 function unmaximize(win) {
-    try {
-        win.unmaximize(Meta.MaximizeFlags.BOTH);
-    } catch {
+    if (win.is_maximized)
         win.unmaximize();
-    }
+    else
+        win.unmaximize(Meta.MaximizeFlags.BOTH);
 }
 
 export default class ResizableMaximize extends Extension {

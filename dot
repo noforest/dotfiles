@@ -1072,8 +1072,11 @@ cmd_gnome_settings() {
     # Super+M is dwm's monocle layout and Super+F its floating one. GNOME gives
     # Super+M to the message tray, which keeps Super+V
     gsettings set org.gnome.shell.keybindings toggle-message-tray "['<Super>v']" &&
-    gsettings set org.gnome.desktop.wm.keybindings maximize "['<Super>Up', '<Super>m']" &&
-    gsettings set org.gnome.desktop.wm.keybindings unmaximize "['<Super>Down', '<Alt>F5', '<Super>f']" &&
+    # Those two keys alone: Ubuntu's Tiling Assistant owns Super+Up and
+    # Super+Down, and empties both lists at session start when it finds its keys
+    # in them.
+    gsettings set org.gnome.desktop.wm.keybindings maximize "['<Super>m']" &&
+    gsettings set org.gnome.desktop.wm.keybindings unmaximize "['<Super>f']" &&
     ok "Super+M maximizes the window, Super+F restores it"
     # Super+left drag moves a window out of the box, Super+right drag resizes it
     # with this, as in dwm. The only handles of a window without a title bar.
