@@ -1,3 +1,12 @@
+-- The config and its plugins are written against nvim 0.12: nvim-treesitter for
+-- one calls vim.list.unique, and installs no parser without it. An older nvim
+-- would fail in many places, some of them silently: say it once and stop.
+if vim.fn.has("nvim-0.12") == 0 then
+    vim.api.nvim_echo({ { "This config needs nvim 0.12 or newer, this is "
+        .. tostring(vim.version()) .. ". Nothing was loaded.", "ErrorMsg" } }, true, {})
+    return
+end
+
 require("keymaps")
 require("options")
 

@@ -335,15 +335,37 @@ Three traps:
 
 ---
 
-## Python in nvim
+## nvim
 
-The Python server is [pyrefly](https://pyrefly.org). Nothing is installed by
-hand: lazy.nvim restores the plugins pinned in `lazy-lock.json`, and mason
-installs pyrefly the first time nvim starts with a window (about half a minute,
-it needs the network). A headless start installs no server.
+The config needs **neovim 0.12** and nothing installed by hand. Two commands
+make a new machine ready before nvim is first opened, and the bootstrap runs
+both:
 
-Two files hold everything that is specific to Python, under
-`modules/nvim/.config/nvim/`:
+```sh
+./dot install      # the packages of packages/<distro>/nvim.txt
+./dot nvim-setup   # plugins, language servers, treesitter parsers
+```
+
+- `packages/<distro>/nvim.txt` lists every tool the config calls: a compiler and
+  the tree-sitter CLI for the parsers, Node, Python with venv, Go, Java and Rust
+  for the language servers, ripgrep and fd for the pickers.
+- On Ubuntu, `dot install` also runs `scripts/ubuntu-install-neovim.sh`: the
+  archive has neovim 0.11, so the official 0.12 release goes to `~/.local`, after
+  a SHA256 check against the sum pinned in the script.
+- `dot nvim-setup` checks that these tools are there and names the missing ones.
+  Then it restores the plugins pinned in `lazy-lock.json`, installs the eight
+  language servers through mason and builds the sixteen parsers. It waits for all
+  of it: left to itself, nvim installs them in the background the first time it
+  opens a window, and not at all when started headless. Running it again costs a
+  few seconds and changes nothing.
+
+Tried from an empty container on both distributions: about five minutes of
+packages on Ubuntu, then two and a half for `dot nvim-setup`.
+
+### Python
+
+The Python server is [pyrefly](https://pyrefly.org). Two files hold everything
+that is specific to Python, under `modules/nvim/.config/nvim/`:
 
 | File | Role |
 |---|---|
@@ -363,9 +385,11 @@ Two files hold everything that is specific to Python, under
 - **Completion menu.** A short word on the right of each name (`function`,
   `method`, `class`, `module`, or the type of a value).
 
-`hover_doc.py` runs `python3` from the PATH and imports the packages of the
-project being edited, so they have to be installed for that interpreter. Without
-`python3` the hover shows what the server sends and nothing more.
+`hover_doc.py` runs `python3` from the PATH and imports the packages the file
+imports, so they have to be installed for that interpreter. It replays the import
+statements and nothing else of the file, and never imports from the project
+directory: hovering does not run your code. Without `python3` the hover shows
+what the server sends and nothing more.
 
 The settings sit at the top of `lua/lsp_hover.lua` (`signature_name`,
 `signature_exclude`, `rule_char`, `max_annotation`, `max_width`,

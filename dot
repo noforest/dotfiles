@@ -6,6 +6,10 @@ export LC_COLLATE=C   # comm and sort must agree on the order, whatever the loca
 
 REPO="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 MODULES="$REPO/modules"
+# Where `dot install` puts what the distribution does not package the way the
+# configs expect (bat and fd under their upstream names, neovim on Ubuntu). The
+# next steps of a bootstrap need them before any shell has read .zshrc.
+case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) PATH="$HOME/.local/bin:$PATH" ;; esac
 PROFILES="$REPO/profiles"
 MACHINES="$REPO/machine.d"
 FALLBACK_PROFILE=laptop
@@ -765,7 +769,11 @@ cmd_install() {
                 command -v "${pair#*:}" >/dev/null && continue
                 command -v "${pair%%:*}" >/dev/null || continue
                 ln -s "$(command -v "${pair%%:*}")" "$HOME/.local/bin/${pair#*:}" && ok "${pair#*:} -> ${pair%%:*}"
-            done ;;
+            done
+            # The archive's neovim is too old for the config (see the script).
+            if printf '%s\n' "$native" | grep -qx 'tree-sitter-cli'; then
+                "$REPO/scripts/ubuntu-install-neovim.sh" || warn "neovim not installed, run scripts/ubuntu-install-neovim.sh"
+            fi ;;
         *)  die "unsupported distribution: $(distro) (add packages/$(distro)/ and a case here)" ;;
     esac
 }
@@ -877,6 +885,51 @@ cmd_yazi_plugins() {
     ya pkg install && ok "plugins and flavors restored from package.toml"
 }
 
+# The nvim config fetches its plugins, its language servers and its treesitter
+# parsers by itself, but only once nvim runs with a window, in the background,
+# and it fails one tool at a time when something is missing. This does all of it
+# up front, so that the first nvim a new machine opens is ready and silent.
+# Every tool it checks for comes from packages/<distro>/nvim.txt.
+cmd_nvim_setup() {
+    head_ "nvim-setup"
+    if ! command -v nvim >/dev/null; then
+        warn "nvim not installed, skipping (dot install first)"
+        return 0
+    fi
+    nvim --headless -c 'lua if vim.fn.has("nvim-0.12") == 0 then vim.cmd("cquit 1") end' +qall >/dev/null 2>&1 \
+        || die "nvim $(nvim --version | head -1 | cut -d' ' -f2) is too old, the config needs 0.12 or newer$(
+            [ "$(distro)" = arch ] || printf ' (scripts/ubuntu-install-neovim.sh)')"
+
+    # command:what it is for. fd is `fdfind` on Debian, either name will do.
+    local need missing="" cmd
+    for need in git:plugins curl:mason unzip:mason cc:treesitter-parsers tree-sitter:treesitter-parsers \
+                node:typescript-server npm:typescript-server python3:pyrefly go:sqls java:jdtls \
+                rustc:rust_analyzer rg:telescope; do
+        cmd=${need%%:*}
+        command -v "$cmd" >/dev/null || missing="$missing $cmd(${need#*:})"
+    done
+    command -v fd >/dev/null || command -v fdfind >/dev/null || missing="$missing fd(snacks)"
+    # Debian ships venv apart from python3, and mason installs pyrefly in one
+    python3 -c 'import venv, ensurepip' 2>/dev/null || missing="$missing python3-venv(pyrefly)"
+    if [ -n "$missing" ]; then
+        err "missing:$missing"
+        info "  ${D}They are listed in packages/$(distro)/nvim.txt: dot install${N}"
+        return 1
+    fi
+    ok "tools present"
+
+    info "  ${D}plugins: nvim --headless +Lazy! restore${N}"
+    nvim --headless "+Lazy! restore" +qall >/dev/null 2>&1 || warn "lazy.nvim reported an error, open nvim and run :Lazy"
+    ok "plugins restored from lazy-lock.json"
+
+    if nvim --headless -c "lua require('nvim_setup').run()" 2>&1; then
+        ok "language servers and treesitter parsers installed"
+    else
+        err "some servers or parsers could not be installed, see above (rerun: dot nvim-setup)"
+        return 1
+    fi
+}
+
 cmd_nvim_patch() {
     local mode="${1:-apply}" dir="$MODULES/nvim/.config/nvim/patches" lazy="$HOME/.local/share/nvim/lazy"
     head_ "nvim-patch ($mode)"
@@ -970,7 +1023,7 @@ cmd_gnome_settings() {
 # st, dmenu, slock and dwmblocks, which is pointless on a profile that runs none
 # of them. A profile overrides the chain with a `steps:` line rather than this
 # script testing for a module by name.
-BOOTSTRAP_STEPS="install login-shell link system-apply services fonts build-suckless nvim-patch yazi-plugins"
+BOOTSTRAP_STEPS="install login-shell link system-apply services fonts build-suckless nvim-setup nvim-patch yazi-plugins"
 
 cmd_bootstrap() {
     local profile="${1:-$DEFAULT_PROFILE}"
@@ -1099,6 +1152,7 @@ ${B}dot${N} - dotfiles management for dwm / Arch
   ${G}dot system-apply${N} [profile] Copy the profile scopes of system/ to / (sudo)
   ${G}dot system-pull${N} [profile]  Pull /etc and /usr/local/bin back into the repo
   ${G}dot services${N} [profile]   Enable the systemd units of the profile (sudo)
+  ${G}dot nvim-setup${N}           Install nvim's plugins, language servers and parsers
   ${G}dot nvim-patch${N}           Apply the snacks patch that config cannot express
   ${G}dot yazi-plugins${N}         Restore yazi plugins and flavors from package.toml
   ${G}dot build-suckless${N}       Build and install dwm, st, dmenu, slock, dwmblocks
@@ -1143,6 +1197,7 @@ case "$cmd" in
     login-shell)    cmd_login_shell "$@" ;;
     gnome-settings) cmd_gnome_settings "$@" ;;
     services)       cmd_services "$@" ;;
+    nvim-setup)     cmd_nvim_setup "$@" ;;
     nvim-patch)     cmd_nvim_patch "$@" ;;
     yazi-plugins)   cmd_yazi_plugins "$@" ;;
     audit)          cmd_audit "$@" ;;

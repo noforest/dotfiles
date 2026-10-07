@@ -119,6 +119,9 @@ T}
 dot services [prof]@T{
 Enable the systemd units the profile lists on its \fIservices:\fR line. Needs sudo.
 T}
+dot nvim-setup@T{
+Install the plugins, language servers and treesitter parsers of nvim, and wait for them.
+T}
 dot nvim-patch@T{
 Apply the patches that a plugin's own API cannot express.
 T}
@@ -224,6 +227,19 @@ distribution neutral:
 .I ly@tty2
 does not exist on Ubuntu. Does not start them, the reboot does.
 .TP
+.B dot nvim-setup
+Makes nvim ready before it is first opened. Checks that nvim is 0.12 or newer and
+that every tool of
+.I packages/<distro>/nvim.txt
+is installed, and stops with the list of the missing ones otherwise. Then restores
+the plugins from
+.IR lazy-lock.json ,
+installs the language servers of the config through mason and builds its
+treesitter parsers, waiting for each. Left to itself nvim does this in the
+background the first time it opens a window, and installs no server at all when
+started headless, which is the only way a bootstrap can start it. Safe to run
+again: what is already there is skipped.
+.TP
 .B dot nvim-patch
 When the plugins are not installed yet, runs
 .B nvim --headless "+Lazy! sync"
@@ -245,7 +261,7 @@ It stops there. The commit is yours to write.
 .TP
 .BI "dot bootstrap " [profile]
 Chains
-.BR install ", " link ", " system-apply ", " services ", " fonts ", " build-suckless ", " nvim-patch " and " yazi-plugins ,
+.BR install ", " link ", " system-apply ", " services ", " fonts ", " build-suckless ", " nvim-setup ", " nvim-patch " and " yazi-plugins ,
 unless the profile overrides the chain with
 .IR steps: .
 Called without an argument it prints what it takes the machine to be and asks for

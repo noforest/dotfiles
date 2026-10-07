@@ -1763,11 +1763,14 @@ require("lazy").setup({
                 install_dir = vim.fn.stdpath('data') .. '/site',
             })
 
-            require('nvim-treesitter').install({
+            -- In a variable for `dot nvim-setup` (lua/nvim_setup.lua), which waits
+            -- for these to be built. Here the install runs in the background.
+            vim.g.treesitter_parsers = {
                 'lua', 'python', 'bash', 'markdown', 'markdown_inline',
                 'javascript', 'c', 'cpp', 'vim', 'vimdoc', 'query', 'rust',
                 'typescript', 'java', 'zsh', 'git_config'
-            })
+            }
+            require('nvim-treesitter').install(vim.g.treesitter_parsers)
 
             vim.api.nvim_create_autocmd('FileType', {
                 callback = function(args)
