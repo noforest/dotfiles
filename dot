@@ -2,7 +2,11 @@
 # dot - dotfiles management (dwm / Arch Linux)
 # See README.md for the full procedure.
 set -uo pipefail
-export LC_COLLATE=C   # comm and sort must agree on the order, whatever the locale
+# comm and sort must agree on the order, whatever the locale. LC_ALL would
+# override LC_COLLATE, so it is demoted to LANG first.
+[ -n "${LC_ALL:-}" ] && export LANG="$LC_ALL"
+unset LC_ALL
+export LC_COLLATE=C
 
 REPO="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 MODULES="$REPO/modules"
@@ -525,7 +529,11 @@ cmd_status() {
             warn "$(printf '%s\n' "$uncat" | wc -l) package(s) installed but missing from the lists:"
             printf '%s\n' "$uncat" | head -15 | sed "s/^/      ${D}/;s/\$/${N}/"
             [ "$(printf '%s\n' "$uncat" | wc -l)" -gt 15 ] && info "      ${D}...${N}"
-            info "  ${D}-> AUR: 'dot sync'. Official packages: add them manually to packages/$(distro)/<group>.txt${N}"
+            if [ "$(distro)" = arch ]; then
+                info "  ${D}-> AUR: 'dot sync'. Official packages: add them manually to packages/$(distro)/<group>.txt${N}"
+            else
+                info "  ${D}-> add the ones worth keeping to packages/$(distro)/<group>.txt${N}"
+            fi
         else ok "every list is up to date"; fi
     fi
 
