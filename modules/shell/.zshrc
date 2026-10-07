@@ -55,7 +55,13 @@ export PATH="$HOME/go/bin:$PATH"
 export TODO_DB_PATH=$HOME/.config/td/todo.json
 export PATH="$HOME/.pyenv/versions/3.11.11/bin:$PATH"
 export PATH="$HOME/.pyenv/shims/auto-cpufreq:$PATH"
-export SSH_AUTH_SOCK="$XDG_RUNTIME_DIR/ssh-agent.socket"
+# The systemd user unit of OpenSSH names its socket ssh-agent.socket on Arch and
+# openssh_agent on Ubuntu. Pointing at the wrong one fails silently: ssh finds no
+# agent, AddKeysToAgent adds nothing, and the passphrase is asked on every pull.
+for s in "$XDG_RUNTIME_DIR/ssh-agent.socket" "$XDG_RUNTIME_DIR/openssh_agent"; do
+    [ -S "$s" ] && export SSH_AUTH_SOCK="$s" && break
+done
+unset s
 eval "$(pyenv init --path)"
 eval "$(pyenv init -)"
 # AUR python packages must build against the system python, not pyenv's
