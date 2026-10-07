@@ -4,5 +4,6 @@
 [Desktop Entry]
 Type=Application
 Name=tmux
-Exec=alacritty -e systemd-run --user --scope --quiet tmux new-session -A -s main
+# A window rather than the maximized one of alacritty.toml, sized in cells.
+Exec=alacritty -o "window.startup_mode=\\"Windowed\\"" -o window.dimensions.columns=126 -o window.dimensions.lines=33 -e systemd-run --user --scope --quiet tmux new-session -A -s main
 OnlyShowIn=GNOME;
