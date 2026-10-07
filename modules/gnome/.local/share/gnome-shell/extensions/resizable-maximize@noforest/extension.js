@@ -2,7 +2,6 @@
 // on it. dwm's monocle has no such state: the window fills the screen and any
 // drag resizes it. This gives the maximize and unmaximize keys that behaviour.
 // The window is sized to the work area and never marked maximized.
-import GLib from 'gi://GLib';
 import Meta from 'gi://Meta';
 import Shell from 'gi://Shell';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
@@ -22,15 +21,17 @@ function unmaximize(win) {
 
 export default class ResizableMaximize extends Extension {
     enable() {
-        this._idles = new Set();
+        this._pending = new Map();
         const mode = Shell.ActionMode.NORMAL;
         Main.wm.setCustomKeybindingHandler('maximize', mode, (_d, win) => win && this._fill(win));
         Main.wm.setCustomKeybindingHandler('unmaximize', mode, (_d, win) => win && this._restore(win));
-        // A window that opens maximized (alacritty's startup_mode) is filled too
+        // alacritty opens maximized (startup_mode) and is filled at once. Only
+        // alacritty: the others keep the maximized state they ask for until
+        // Super+M.
         this._created = global.display.connect('window-created', (_d, win) => {
             const id = win.connect('shown', () => {
                 win.disconnect(id);
-                if (isMaximized(win))
+                if (win.get_wm_class() === 'Alacritty' && isMaximized(win))
                     this._fill(win);
             });
         });
@@ -40,8 +41,8 @@ export default class ResizableMaximize extends Extension {
         global.display.disconnect(this._created);
         Meta.keybindings_set_custom_handler('maximize', null);
         Meta.keybindings_set_custom_handler('unmaximize', null);
-        this._idles.forEach(id => GLib.source_remove(id));
-        this._idles = null;
+        this._pending.forEach((id, win) => win.disconnect(id));
+        this._pending = null;
     }
 
     _fill(win) {
@@ -56,14 +57,19 @@ export default class ResizableMaximize extends Extension {
             return;
         }
         // Its own size is the one unmaximizing gives back, nothing to remember.
-        // The resize waits for the unmaximize to be through.
-        unmaximize(win);
-        const id = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
-            this._idles.delete(id);
+        // The resize waits for the window to have taken that size: sent right
+        // behind the unmaximize, it left Firefox drawn off its own frame.
+        if (this._pending.has(win))
+            return;
+        const id = win.connect('size-changed', () => {
+            if (isMaximized(win))
+                return;
+            win.disconnect(id);
+            this._pending.delete(win);
             resize();
-            return GLib.SOURCE_REMOVE;
         });
-        this._idles.add(id);
+        this._pending.set(win, id);
+        unmaximize(win);
     }
 
     _restore(win) {
