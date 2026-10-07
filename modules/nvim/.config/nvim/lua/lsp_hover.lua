@@ -296,10 +296,12 @@ end
 ---nameable stands there (`f()(`, `(1, `), nil when no parenthesis is open.
 ---ponytail: brackets inside string literals are counted too, use treesitter if
 ---that ever picks the wrong call.
----@return string?
+---Also returns where that name starts in the buffer, as a 0-based row and column.
+---@return string?, integer?, integer?
 local function callee()
     local row, col = unpack(vim.api.nvim_win_get_cursor(0))
-    local lines = vim.api.nvim_buf_get_lines(0, math.max(0, row - 20), row, false)
+    local first = math.max(0, row - 20)
+    local lines = vim.api.nvim_buf_get_lines(0, first, row, false)
     lines[#lines] = lines[#lines]:sub(1, col)
     local text, depth = table.concat(lines, "\n"), 0
     for i = #text, 1, -1 do
@@ -309,9 +311,39 @@ local function callee()
         elseif (ch == "(" or ch == "[" or ch == "{") and depth > 0 then
             depth = depth - 1
         elseif ch == "(" then
-            return text:sub(1, i - 1):match("([%a_][%w_%.]*)%s*$") or ""
+            local before = text:sub(1, i - 1)
+            local start, _, name = before:find("([%a_][%w_%.]*)%s*$")
+            if not start then return "" end
+            local above = before:sub(1, start - 1)
+            local _, newlines = above:gsub("\n", "")
+            return name, first + newlines, #above:match("[^\n]*$")
         end
     end
+end
+
+---The highlighting of the callee where it stands in the code, to show its name
+---in the same colours in the signature help: `print` is not coloured like a
+---method, and the server has its say through semantic tokens. One entry per
+---dotted part and per group: { start_col, end_col, group, priority }, the
+---columns counted from the start of the name.
+---@return table[]
+local function name_highlights(name, row, col)
+    local out, from = {}, 1
+    while true do
+        local first, last = name:find("[^.]+", from)
+        if not first then break end
+        local ok, at = pcall(vim.inspect_pos, 0, row, col + first - 1, { syntax = false, extmarks = false })
+        if ok then
+            for i, capture in ipairs(at.treesitter or {}) do
+                out[#out + 1] = { first - 1, last, capture.hl_group, i }
+            end
+            for _, token in ipairs(at.semantic_tokens or {}) do
+                out[#out + 1] = { first - 1, last, token.opts.hl_group, token.opts.priority or 125 }
+            end
+        end
+        from = last + 1
+    end
+    return out
 end
 
 ---Whether a callee is in signature_exclude.
@@ -342,16 +374,19 @@ end
 ---same parameters differ only by what was just dropped and fold into one line.
 ---`marks` locates the active parameter on each line: { row, start_col, end_col }.
 ---`rule` is the row of the blank line left for the rule, if any.
+---`name_rows` are the rows that start with the callee and `name_marks` its
+---colours in the code (see name_highlights).
 ---Returns false when the cursor is in no call, or in one that signature_exclude
 ---lists: pyrefly still answers right before the opening parenthesis, where
 ---there is no callee to name, and the popup has no business staying open there. Returns nil when it cannot read
 ---the signatures, which are then the caller's to show.
 ---@param help lsp.SignatureHelp
 ---@param name string? of the callee, read from the code when nil
----@return { lines: string[], marks: integer[][], rule: integer? }|false|nil
+---@return { lines: string[], marks: integer[][], rule: integer?, name_rows: integer[], name_marks: table[] }|false|nil
 function M.signature_help(help, name)
     local lines, marks, seen = {}, {}, {}
-    name = name or callee()
+    local row, col
+    if not name then name, row, col = callee() end
     if not name or excluded(name) then return false end
     local on_top = signature_name == 'top' and name ~= ""
     local prefix = signature_name == 'left' and name or ""
@@ -381,7 +416,20 @@ function M.signature_help(help, name)
         end
     end
     if #lines == head then return end -- nothing this module can read
-    return { lines = lines, marks = marks, rule = on_top and 1 or nil }
+    -- the rows that start with the name, and its colours in the code
+    local name_rows = {}
+    if on_top then
+        name_rows = { 0 }
+    elseif prefix ~= "" then
+        for i = 1, #lines do name_rows[i] = i - 1 end
+    end
+    return {
+        lines = lines,
+        marks = marks,
+        rule = on_top and 1 or nil,
+        name_rows = name_rows,
+        name_marks = row and #name_rows > 0 and name_highlights(name, row, col) or {},
+    }
 end
 
 ---Whether the cursor sits between the parentheses of a call whose signature
@@ -615,6 +663,13 @@ function M.setup_signature()
         for _, mark in ipairs(view.marks) do
             vim.api.nvim_buf_set_extmark(buf, highlight_ns, mark[1], mark[2],
                 { end_col = mark[3], hl_group = 'BlinkCmpSignatureHelpActiveParameter' })
+        end
+        -- the callee in the colours it has in the code, over the generic Python highlighting
+        for _, row in ipairs(view.name_rows) do
+            for _, mark in ipairs(view.name_marks) do
+                vim.api.nvim_buf_set_extmark(buf, highlight_ns, row, mark[1],
+                    { end_col = mark[2], hl_group = mark[3], priority = 5000 + mark[4] })
+            end
         end
         -- A rule between the callee and its signatures, in the colour of the border.
         -- Virtual text over a blank line, like blink's own separator: the buffer is
