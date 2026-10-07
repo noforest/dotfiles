@@ -3479,10 +3479,21 @@ require("lazy").setup({
                         -- Which directions to show the window,
                         -- falling back to the next direction when there's not enough space,
                         -- or another window is in the way
-                        -- direction_priority = { 's', 'e' },
-                        -- below the cursor, above it when there is no room left: with 's'
-                        -- alone it was drawn over the status line at the bottom of the window
-                        direction_priority = { 's', 'n' },
+                        -- Below the cursor whenever the popup fits there, above it otherwise.
+                        -- { 's' } alone drew it over the status line on the last rows, and
+                        -- { 's', 'n' } does not mean "below first": blink takes the side with
+                        -- the most room, so it went above with free lines left below.
+                        direction_priority = function()
+                            local needed = 3 -- one line and its border
+                            local window = package.loaded['blink.cmp.signature.window']
+                            if window and window.win and window.win:is_open() then
+                                needed = math.min(window.win:get_height(), 10) -- max_height below
+                            end
+                            local cursor = vim.api.nvim_win_get_cursor(0)
+                            local row = vim.fn.screenpos(0, cursor[1], cursor[2] + 1).row
+                            local below = vim.o.lines - row - vim.o.cmdheight - (vim.o.laststatus > 0 and 1 or 0)
+                            return below >= needed and { 's' } or { 'n' }
+                        end,
                         -- Disable if you run into performance issues
                         treesitter_highlighting = true,
                         show_documentation = false,
