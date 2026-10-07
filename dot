@@ -1020,13 +1020,13 @@ cmd_login_shell() {
 # gnome_key <id> <binding> <command>: a custom shortcut, added to those already
 # there rather than replacing them.
 gnome_key() {
-    local mk=org.gnome.settings-daemon.plugins.media-keys list
+    local mk=org.gnome.settings-daemon.plugins.media-keys list add
     local path=/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/$1/
     list=$(gsettings get $mk custom-keybindings)
     case "$list" in
         *"'$path'"*) ;;
         "@as []"|"[]") gsettings set $mk custom-keybindings "['$path']" ;;
-        *) gsettings set $mk custom-keybindings "${list/\[/['$path', }" ;;
+        *) add="'$path', "; gsettings set $mk custom-keybindings "${list/\[/[$add}" ;;
     esac &&
     gsettings set "$mk.custom-keybinding:$path" name "$1" &&
     gsettings set "$mk.custom-keybinding:$path" command "$3" &&
