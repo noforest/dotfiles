@@ -342,14 +342,13 @@ end
 ---same parameters differ only by what was just dropped and fold into one line.
 ---`marks` locates the active parameter on each line: { row, start_col, end_col }.
 ---`rule` is the row of the blank line left for the rule, if any.
----`name_rows` are the rows that start with the callee, `name_width` its length.
 ---Returns false when the cursor is in no call, or in one that signature_exclude
 ---lists: pyrefly still answers right before the opening parenthesis, where
 ---there is no callee to name, and the popup has no business staying open there. Returns nil when it cannot read
 ---the signatures, which are then the caller's to show.
 ---@param help lsp.SignatureHelp
 ---@param name string? of the callee, read from the code when nil
----@return { lines: string[], marks: integer[][], rule: integer?, name_rows: integer[], name_width: integer }|false|nil
+---@return { lines: string[], marks: integer[][], rule: integer? }|false|nil
 function M.signature_help(help, name)
     local lines, marks, seen = {}, {}, {}
     name = name or callee()
@@ -382,14 +381,7 @@ function M.signature_help(help, name)
         end
     end
     if #lines == head then return end -- nothing this module can read
-    -- the rows that start with the name
-    local name_rows = {}
-    if on_top then
-        name_rows = { 0 }
-    elseif prefix ~= "" then
-        for i = 1, #lines do name_rows[i] = i - 1 end
-    end
-    return { lines = lines, marks = marks, rule = on_top and 1 or nil, name_rows = name_rows, name_width = #name }
+    return { lines = lines, marks = marks, rule = on_top and 1 or nil }
 end
 
 ---Whether the cursor sits between the parentheses of a call whose signature
@@ -623,12 +615,6 @@ function M.setup_signature()
         for _, mark in ipairs(view.marks) do
             vim.api.nvim_buf_set_extmark(buf, highlight_ns, mark[1], mark[2],
                 { end_col = mark[3], hl_group = 'BlinkCmpSignatureHelpActiveParameter' })
-        end
-        -- The callee in the plain text colour. The popup is highlighted as a bare
-        -- line of Python, which would colour it as a call whatever it is in the code.
-        for _, row in ipairs(view.name_rows) do
-            vim.api.nvim_buf_set_extmark(buf, highlight_ns, row, 0,
-                { end_col = view.name_width, hl_group = 'NormalFloat', priority = 5000 })
         end
         -- A rule between the callee and its signatures, in the colour of the border.
         -- Virtual text over a blank line, like blink's own separator: the buffer is
