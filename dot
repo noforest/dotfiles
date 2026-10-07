@@ -1034,17 +1034,23 @@ cmd_login_shell() {
 # the terminal font, the cursor blink, the default terminal and the keys that
 # dwm sets in its config.h.
 
-# gnome_key <id> <binding> <command>: a custom shortcut, added to those already
-# there rather than replacing them.
+# gs_list_add <schema> <key> <item>: adds a string to a gsettings list, keeping
+# what is already there.
+gs_list_add() {
+    local cur add="'$3', "
+    cur=$(gsettings get "$1" "$2")
+    case "$cur" in
+        *"'$3'"*) ;;
+        "@as []"|"[]") gsettings set "$1" "$2" "['$3']" ;;
+        *) gsettings set "$1" "$2" "${cur/\[/[$add}" ;;
+    esac
+}
+
+# gnome_key <id> <binding> <command>: a custom shortcut.
 gnome_key() {
-    local mk=org.gnome.settings-daemon.plugins.media-keys list add
+    local mk=org.gnome.settings-daemon.plugins.media-keys
     local path=/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/$1/
-    list=$(gsettings get $mk custom-keybindings)
-    case "$list" in
-        *"'$path'"*) ;;
-        "@as []"|"[]") gsettings set $mk custom-keybindings "['$path']" ;;
-        *) add="'$path', "; gsettings set $mk custom-keybindings "${list/\[/[$add}" ;;
-    esac &&
+    gs_list_add $mk custom-keybindings "$path" &&
     gsettings set "$mk.custom-keybinding:$path" name "$1" &&
     gsettings set "$mk.custom-keybinding:$path" command "$3" &&
     gsettings set "$mk.custom-keybinding:$path" binding "$2"
@@ -1058,14 +1064,7 @@ cmd_gnome_settings() {
     gsettings set $k delay 250 &&
     gsettings set $k repeat-interval 20 &&   # 50 per second
     ok "key repeat: 250 ms delay, 50 per second"
-    # Added to the xkb options already there rather than replacing them
-    local src=org.gnome.desktop.input-sources opts add="'caps:escape', "
-    opts=$(gsettings get $src xkb-options)
-    case "$opts" in
-        *"'caps:escape'"*) ;;
-        "@as []"|"[]") gsettings set $src xkb-options "['caps:escape']" ;;
-        *) gsettings set $src xkb-options "${opts/\[/[$add}" ;;
-    esac && ok "Caps Lock is Escape"
+    gs_list_add org.gnome.desktop.input-sources xkb-options caps:escape && ok "Caps Lock is Escape"
     # The keys dwm sets in suckless/dwm/config.h
     gnome_key flameshot "<Super><Shift>s" "flameshot gui" && ok "Super+Shift+S opens flameshot"
     gsettings set org.gnome.desktop.wm.keybindings close "['<Super><Shift>c', '<Alt>F4']" &&
@@ -1080,6 +1079,11 @@ cmd_gnome_settings() {
     # with this, as in dwm. The only handles of a window without a title bar.
     gsettings set org.gnome.desktop.wm.preferences resize-with-right-button true &&
     ok "Super+right drag resizes the window"
+    # GNOME refuses to resize a maximized window. This extension of the gnome
+    # module makes Super+M fill the screen without that state. The shell only
+    # finds a new extension when the session starts.
+    gs_list_add org.gnome.shell enabled-extensions resizable-maximize@noforest &&
+    ok "resizable-maximize extension enabled ${D}(log out and back in the first time)${N}"
     # alacritty as on the dwm machines, for whatever GNOME itself opens a
     # terminal for (Ctrl+Alt+T). The tmux window of the session start is
     # modules/terminal/.config/autostart/tmux.desktop.

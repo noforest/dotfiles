@@ -1,0 +1,6 @@
+{
+  "uuid": "resizable-maximize@noforest",
+  "name": "Resizable maximize",
+  "description": "Maximize fills the screen without the maximized state, so Super+right drag still resizes the window, as in dwm.",
+  "shell-version": ["46", "47", "48", "49", "50"]
+}
