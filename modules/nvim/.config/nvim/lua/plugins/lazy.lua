@@ -3480,7 +3480,9 @@ require("lazy").setup({
                         -- falling back to the next direction when there's not enough space,
                         -- or another window is in the way
                         -- direction_priority = { 's', 'e' },
-                        direction_priority = { 's' },
+                        -- below the cursor, above it when there is no room left: with 's'
+                        -- alone it was drawn over the status line at the bottom of the window
+                        direction_priority = { 's', 'n' },
                         -- Disable if you run into performance issues
                         treesitter_highlighting = true,
                         show_documentation = false,
