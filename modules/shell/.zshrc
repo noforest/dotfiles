@@ -39,8 +39,11 @@ export LS_COLORS="$(vivid generate dracula)"
 
 
 
-[[ -r ~/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh ]] && \
-    source ~/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh
+# The clone of packages/arch/manual.md, else the Debian package.
+for f in ~/.zsh/zsh-autosuggestions /usr/share/zsh-autosuggestions; do
+    [[ -r $f/zsh-autosuggestions.zsh ]] && { source $f/zsh-autosuggestions.zsh; break }
+done
+unset f
 
 
 # export PATH="/sbin:$PATH"
