@@ -922,7 +922,9 @@ cmd_nvim_setup() {
     nvim --headless "+Lazy! restore" +qall >/dev/null 2>&1 || warn "lazy.nvim reported an error, open nvim and run :Lazy"
     ok "plugins restored from lazy-lock.json"
 
-    if nvim --headless -c "lua require('nvim_setup').run()" 2>&1; then
+    # Loaded from the repository, not with require(): links are per file, so a
+    # machine that pulled this module without rerunning dot link does not have it.
+    if nvim --headless -c "lua dofile('$MODULES/nvim/.config/nvim/lua/nvim_setup.lua').run()" 2>&1; then
         ok "language servers and treesitter parsers installed"
     else
         err "some servers or parsers could not be installed, see above (rerun: dot nvim-setup)"

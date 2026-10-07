@@ -3,7 +3,7 @@
 -- the treesitter parsers. Run by `dot nvim-setup`, so that a new machine is
 -- ready before nvim is first opened:
 --
---   nvim --headless -c "lua require('nvim_setup').run()"
+--   nvim --headless -c "lua dofile('<this file>').run()"
 --
 -- mason-lspconfig installs nothing at all in a headless nvim, which is the only
 -- kind a bootstrap script can start. Both lists are read from the config
