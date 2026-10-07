@@ -3546,6 +3546,8 @@ require("lazy").setup({
 
                     trigger = {
                         show_on_trigger_character = true,
+                        -- entering insert mode right after a "." is not asking for the menu
+                        show_on_insert_on_trigger_character = false,
                     },
 
                     accept = {

@@ -22,8 +22,16 @@ local expanded_width = 100 -- once expanded
 local expand_hint = ' <leader>gh: expand '
 local ns = vim.api.nvim_create_namespace('lsp_hover')
 local hover_doc = vim.fn.stdpath('config') .. '/hover_doc.py'
-local signature_header = true -- name the callee above its signatures in the signature help
--- The rule under that name. A thin line sits in the middle of its cell: the thin
+-- Where the signature help names the callee:
+--   'left'   np.random.randint(low, high=None, size=None)   before each signature
+--   'top'    on a line of its own, over a rule
+--   false    nowhere, the signatures start at their parenthesis like the server's
+local signature_name = 'left'
+-- Calls whose signature help is never shown. Globs, tested against the name as
+-- written (`trajectory.append`) and against its last part (`append`): `*` stops
+-- at a dot, `**` does not. { "print", "logging.*", "np.random.**" }
+local signature_exclude = { "append" }
+-- The rule under the name when it is on top. A thin line sits in the middle of its cell: the thin
 -- ones drawn at the top (U+203E, U+23BA) are missing from most monospace fonts,
 -- and the block drawn at the top (U+2594) is three times as thick.
 local rule_char = "─"
@@ -306,6 +314,15 @@ local function callee()
     end
 end
 
+---Whether a callee is in signature_exclude.
+local function excluded(name)
+    for _, glob in ipairs(signature_exclude) do
+        local pattern = "^" .. vim.pesc(glob):gsub("%%%*%%%*", ".*"):gsub("%%%*", "[^.]*") .. "$"
+        if name:match(pattern) or (name:match("[%w_]+$") or ""):match(pattern) then return true end
+    end
+    return false
+end
+
 ---`name: Type = default` becomes `name=default`. Returns that and the bare
 ---name, or nil for the `/` and `*` markers.
 ---@return string?, string?
@@ -318,17 +335,16 @@ end
 
 ---Lays a signatureHelp answer out the way the Signature Hints extension for
 ---VS Code does:
----  np.random.randint
----  (low, high=None, size=None)
----  (low, high=None, size=None, dtype=...)
----the callee over a rule (when signature_header is on), then one line per overload with the names of its parameters and
+---  np.random.randint(low, high=None, size=None)
+---  np.random.randint(low, high=None, size=None, dtype=...)
+---one line per overload, named after the callee as signature_name says, with the names of its parameters and
 ---their defaults, without annotations or return type. Overloads that take the
 ---same parameters differ only by what was just dropped and fold into one line.
 ---`marks` locates the active parameter on each line: { row, start_col, end_col }.
 ---`rule` is the row of the blank line left for the rule, if any.
----Returns false when the cursor is in no call: pyrefly still answers right
----before the opening parenthesis, where there is no callee to name, and the
----popup has no business staying open there. Returns nil when it cannot read
+---Returns false when the cursor is in no call, or in one that signature_exclude
+---lists: pyrefly still answers right before the opening parenthesis, where
+---there is no callee to name, and the popup has no business staying open there. Returns nil when it cannot read
 ---the signatures, which are then the caller's to show.
 ---@param help lsp.SignatureHelp
 ---@param name string? of the callee, read from the code when nil
@@ -336,17 +352,18 @@ end
 function M.signature_help(help, name)
     local lines, marks, seen = {}, {}, {}
     name = name or callee()
-    if not name then return false end
-    local header = signature_header and name ~= ""
+    if not name or excluded(name) then return false end
+    local on_top = signature_name == 'top' and name ~= ""
+    local prefix = signature_name == 'left' and name or ""
     -- The blank line is where the caller draws a rule under the name (`rule`).
     -- A space rather than nothing: blink drops empty lines.
-    if header then lines = { name, " " } end
+    if on_top then lines = { name, " " } end
     local head = #lines
     for _, sig in ipairs(help.signatures) do
         local parsed = parse(sig.label)
         -- the server counts neither the receiver nor the `/` and `*` markers, like the list built here
         local active = tonumber(sig.activeParameter) or tonumber(help.activeParameter)
-        local text, names, mark = "(", {}, nil
+        local text, names, mark = prefix .. "(", {}, nil
         for _, param in ipairs(parsed and parsed.params or {}) do
             local piece, param_name = compact_param(param)
             if piece then
@@ -364,12 +381,14 @@ function M.signature_help(help, name)
         end
     end
     if #lines == head then return end -- nothing this module can read
-    return { lines = lines, marks = marks, rule = header and 1 or nil }
+    return { lines = lines, marks = marks, rule = on_top and 1 or nil }
 end
 
----Whether the cursor sits between the parentheses of a call.
+---Whether the cursor sits between the parentheses of a call whose signature
+---help is wanted.
 function M.in_call()
-    return callee() ~= nil
+    local name = callee()
+    return name ~= nil and not excluded(name)
 end
 
 local function set_lines(buf, first, last, lines)
@@ -683,8 +702,8 @@ function M._check()
         for _, m in ipairs(view.marks) do shown[#shown + 1] = ("%d:%s"):format(m[1], view.lines[m[1] + 1]:sub(m[2] + 1, m[3])) end
         return table.concat(view.lines, "\n") .. "  |  " .. table.concat(shown, " ")
     end
-    local header = signature_header
-    signature_header = false
+    local name_setting, exclude_setting = signature_name, signature_exclude
+    signature_name, signature_exclude = false, {}
     eq(help(0, "(cls: type[range], stop: SupportsIndex, /) -> range",
         "(cls: type[range], start: SupportsIndex, stop: SupportsIndex, step: SupportsIndex = 1, /) -> range"),
         "(stop)\n(start, stop, step=1)  |  0:stop 1:start")
@@ -700,7 +719,26 @@ function M._check()
     eq(help(1, "def f(a: dict[str, int] = {'x': 1, 'y': 2}, b: Callable[[int], bool] = lambda v: v == 1, **kwargs: Any) -> None"),
         "(a={'x': 1, 'y': 2}, b=lambda v: v == 1, **kwargs)  |  0:b=lambda v: v == 1")
     eq(help(0, "def make() -> MDP: ..."), "()  |  ")
-    signature_header = header
+    -- where the callee is named
+    local two = { signatures = { { label = "(cls: type[range], stop: SupportsIndex, /) -> range" },
+        { label = "(cls: type[range], start: SupportsIndex, stop: SupportsIndex, step: SupportsIndex = 1, /) -> range" } }, activeParameter = 0 }
+    local function shown(view)
+        local parts = {}
+        for _, m in ipairs(view.marks) do parts[#parts + 1] = ("%d:%s"):format(m[1], view.lines[m[1] + 1]:sub(m[2] + 1, m[3])) end
+        return table.concat(view.lines, "\n") .. "  |  " .. table.concat(parts, " ") .. "  |  rule=" .. tostring(view.rule)
+    end
+    signature_name = 'left'
+    eq(shown(M.signature_help(two, "np.arange")), "np.arange(stop)\nnp.arange(start, stop, step=1)  |  0:stop 1:start  |  rule=nil")
+    signature_name = 'top'
+    eq(shown(M.signature_help(two, "range")), "range\n \n(stop)\n(start, stop, step=1)  |  2:stop 3:start  |  rule=1")
+    -- excluded calls
+    signature_exclude = { "append", "logging.*", "np.random.**" }
+    for name, want in pairs({ ["trajectory.append"] = true, append = true, ["logging.info"] = true, ["logging.a.b"] = false,
+        ["np.random.rng.choice"] = true, ["np.zeros"] = false, appendix = false, [""] = false }) do
+        eq(tostring(excluded(name)), tostring(want))
+    end
+    eq(tostring(M.signature_help(two, "trajectory.append")), "false")
+    signature_name, signature_exclude = name_setting, exclude_setting
     print("ok")
 end
 

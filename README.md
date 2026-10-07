@@ -355,10 +355,10 @@ Two files hold everything that is specific to Python, under
   closes it. Signatures are worded the way Pylance does, without `self` or `cls`,
   and annotations longer than 48 characters are shortened until the float is
   expanded.
-- **Signature help.** The callee, a rule, then one line per overload with
+- **Signature help.** One line per overload, the callee followed by its
   parameter names and defaults only, after the Signature Hints extension for
   VS Code. It is open exactly while the cursor is between the parentheses of a
-  call.
+  call, except for the calls listed in `signature_exclude`.
 - **Completion menu.** A short word on the right of each name (`function`,
   `method`, `class`, `module`, or the type of a value).
 
@@ -366,9 +366,9 @@ Two files hold everything that is specific to Python, under
 project being edited, so they have to be installed for that interpreter. Without
 `python3` the hover shows what the server sends and nothing more.
 
-The settings sit at the top of `lua/lsp_hover.lua` (`signature_header`,
-`rule_char`, `max_annotation`, `max_width`, `expanded_width`). After changing
-either file:
+The settings sit at the top of `lua/lsp_hover.lua` (`signature_name`,
+`signature_exclude`, `rule_char`, `max_annotation`, `max_width`,
+`expanded_width`). After changing either file:
 
 ```sh
 nvim --headless -c "lua require('lsp_hover')._check()" -c q
