@@ -1030,11 +1030,11 @@ cmd_gnome_settings() {
         "@as []"|"[]") gsettings set $src xkb-options "['caps:escape']" ;;
         *) gsettings set $src xkb-options "${opts/\[/[$add}" ;;
     esac && ok "Caps Lock is Escape"
-    # The font of the terminals on the other machines. Its Mono variant, since
-    # VTE gives an icon one cell and the wider glyphs run into the next letter.
+    # The font of the terminals on the other machines. Not its Mono variant,
+    # which shrinks every icon to one cell: too small to read.
     # ponytail: the system monospace font, which a terminal profile with its own
     # font ignores
-    local font="RobotoMono Nerd Font Mono"
+    local font="RobotoMono Nerd Font"
     if fc-list : family | grep -F "$font" >/dev/null; then
         gsettings set org.gnome.desktop.interface monospace-font-name "$font 11" && ok "monospace font: $font 11"
     else

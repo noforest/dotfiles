@@ -86,10 +86,9 @@ The Nerd Fonts are not packaged. `dot fonts` downloads two of them into
 `~/.local/share/fonts`:
 
 - **RobotoMono Nerd Font**, the font alacritty, kitty and ghostty ask for.
-  `dot gnome-settings` makes its Mono variant the system monospace font, which
-  the GNOME terminal follows unless its profile sets a font of its own. The Mono
-  variant keeps every icon inside one cell, the only width that terminal draws
-  without running into the next letter.
+  `dot gnome-settings` makes it the system monospace font, which the GNOME
+  terminal follows unless its profile sets a font of its own. Not its Mono
+  variant, which shrinks every icon to one cell and leaves them too small.
 - **Symbols Nerd Font**, which `.config/fontconfig/fonts.conf` appends to every
   family as a fallback, so the icons show in the other fonts as well.
 
