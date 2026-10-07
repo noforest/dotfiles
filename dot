@@ -1053,15 +1053,14 @@ cmd_gnome_settings() {
     gnome_key flameshot "<Super><Shift>s" "flameshot gui" && ok "Super+Shift+S opens flameshot"
     gsettings set org.gnome.desktop.wm.keybindings close "['<Super><Shift>c', '<Alt>F4']" &&
     ok "Super+Shift+C closes the window"
-    # alacritty as on the dwm machines: Super+Shift+Return, and whatever GNOME
-    # itself opens a terminal for (Ctrl+Alt+T). The tmux window of the session
-    # start is modules/terminal/.config/autostart/tmux.desktop.
+    # alacritty as on the dwm machines, for whatever GNOME itself opens a
+    # terminal for (Ctrl+Alt+T). The tmux window of the session start is
+    # modules/terminal/.config/autostart/tmux.desktop.
     if command -v alacritty >/dev/null; then
         local term=org.gnome.desktop.default-applications.terminal
-        gnome_key terminal "<Super><Shift>Return" alacritty &&
         gsettings set $term exec alacritty &&
         gsettings set $term exec-arg -e &&
-        ok "alacritty is the default terminal, Super+Shift+Return opens it"
+        ok "alacritty is the default terminal"
     else
         warn "alacritty not installed, default terminal left alone ${D}(dot install, then dot gnome-settings)${N}"
     fi
