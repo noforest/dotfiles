@@ -2,7 +2,8 @@
 
 padding = { x = 0, y = 0 }
 # dynamic_padding = true
-# decorations = "None"
+# No title bar on GNOME. dwm draws none anyway, so this changes nothing there.
+decorations = "None"
 # opacity = 0.98
 # opacity = 0.96
 
