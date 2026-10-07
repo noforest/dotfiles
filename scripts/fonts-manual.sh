@@ -61,5 +61,8 @@ fi
 # The fallback .config/fontconfig/fonts.conf appends to every family, so the
 # icons render in any font without replacing it
 fetch_nerd NerdFontsSymbolsOnly "Symbols Nerd Font Mono"
+# The font of alacritty, kitty and ghostty, and of the GNOME terminal through
+# `dot gnome-settings`
+fetch_nerd RobotoMono "RobotoMono Nerd Font"
 
 fc-cache -f "$DEST" >/dev/null 2>&1 && printf '  \033[32m✓\033[0m font cache rebuilt\n'
