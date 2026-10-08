@@ -1056,6 +1056,43 @@ gnome_key() {
     gsettings set "$mk.custom-keybinding:$path" binding "$2"
 }
 
+# ghostty_key_repeat: GNOME 50 only, and gone again on any other version.
+# mutter 50 repeats held keys itself for the clients that let it, GTK 4 among
+# them, and gets one case wrong: a key pressed while another is still held is
+# sent once and never repeated. Going right then straight back left in ghostty
+# left the cursor where it was (mutter issue 4675, fixed in 51; alacritty
+# repeats keys itself and never showed it). Neither ghostty nor GTK has a
+# setting for it, so ghostty is started with a preloaded library that binds
+# the seat at the version before compositor-side repeat, which hands the
+# repeat back to GTK. Only the systemd unit gets it, the one the launcher and
+# D-Bus start; the drop-in is written, not linked, as NEVER_LINK demands.
+ghostty_key_repeat() {
+    local src="$HOME/.local/share/wl-seat-v9/wl-seat-v9.c"
+    local lib="$HOME/.local/lib/wl-seat-v9.so"
+    local dir="$HOME/.config/systemd/user/app-com.mitchellh.ghostty.service.d"
+    local ver
+    command -v ghostty >/dev/null || return 0
+    ver=$(gnome-shell --version 2>/dev/null)
+    ver=${ver##* }
+    ver=${ver%%.*}
+    if [ "$ver" != 50 ]; then
+        [ -e "$dir/key-repeat.conf" ] || return 0
+        rm -f "$dir/key-repeat.conf" "$lib"
+        rmdir "$dir" 2>/dev/null
+        systemctl --user daemon-reload
+        ok "ghostty key repeat workaround removed ${D}(GNOME ${ver:-?}, not 50)${N}"
+        return 0
+    fi
+    [ -r "$src" ] || { warn "$src missing, ghostty key repeat left alone ${D}(dot link, then dot gnome-settings)${N}"; return 0; }
+    command -v cc >/dev/null || { warn "no C compiler, ghostty key repeat left alone ${D}(dot install, then dot gnome-settings)${N}"; return 0; }
+    mkdir -p "$(dirname "$lib")" "$dir" &&
+    cc -shared -fPIC -O2 -o "$lib.new" "$src" -ldl &&
+    mv "$lib.new" "$lib" &&
+    printf '[Service]\nEnvironment=LD_PRELOAD=%s\n' "$lib" > "$dir/key-repeat.conf" &&
+    systemctl --user daemon-reload &&
+    ok "ghostty repeats a key pressed while another is held ${D}(systemctl --user restart app-com.mitchellh.ghostty.service)${N}"
+}
+
 cmd_gnome_settings() {
     head_ "gnome-settings"
     command -v gsettings >/dev/null || { warn "gsettings not installed, skipping"; return 0; }
@@ -1114,6 +1151,7 @@ cmd_gnome_settings() {
     else
         warn "$font not installed, monospace font left alone ${D}(dot fonts, then dot gnome-settings)${N}"
     fi
+    ghostty_key_repeat
 }
 
 # === bootstrap ===============================================================
@@ -1256,7 +1294,7 @@ ${B}dot${N} - dotfiles management for dwm / Arch
   ${G}dot build-suckless${N}       Build and install dwm, st, dmenu, slock, dwmblocks
   ${G}dot fonts${N} [profile]      Install the fonts that are not packaged
   ${G}dot login-shell${N}          Make zsh the login shell (chsh)
-  ${G}dot gnome-settings${N}       GNOME keys, key repeat, font, cursor, default terminal
+  ${G}dot gnome-settings${N}       GNOME keys, key repeat (ghostty included), font, cursor, default terminal
   ${G}dot audit${N} [what]         What this machine really uses: packages, scripts, or all
   ${G}dot state${N}                Regenerate system/state.md
   ${G}dot bootstrap${N} [profile]  Chain everything: bare machine to full environment
