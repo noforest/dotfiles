@@ -60,6 +60,8 @@ window-padding-x=0
 window-padding-y=0
 # window-padding-balance = true 
 window-save-state = always
+# Opens filling the screen on GNOME, as alacritty and kitty do; dwm ignores it.
+maximize = true
 # window-colorspace = "display-p3"
 # alacritty's background, default foreground and default palette, which kitty
 # copies too, so the three terminals show the same colours. Bold text keeps its
@@ -95,6 +97,10 @@ copy-on-select = clipboard
 # `auto` would draw that client-side bar under dwm as well.
 window-decoration = server
 confirm-close-surface = false
+# No bell at all. zsh rings on a Tab with nothing to complete and on Escape,
+# and ghostty's default answer is a bell emoji in the title bar plus an
+# attention request, which GNOME turns into a notification.
+bell-features = no-system,no-audio,no-attention,no-title,no-border
 font-synthetic-style = false
 resize-overlay=never
 cursor-style-blink=false
