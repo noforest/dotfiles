@@ -268,8 +268,16 @@ ZSH_AUTOSUGGEST_MANUAL_REBIND=0
 # }
 # fi
 
-# Checks the shell was started from Alacritty (even inside tmux)
-if [[ -n "$ALACRITTY_WINDOW_ID" ]]; then
+# Window title: the terminal's name and the current path.
+# Inside tmux the shell only gives the path, and tmux puts the name in front
+# (set-titles-string in ~/.tmux.conf). The shell cannot name the terminal there:
+# its environment is that of the terminal the tmux server was started from, so
+# a session started in alacritty and attached from ghostty said "Alacritty".
+if [[ -n "$TMUX" ]]; then
+    precmd() {
+        echo -ne "\033]0;${PWD/#$HOME/~}\007"
+    }
+elif [[ -n "$ALACRITTY_WINDOW_ID" ]]; then
     precmd() {
         # Sets the alacritty window title to the current path
         echo -ne "\033]0;Alacritty: ${PWD/#$HOME/~}\007"
