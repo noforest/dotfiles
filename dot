@@ -798,6 +798,10 @@ cmd_install() {
             # The archive's neovim is too old for the config (see the script).
             if printf '%s\n' "$native" | grep -qx 'tree-sitter-cli'; then
                 "$REPO/scripts/ubuntu-install-neovim.sh" || warn "neovim not installed, run scripts/ubuntu-install-neovim.sh"
+            fi
+            # So is its tmux, for the floating pane of Alt+E (see the script).
+            if printf '%s\n' "$native" | grep -qx 'tmux'; then
+                "$REPO/scripts/ubuntu-install-tmux.sh" || warn "tmux not built, run scripts/ubuntu-install-tmux.sh"
             fi ;;
         *)  die "unsupported distribution: $(distro) (add packages/$(distro)/ and a case here)" ;;
     esac

@@ -3,7 +3,16 @@ zsh
 zsh-autosuggestions
 zsh-syntax-highlighting
 bash-completion
+# tmux from apt is 3.6a and stays as the fallback in /usr/bin. `dot install`
+# then runs scripts/ubuntu-install-tmux.sh, which builds 3.8 into ~/.local for
+# the floating pane of Alt+E; the five packages after it are what that build
+# needs.
 tmux
+build-essential
+pkg-config
+bison
+libevent-dev
+libncurses-dev
 bat
 eza
 fd-find

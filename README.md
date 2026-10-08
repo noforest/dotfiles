@@ -360,6 +360,9 @@ both:
 - On Ubuntu, `dot install` also runs `scripts/ubuntu-install-neovim.sh`: the
   archive has neovim 0.11, so the official 0.12 release goes to `~/.local`, after
   a SHA256 check against the sum pinned in the script.
+- It runs `scripts/ubuntu-install-tmux.sh` the same way: the archive has tmux
+  3.6a, and the floating pane `Alt+E` opens yazi in is tmux 3.7, so 3.8 is built
+  from the release tarball into `~/.local`.
 - `dot nvim-setup` checks that these tools are there and names the missing ones.
   Then it restores the plugins pinned in `lazy-lock.json`, installs the eight
   language servers through mason and builds the sixteen parsers. It waits for all

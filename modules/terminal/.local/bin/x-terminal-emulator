@@ -4,4 +4,9 @@
 # `-e` is a process of its own, outside that unit, and needs it just as much.
 lib="$HOME/.local/lib/wl-seat-v9.so"
 [ -e "$lib" ] && export LD_PRELOAD="$lib${LD_PRELOAD:+:$LD_PRELOAD}"
+# The desktop starts this before any shell has run, with a PATH that has no
+# ~/.local/bin: `-e tmux` then found the archive's tmux and not the one
+# scripts/ubuntu-install-tmux.sh builds, and the server it started had no
+# floating pane.
+PATH="$HOME/.local/bin:$PATH"
 exec ghostty "$@"

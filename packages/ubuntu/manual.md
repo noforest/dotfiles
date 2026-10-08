@@ -29,6 +29,18 @@ its SHA256 against the sum pinned in the script and unpacks it under
 `~/.local/opt`, with a link in `~/.local/bin`. No sudo, nothing outside `$HOME`.
 To move to a newer release, change the version and the two sums in the script.
 
+## 1a. tmux is built from its own release
+
+The archive has tmux 3.6a, and `Alt+E` opens yazi in a floating pane, which is
+tmux 3.7. On 3.6a the binding falls back to a popup, and no image preview goes
+through a popup. `dot install` runs `scripts/ubuntu-install-tmux.sh`, which
+downloads the release tarball, checks its SHA256 against the sum pinned in the
+script, builds it and installs it under `~/.local/opt`, with a link in
+`~/.local/bin`. No sudo, nothing outside `$HOME`; the build dependencies are in
+`shell.txt`. The apt package stays in `/usr/bin` as a fallback. Run
+`tmux kill-server` once afterwards: a server started by the old binary keeps it.
+To move to a newer release, change the version and the sum in the script.
+
 ## 1b. Two renamed binaries
 
 Debian renames two commands, and `.zshrc` calls them by their upstream name.
