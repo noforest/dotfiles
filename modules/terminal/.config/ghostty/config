@@ -44,6 +44,9 @@
 
 font-family = Roboto Mono Nerd Font
 font-size = 12.5
+# Blends glyphs the way alacritty and kitty do. The default, linear-corrected,
+# draws light text on a dark background heavier, which reads as bold.
+alpha-blending = native
 # shell-integration-features = no-cursor,sudo,no-title
 cursor-style = block
 cursor-invert-fg-bg=true
@@ -52,7 +55,9 @@ cursor-invert-fg-bg=true
 background-opacity = 1
 background-blur = false
 
-mouse-hide-while-typing = true
+# As alacritty: the pointer stays, and there is no scrollbar
+mouse-hide-while-typing = false
+scrollbar = never
 
 
 window-vsync=false
