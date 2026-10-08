@@ -19,19 +19,27 @@ function unmaximize(win) {
         win.unmaximize(Meta.MaximizeFlags.BOTH);
 }
 
+function isFirefox(win) {
+    return win.get_window_type() === Meta.WindowType.NORMAL && /^firefox/i.test(win.get_wm_class() ?? '');
+}
+
 export default class ResizableMaximize extends Extension {
     enable() {
         this._pending = new Map();
         const mode = Shell.ActionMode.NORMAL;
         Main.wm.setCustomKeybindingHandler('maximize', mode, (_d, win) => win && this._fill(win));
         Main.wm.setCustomKeybindingHandler('unmaximize', mode, (_d, win) => win && this._restore(win));
-        // alacritty opens maximized (startup_mode) and is filled at once. Only
-        // alacritty: the others keep the maximized state they ask for until
+        // alacritty opens maximized (startup_mode) and is filled at once. So is
+        // Firefox, which has no setting to start maximized: only its first
+        // window, the later ones (picture-in-picture, library, devtools) keep
+        // their size. The others keep the maximized state they ask for until
         // Super+M.
         this._created = global.display.connect('window-created', (_d, win) => {
             const id = win.connect('shown', () => {
                 win.disconnect(id);
                 if (win.get_wm_class() === 'Alacritty' && isMaximized(win))
+                    this._fill(win);
+                else if (isFirefox(win) && !global.display.list_all_windows().some(w => w !== win && isFirefox(w)))
                     this._fill(win);
             });
         });
