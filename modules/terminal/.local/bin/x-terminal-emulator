@@ -1,2 +1,7 @@
 #!/bin/sh
-exec alacritty "$@"
+# GNOME 50 only: `dot gnome-settings` builds this library and preloads it in
+# ghostty's systemd unit (ghostty_key_repeat in dot). A ghostty started with
+# `-e` is a process of its own, outside that unit, and needs it just as much.
+lib="$HOME/.local/lib/wl-seat-v9.so"
+[ -e "$lib" ] && export LD_PRELOAD="$lib${LD_PRELOAD:+:$LD_PRELOAD}"
+exec ghostty "$@"

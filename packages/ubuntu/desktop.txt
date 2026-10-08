@@ -1,9 +1,9 @@
 # Graphical applications
 # The terminal of modules/terminal/, on dwm and on GNOME alike
-alacritty
-# Same settings as alacritty, installed side by side to compare the three
-kitty
 ghostty
+# Same settings as ghostty, installed side by side to compare the three
+alacritty
+kitty
 thunar
 thunar-archive-plugin
 thunar-media-tags-plugin

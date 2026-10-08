@@ -5,7 +5,7 @@ CACHE="/tmp/dwm-updates-count"
 
 case $BUTTON in
     1)
-        alacritty -e sudo pacman -Syu
+        ghostty -e sudo pacman -Syu
         echo "$(checkupdates | wc -l)" > "$CACHE"
         pkill -RTMIN+2 dwmblocks
         exit

@@ -15,7 +15,7 @@ setopt hist_verify
 
 
 export SUDO_EDITOR="nvim"
-export TERMINAL=alacritty
+export TERMINAL=ghostty
 export EDITOR=nvim
 export LC_ALL=en_US.UTF-8
 export LC_TIME=en_US.UTF-8

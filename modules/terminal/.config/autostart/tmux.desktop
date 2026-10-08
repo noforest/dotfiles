@@ -1,8 +1,12 @@
 # The tmux window dwm opens at session start (tmuxterm in suckless/dwm/config.h),
 # for the desktops that read ~/.config/autostart. dwm does not, so this never
 # doubles its own.
+# Through x-terminal-emulator rather than ghostty itself: the wrapper carries
+# the GNOME 50 key repeat workaround, which a ghostty started with `-e` does
+# not get from the systemd unit. By its path, since nothing puts ~/.local/bin
+# in the PATH of the session before a shell runs.
 [Desktop Entry]
 Type=Application
 Name=tmux
-Exec=alacritty -e systemd-run --user --scope --quiet tmux new-session -A -s main
+Exec=sh -c "exec ~/.local/bin/x-terminal-emulator -e systemd-run --user --scope --quiet tmux new-session -A -s main"
 OnlyShowIn=GNOME;

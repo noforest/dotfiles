@@ -1064,8 +1064,10 @@ gnome_key() {
 # repeats keys itself and never showed it). Neither ghostty nor GTK has a
 # setting for it, so ghostty is started with a preloaded library that binds
 # the seat at the version before compositor-side repeat, which hands the
-# repeat back to GTK. Only the systemd unit gets it, the one the launcher and
-# D-Bus start; the drop-in is written, not linked, as NEVER_LINK demands.
+# repeat back to GTK. The systemd unit gets it, the one the launcher and
+# D-Bus start; the drop-in is written, not linked, as NEVER_LINK demands. A
+# ghostty started with `-e` runs outside that unit:
+# modules/terminal/.local/bin/x-terminal-emulator preloads the same library.
 ghostty_key_repeat() {
     local src="$HOME/.local/share/wl-seat-v9/wl-seat-v9.c"
     local lib="$HOME/.local/lib/wl-seat-v9.so"
@@ -1124,19 +1126,19 @@ cmd_gnome_settings() {
     # finds a new extension when the session starts.
     gs_list_add org.gnome.shell enabled-extensions resizable-maximize@noforest &&
     ok "resizable-maximize extension enabled ${D}(log out and back in the first time)${N}"
-    # alacritty as on the dwm machines, for whatever GNOME itself opens a
+    # ghostty as on the dwm machines, for whatever GNOME itself opens a
     # terminal for (Ctrl+Alt+T). The tmux window of the session start is
     # modules/terminal/.config/autostart/tmux.desktop.
-    if command -v alacritty >/dev/null; then
+    if command -v ghostty >/dev/null; then
         local term=org.gnome.desktop.default-applications.terminal
-        gsettings set $term exec alacritty &&
+        gsettings set $term exec ghostty &&
         gsettings set $term exec-arg -e &&
-        ok "alacritty is the default terminal"
+        ok "ghostty is the default terminal"
         # dwm's terminal key, next to the one GNOME ships
         gsettings set org.gnome.settings-daemon.plugins.media-keys terminal "['<Primary><Alt>t', '<Super><Shift>Return']" &&
         ok "Super+Shift+Enter opens a terminal, as Ctrl+Alt+T does"
     else
-        warn "alacritty not installed, default terminal left alone ${D}(dot install, then dot gnome-settings)${N}"
+        warn "ghostty not installed, default terminal left alone ${D}(dot install, then dot gnome-settings)${N}"
     fi
     # ponytail: the system-wide setting, so text fields stop blinking too. The
     # GNOME terminal follows it unless its profile sets a blink mode of its own
