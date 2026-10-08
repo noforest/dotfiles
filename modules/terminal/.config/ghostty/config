@@ -44,7 +44,6 @@
 
 font-family = Roboto Mono Nerd Font
 font-size=11
-bold-is-bright=true
 # shell-integration-features = no-cursor,sudo,no-title
 cursor-style = block
 cursor-invert-fg-bg=true
@@ -62,8 +61,27 @@ window-padding-y=0
 # window-padding-balance = true 
 window-save-state = always
 # window-colorspace = "display-p3"
-background = 101010
-foreground = D5D5D5
+# alacritty's background, default foreground and default palette, which kitty
+# copies too, so the three terminals show the same colours. Bold text keeps its
+# own colour as it does there: bold-is-bright would repaint it from 8-15.
+background = 080808
+foreground = d8d8d8
+palette = 0=#181818
+palette = 1=#ac4242
+palette = 2=#90a959
+palette = 3=#f4bf75
+palette = 4=#6a9fb5
+palette = 5=#aa759f
+palette = 6=#75b5aa
+palette = 7=#d8d8d8
+palette = 8=#6b6b6b
+palette = 9=#c55555
+palette = 10=#aac474
+palette = 11=#feca88
+palette = 12=#82b8c8
+palette = 13=#c28cb8
+palette = 14=#93d3c3
+palette = 15=#f8f8f8
 
 # keybindings
 
@@ -71,11 +89,17 @@ foreground = D5D5D5
 clipboard-read = allow
 clipboard-write = allow
 copy-on-select = clipboard
-window-decoration = false
+# A title bar on GNOME, none under dwm. `server` asks the window manager for
+# the decoration: dwm draws none, and GNOME on Wayland, which has no
+# server-side decorations, makes ghostty fall back to its own title bar.
+# `auto` would draw that client-side bar under dwm as well.
+window-decoration = server
 confirm-close-surface = false
 font-synthetic-style = false
 resize-overlay=never
 cursor-style-blink=false
 shell-integration = zsh
+# Keeps the block cursor at the prompt. The Ubuntu launcher overrides this
+# line from its command line; modules/shell/.zshenv covers that case.
 shell-integration-features = no-cursor
 quick-terminal-animation-duration=0
