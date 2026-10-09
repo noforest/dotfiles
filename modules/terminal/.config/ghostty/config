@@ -87,6 +87,19 @@ palette = 15=#f8f8f8
 
 # keybindings
 
+# Alt+é, Alt+è and Alt+ç (2, 7 and 9 on azerty) are tmux's "goto window"
+# keys. ghostty only puts the ESC prefix in front of an ASCII character: for
+# these three it sent the bare letter, which got typed at the prompt, while
+# Alt+& " ' ( - _ went through. alacritty and kitty send ESC + the letter, so
+# this is the same sequence .tmux.conf already matches under them.
+keybind = alt+é=esc:é
+keybind = alt+è=esc:è
+keybind = alt+ç=esc:ç
+# The default goto_tab on the same physical keys would be looked up first.
+keybind = alt+digit_2=unbind
+keybind = alt+digit_7=unbind
+keybind = alt+digit_9=unbind
+
 # other
 clipboard-read = allow
 clipboard-write = allow
