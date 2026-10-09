@@ -176,9 +176,17 @@ cmd_check_never_link() {  # cmd_check_never_link <relative-path> -> 0 if forbidd
 # stores the *name* of a filter in .gitattributes: the command lives in the
 # configuration of each clone, which is unversioned, hence this function. A
 # clone where it never ran just ignores the attribute and drifts as before.
+#
+# drawColor= and drawThickness= are state of the same kind: flameshot writes
+# back the colour and the width last drawn with, so picking red for one
+# screenshot left the file modified. Dropping them would hand a new machine
+# flameshot's own defaults, so the filter pins them instead: whatever was last
+# used on disk, the index holds the values below. They are the shared default,
+# and changing it means changing them here, then running `dot link`.
 git_filters() {
     git -C "$REPO" rev-parse --git-dir >/dev/null 2>&1 || return 0
-    git -C "$REPO" config filter.flameshot.clean "sed '/^savePath=/d'"
+    git -C "$REPO" config filter.flameshot.clean \
+        "sed -e '/^savePath=/d' -e 's/^drawColor=.*/drawColor=#698dda/' -e 's/^drawThickness=.*/drawThickness=10/'"
 }
 
 cmd_link() {
