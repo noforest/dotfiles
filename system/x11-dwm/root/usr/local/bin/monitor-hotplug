@@ -4,7 +4,10 @@
 # It does not drive xrandr itself: it picks a mode and lets screen_mode apply
 # it. The absolute path is mandatory, udev has no /usr/local/bin in its PATH.
 
-# sleep 1
+# One change can raise several DRM events: two of us start 35 ms apart on a
+# wake-up off the dock. Run together, both drive xrandr and feh at once, and
+# picom crashed right after. Queue up on a lock held on this very file.
+exec 9<"$0" && flock 9
 
 . /usr/local/bin/desktop-env.sh   # sets DESKTOP_USER, USER_HOME, DISPLAY, XAUTHORITY, SCREEN_MODE_FILE
 
@@ -62,6 +65,9 @@ if [ -n "$EXTERNAL" ]; then
 else
     sleep "$STANDBY_GRACE"
     [ -n "$(external)" ] && exit 0
+    # No choice on record and the panel already lit: the run queued ahead of us
+    # handled this very unplug, screen_mode has not run since.
+    [ -z "$mode" ] && lit "$LAPTOP" && exit 0
     # Real unplug: forget the manual choice so that plugging back in starts over
     # on the monitor. The removal comes last, screen_mode rewrites the file.
     as_user /usr/local/bin/screen_mode laptop
