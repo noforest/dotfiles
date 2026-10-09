@@ -1070,8 +1070,9 @@ gnome_key() {
 # the seat at the version before compositor-side repeat, which hands the
 # repeat back to GTK. The systemd unit gets it, the one the launcher and
 # D-Bus start; the drop-in is written, not linked, as NEVER_LINK demands. A
-# ghostty started with `-e` runs outside that unit:
-# modules/terminal/.local/bin/x-terminal-emulator preloads the same library.
+# ghostty started with `-e`, or by GNOME's terminal key, runs outside that
+# unit: modules/terminal/.local/bin/x-terminal-emulator preloads the same
+# library, and cmd_gnome_settings makes it the default terminal.
 ghostty_key_repeat() {
     local src="$HOME/.local/share/wl-seat-v9/wl-seat-v9.c"
     local lib="$HOME/.local/lib/wl-seat-v9.so"
@@ -1133,9 +1134,13 @@ cmd_gnome_settings() {
     # ghostty as on the dwm machines, for whatever GNOME itself opens a
     # terminal for (Ctrl+Alt+T). The tmux window of the session start is
     # modules/terminal/.config/autostart/tmux.desktop.
+    # Through x-terminal-emulator and not ghostty itself: the terminal key runs
+    # this command outside ghostty's systemd unit, so the window it opened had
+    # no key repeat workaround (ghostty_key_repeat). By its path, since the
+    # session's PATH has no ~/.local/bin.
     if command -v ghostty >/dev/null; then
         local term=org.gnome.desktop.default-applications.terminal
-        gsettings set $term exec ghostty &&
+        gsettings set $term exec "$HOME/.local/bin/x-terminal-emulator" &&
         gsettings set $term exec-arg -e &&
         ok "ghostty is the default terminal"
         # dwm's terminal key, next to the one GNOME ships
