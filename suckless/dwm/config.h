@@ -155,7 +155,9 @@ static const Layout layouts[] = {
 /* commands */
 static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
 static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", col_gray1, "-nf", col_gray3, "-sb", col_cyan, "-sf", col_gray4, NULL };
-static const char *termcmd[]  = { "ghostty", NULL };
+/* alacritty, not ghostty: under X11 ghostty skips cells when a key is held and
+ * answers a key about 20 ms later. See docs/ghostty-on-x11.md. */
+static const char *termcmd[]  = { "alacritty", NULL };
 static const char *prtscrcmd[] = { "flameshot", "gui", NULL};
 #include <X11/XF86keysym.h>
 #include "movestack.c"
@@ -178,7 +180,7 @@ static const char *prtscrcmd[] = { "flameshot", "gui", NULL};
 
 /* The tmux server runs in a scope of the user manager, not in the login
  * session: it still outlives dwm, but no longer keeps a dead session closing. */
-static const char *tmuxterm[] = { "ghostty", "-e", "systemd-run", "--user", "--scope", "--quiet", "tmux", "new-session", "-A", "-s", "main", NULL };
+static const char *tmuxterm[] = { "alacritty", "-e", "systemd-run", "--user", "--scope", "--quiet", "tmux", "new-session", "-A", "-s", "main", NULL };
 
 // static const char *chrome_with_options[] = {
 //   "google-chrome-stable",
