@@ -52,3 +52,14 @@ require("custom-shell"):setup({
 -- undo.yazi records file operations from yazi's own DDS events. Without this
 -- call nothing is recorded and `u` has an empty journal to work from.
 require("undo"):setup()
+
+-- Under tmux the preview of the file yazi opens on is sometimes never drawn,
+-- about one start in two with ghostty: an image is there as soon as the cursor
+-- moves, and always there without tmux. Whatever loses that first image at
+-- startup, asking for the preview once more shortly after brings it back.
+if os.getenv("TMUX") then
+	ya.async(function()
+		ya.sleep(0.4)
+		ya.emit("peek", { force = true })
+	end)
+end
