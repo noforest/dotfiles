@@ -1,0 +1,17 @@
+#!/bin/sh
+# In front of /usr/bin/ueberzugpp, for yazi under tmux.
+#
+# yazi asks for its preview again whenever the hovered file changes, and
+# ueberzugpp draws what it is told wherever the pane is supposed to be: a PDF
+# rebuilt from nvim in another tmux window had its preview land on nvim. This
+# drops the "add" commands that come while the window of the pane is not the
+# current one. The focus hook of ~/.tmux.conf has yazi draw again on the way
+# back.
+real=/usr/bin/ueberzugpp
+[ "$1" = layer ] && [ -n "$TMUX_PANE" ] || exec "$real" "$@"
+while IFS= read -r line; do
+    case $line in
+        *'"add"'*) [ "$(tmux display-message -p -t "$TMUX_PANE" '#{window_active}')" = 1 ] || continue ;;
+    esac
+    printf '%s\n' "$line"
+done | "$real" "$@"
