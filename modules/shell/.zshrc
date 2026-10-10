@@ -287,10 +287,13 @@ fi
 
 function y() {
     local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
-    # A bar cursor while yazi runs: see the Alt+E binding in ~/.tmux.conf.
-    [[ -n "$TMUX" ]] && tmux set -p cursor-style bar
+    # A bar cursor while yazi runs, except on Ubuntu: see the Alt+E binding in
+    # ~/.tmux.conf.
+    local bar=
+    [[ -n "$TMUX" ]] && ! grep -qx 'ID=ubuntu' /etc/os-release 2>/dev/null && bar=1
+    [[ -n "$bar" ]] && tmux set -p cursor-style bar
     yazi "$@" --cwd-file="$tmp"
-    [[ -n "$TMUX" ]] && tmux set -pu cursor-style
+    [[ -n "$bar" ]] && tmux set -pu cursor-style
     # yazi writes a VFS url (trash:///, remote://...) when you quit from one,
     # and those are not directories the shell can cd into
     if cwd="$(command cat -- "$tmp")" && [ -d "$cwd" ] && [ "$cwd" != "$PWD" ]; then
