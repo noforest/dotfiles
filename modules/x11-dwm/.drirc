@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<!-- Mesa per-application settings. In the x11-dwm module: this is for X11.
+
+     ghostty does not wait for the vertical blank when it swaps buffers. picom
+     already presents in step with the screen, and GTK waiting a second time in
+     front of it made a key show 67 ms later, against 27 ms in alacritty. With
+     this and picom's glx backend it is 30 ms. See docs/ghostty-on-x11.md. -->
+<driconf>
+    <device>
+        <application name="ghostty" executable="ghostty">
+            <option name="vblank_mode" value="0"/>
+        </application>
+    </device>
+</driconf>

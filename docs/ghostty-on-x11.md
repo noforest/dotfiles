@@ -1,15 +1,21 @@
-# ghostty on X11: why dwm stays on alacritty
+# ghostty on X11: what makes it slower than alacritty, and what fixes it
 
-Measured on 2026-10-09 on the Arch laptop (dwm, X11, picom, 1920x1080 at 60 Hz,
-Radeon Vega integrated graphics), with ghostty 1.3.1, GTK 4.24.1, alacritty
-0.17.0, picom 13 and tmux 3.7c.
+Measured on 2026-10-09 and 2026-10-10 on the Arch laptop (dwm, X11, picom,
+1920x1080 at 60 Hz, Ryzen 5 3500U with Radeon Vega graphics), with ghostty
+1.3.1, GTK 4.24.1, alacritty 0.17.0, picom 13 and tmux 3.7c.
 
 ## Conclusion
 
-Under X11, ghostty moves the cursor less smoothly than alacritty and answers a
-key later. No setting found here fixes it, so dwm opens alacritty. ghostty stays
-the terminal on GNOME and Wayland, where the cursor looks smooth. That part was
-not measured.
+Out of the box, ghostty under X11 shows a key 40 ms later than alacritty. Two
+settings bring that down to 5 to 10 ms, and both are in this repository:
+
+- picom uses the `glx` backend (`modules/x11-dwm/.config/picom/picom.conf`),
+- Mesa does not make ghostty wait for the vertical blank
+  (`modules/x11-dwm/.drirc`).
+
+On mains power ghostty then crosses a line almost as evenly as alacritty. It
+still uses three to four times the CPU, and on battery it skipped cells on the
+first day. That case has not been measured again with the two settings.
 
 ## The symptom
 
@@ -32,48 +38,57 @@ sent through XTEST, each timed until the first pixel of the row changed.
 Everything is read from what the X server displays. Nothing here measures the
 panel itself.
 
-## Results
+## Key to screen
 
-| | alacritty | ghostty |
+Median of 40 presses, on mains power, tmux and nvim.
+
+| picom | ghostty | ghostty, `vblank_mode=0` | alacritty |
+|---|---|---|---|
+| xrender, vsync (the old config) | 67 ms | 50 ms | 27 ms |
+| glx, vsync (the new config) | 39 to 45 ms | 30 to 34 ms | 25 ms |
+| glx, no vsync | 47 ms | 42 ms | |
+| xrender, no vsync | 52 ms | 43 ms | |
+| not running | 45 ms | 32 ms | 18 ms |
+
+`vblank_mode=0` is Mesa's switch for the swap interval. `.drirc` sets it for
+the `ghostty` executable alone, so every way of starting ghostty gets it and
+nothing else loses its vsync. `GDK_DEBUG=no-vsync` does nothing here: ghostty
+overwrites that variable when it starts.
+
+## Cells skipped while the key is held
+
+A skipped cell is the cursor moving two cells in one screen update.
+
+| | ghostty | alacritty |
 |---|---|---|
-| Cells skipped while crossing the line (the cursor moves two at once) | 0 to 2 | 8 to 19 |
-| Key to screen, median | 34 ms | 52 to 60 ms |
-| Key to screen, worst | 45 ms | 82 ms |
-| CPU of the terminal while the key is held, nvim alone | 20 % of a core | 50 % |
+| On battery, old config, about 15 runs | 3 to 24 | 0 to 2 |
+| On mains, old config, 3 runs | 0 | 0 |
+| On mains, new config, 9 runs | 0, 0, 0, 0, 0, 1, 2, 6, 11 | 0 |
 
-With tmux in between, ghostty reaches 80 % of a core. Its two busy threads are
-the renderer (about 29 %) and the GTK main thread (about 16 %).
+The first day's runs were all on battery, where auto-cpufreq sets the
+`powersave` governor. The CPU driver is acpi-cpufreq, for which `powersave`
+means the lowest frequency, 1.4 GHz. ghostty needs 40 to 55 % of a core while
+the key is held, 80 % with tmux, against 8 to 20 % for alacritty, so it is the
+one that runs out of time. That link is a deduction: the governor was not
+changed by hand to confirm it.
 
-## What was ruled out
-
-Each line is a run of the same recording.
+## What does not help
 
 - The ghostty config. With `--config-default-files=false` and only the font
-  set, the CPU use is the same. The skipped cells could not be counted in that
-  run.
+  set, the CPU use is the same.
 - The inverted cursor (`cursor-invert-fg-bg`). Frame by frame, alacritty and
   ghostty draw the same thing: a block in the colour of the text under it.
 - tmux. nvim alone in ghostty skips as many cells.
-- picom. Stopping it changes nothing on the full width line.
-- Vertical sync. Neither `vblank_mode=0` nor `GDK_DEBUG=no-vsync` helps.
-- The GTK renderer (`GSK_RENDERER=gl`) and ghostty's I/O backend
-  (`--async-backend=epoll`).
+- The GTK renderer. `GSK_RENDERER=gl` changes nothing and `cairo` is worse
+  (78 ms).
+- ghostty's I/O backend (`--async-backend=epoll`).
 - The key repeat rate. At 60 per second instead of 50 both terminals lose the
-  33 ms pause that a 50 Hz repeat makes on a 60 Hz screen, but ghostty still
-  feels the same.
-- The hardware. alacritty keeps up on the same machine.
+  33 ms pause that a 50 Hz repeat makes on a 60 Hz screen, but ghostty feels
+  the same.
 
-## A guess at the cause
+## Still open
 
-Not verified. On Wayland the compositor tells GTK when each frame is shown, so
-GTK paints in step with the screen. On X11 that signal needs a compositing
-window manager that speaks the frame synchronisation protocol, which neither
-dwm nor picom does. GTK then paces itself on a timer, drifts against the real
-refresh and regularly misses a frame. ghostty also draws on its own thread and
-hands the result to the GTK thread, one more step than alacritty has.
-
-## When to look again
-
-After a ghostty or GTK release that changes rendering on X11, or if dwm is
-replaced by a Wayland compositor. The test takes a few minutes to redo: hold
-the right arrow across a long line in both terminals and compare.
+- The battery case with the new config.
+- A governor other than `powersave` on battery (`schedutil` in
+  `/etc/auto-cpufreq.conf`), if ghostty still skips cells there.
+- A ghostty release after 1.3.1.
