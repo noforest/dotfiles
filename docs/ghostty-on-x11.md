@@ -17,6 +17,10 @@ On mains power ghostty then crosses a line almost as evenly as alacritty. It
 still uses three to four times the CPU, and on battery it skipped cells on the
 first day. That case has not been measured again with the two settings.
 
+Decision, after a day of using both: dwm stays on alacritty. Even with the two
+settings ghostty is the less smooth of the two under X11. It remains the
+terminal on GNOME and Wayland.
+
 ## The symptom
 
 Holding the right arrow in nvim to cross a long line of code. In ghostty the
