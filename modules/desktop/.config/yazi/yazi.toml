@@ -30,9 +30,13 @@ image = [
 html = [
 	{ run = 'firefox %s', desc = "Firefox (default)", orphan = true, for = "linux" },
 ]
+notebook = [
+	{ run = 'code %s', desc = "VS Code (default)", orphan = true, for = "linux" },
+]
 
 [open]
 prepend_rules = [
+	{ url = "*.ipynb",          use = ["notebook", "edit", "reveal"] },
 	{ mime = "text/html",       use = ["html", "edit", "reveal"] },
 	{ mime = "application/pdf", use = ["pdf", "reveal"] },
 	{ mime = "image/*",         use = ["image", "reveal"] },
