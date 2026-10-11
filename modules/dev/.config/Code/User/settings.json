@@ -160,6 +160,9 @@
     "ty.completions.autoImport": false,
     // ty behind a filter that tidies the suggestion list (see the header of the
     // script). Remove this line to get the plain ty back.
-    "ty.path": ["${userHome}/.config/Code/User/ty-filter.py"]
+    "ty.path": ["${userHome}/.config/Code/User/ty-filter.py"],
+    // Read by the script, not by VS Code (which greys it out as unknown):
+    // true hides scikit-learn's set_*_request methods, false shows them.
+    "tyFilter.dropSetRequests": false
 
 }

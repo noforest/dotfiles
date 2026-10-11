@@ -8,7 +8,9 @@ on its way back, the completion lists:
     type without the generic arguments, cut to MAX_TYPE characters (the full
     type stays in the details panel);
   - scikit-learn's `set_*_request` methods are dropped: the library declares
-    all ten of them for type checkers only, on every estimator.
+    all ten of them for type checkers only, on every estimator. To keep them,
+    add `"tyFilter.dropSetRequests": false` to settings.json. The file is read
+    again for every list, so saving it is enough.
 
 Everything else is passed through untouched, and what VS Code sends goes to
 ty directly. If a list cannot be edited it is passed through as it came.
@@ -27,6 +29,17 @@ MAX_TYPE = 20
 PHANTOM = re.compile(r"set_\w+_request")
 WORDS = {2: "method", 3: "function", 7: "class", 9: "module"}  # CompletionItemKind
 GENERIC = re.compile(r"\[[^\[\]]*\]")
+# Not a setting VS Code knows, hence read here, from the settings.json next to this script.
+SETTINGS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "settings.json")
+KEEP_PHANTOMS = re.compile(r'^\s*"tyFilter\.dropSetRequests"\s*:\s*false\b', re.M)
+
+
+def drop_phantoms():
+    try:
+        with open(SETTINGS) as settings:
+            return not KEEP_PHANTOMS.search(settings.read())
+    except OSError:
+        return True
 
 
 def short(kind, text):
@@ -37,14 +50,14 @@ def short(kind, text):
     return text if len(text) <= MAX_TYPE else text[: MAX_TYPE - 1] + "…"
 
 
-def tidy(body):
+def tidy(body, drop=True):
     try:
         message = json.loads(body)
         result = message["result"]
         items = result["items"] if isinstance(result, dict) else result
         kept = []
         for item in items:
-            if PHANTOM.fullmatch(item["label"]):
+            if drop and PHANTOM.fullmatch(item["label"]):
                 continue
             details = item.get("labelDetails")
             if details and details.get("description"):
@@ -70,6 +83,10 @@ if sys.argv[1:] == ["--self-test"]:
     got = json.loads(tidy(json.dumps({"id": 1, "result": {"items": items}}).encode()))["result"]["items"]
     want = [(name, expected) for name, _, _, expected in rows if expected]
     assert [(i["label"], i["labelDetails"]["description"]) for i in got] == want, got
+    kept = json.loads(tidy(json.dumps({"id": 1, "result": {"items": items}}).encode(), drop=False))["result"]["items"]
+    assert [i["label"] for i in kept] == [name for name, *_ in rows], kept
+    assert KEEP_PHANTOMS.search('{\n    "tyFilter.dropSetRequests": false,\n}')
+    assert not KEEP_PHANTOMS.search('{\n    // "tyFilter.dropSetRequests": false,\n    "tyFilter.dropSetRequests": true\n}')
     assert tidy(b"not json") == b"not json"
     sys.exit(print("ok"))
 
@@ -90,7 +107,7 @@ while True:
         break
     body = server.stdout.read(length)
     if b'"labelDetails"' in body:
-        body = tidy(body)
+        body = tidy(body, drop_phantoms())
     out.write(b"Content-Length: %d\r\n\r\n" % len(body) + body)
     out.flush()
 sys.exit(server.wait())
