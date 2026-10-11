@@ -161,10 +161,12 @@
     // Extensions view. Back to plain Pylance: disable ty there, enable Pylance,
     // reload the window. The lines below then do nothing and can stay.
     "ty.completions.autoImport": false,
-    // ty behind a filter that tidies the suggestion list (see the header of the
-    // script). Remove this line to get the plain ty back.
+    // ty and pyrefly both run behind a script that tidies the suggestion list
+    // (see its header). For the plain server, comment its line out: ty then
+    // restarts by itself, pyrefly needs "Developer: Reload Window".
     "ty.path": ["${userHome}/.config/Code/User/ty-filter.py"],
-    // Read by the script, not by VS Code (which greys it out as unknown):
+    "pyrefly.lspPath": "~/.config/Code/User/pyrefly-filter.py",
+    // Read by the script, not by VS Code (which greys them out as unknown):
     // true hides the set_*_request methods of scikit-learn that the class does
     // not really have, false shows all ten.
     "tyFilter.dropSetRequests": true,

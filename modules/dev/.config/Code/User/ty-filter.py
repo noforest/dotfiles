@@ -1,20 +1,22 @@
 #!/usr/bin/python3
-"""ty for VS Code with a tidier suggestion list. Set as "ty.path" in settings.json.
+"""ty or pyrefly for VS Code with a tidier suggestion list.
 
-Runs the ty bundled with the VS Code extension and edits one kind of message
-on its way back, the completion lists:
-  - the type shown at the right of each row becomes a short word, as in the
-    nvim config: the kind of a callable, class or module, and for a value its
-    type without the generic arguments, cut to MAX_TYPE characters (the full
-    type stays in the details panel);
+Set as "ty.path" in settings.json, and under its other name, pyrefly-filter.py,
+as "pyrefly.lspPath". It runs the server bundled with the VS Code extension
+and edits one kind of message on its way back, the completion lists:
+  - each row gets a short word at its right, as in the nvim config: the kind
+    of a callable, class or module, and for a value its type without the
+    generic arguments, cut to MAX_TYPE characters (the full type stays in the
+    details panel). ty writes whole signatures there, which truncates the
+    names, and pyrefly writes one on the selected row only;
   - scikit-learn's `set_*_request` methods are dropped where the class does
     not have them. The library declares all ten for type checkers only, on
     every estimator, and creates the real ones when it is imported. Which
     class really has which is in ty-filter-sklearn.json, next to this script.
     A class missing from it keeps all ten, so that no method that exists is
     ever hidden;
-  - the list is declared complete. ty flags every list as incomplete, so VS
-    Code asks for a new one at each key, and ty answers nothing when the
+  - for ty, the list is declared complete. ty flags every list as incomplete,
+    so VS Code asks for a new one at each key, and ty answers nothing when the
     cursor is no longer at the end of the word, which is where a request sent
     one key earlier points. The popup then flickers or closes while a key is
     held. A complete list is narrowed by VS Code itself, as with pyrefly.
@@ -22,12 +24,13 @@ on its way back, the completion lists:
 
 The last two can be turned off in settings.json, `"tyFilter.dropSetRequests":
 false` and `"tyFilter.completeLists": false`. The file is read again for
-every list, so saving it is enough.
+every list, so saving it is enough. For the plain server, without this script
+at all, comment out its "ty.path" or "pyrefly.lspPath" line.
 
 Everything else is passed through untouched, and what VS Code sends goes to
-ty directly. If a list cannot be edited it is passed through as it came.
+the server directly. If a list cannot be edited it is passed through as it came.
 
-`ty-filter.py --self-test` checks the editing without starting ty.
+`ty-filter.py --self-test` checks the editing without starting a server.
 `<python that has scikit-learn> ty-filter.py --make-table > ty-filter-sklearn.json`
 writes the table again, after scikit-learn gained classes. A stale table only
 leaves the ten methods on the classes it does not know.
@@ -44,7 +47,8 @@ MAX_TYPE = 20
 # The ten scikit-learn declares, and no other name: `set_user_request` may be yours.
 PHANTOM = re.compile(r"set_(fit|partial_fit|predict|predict_proba|predict_log_proba|decision_function|score|split"
                      r"|transform|inverse_transform)_request")
-OWNER = re.compile(r"^bound method (\w+)\.")
+# The class a method is shown on, as ty writes it, then as pyrefly does.
+OWNER = re.compile(r"^bound method (\w+)\.|^def \w+\(\s*self\s*:\s*(\w+)")
 WORDS = {2: "method", 3: "function", 7: "class", 9: "module"}  # CompletionItemKind
 GENERIC = re.compile(r"\[[^\[\]]*\]")
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -52,6 +56,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SETTINGS = os.path.join(HERE, "settings.json")
 LIMIT = 900  # with auto-import ty stops near a thousand entries: such a list really is incomplete
 TABLE = os.path.join(HERE, "ty-filter-sklearn.json")
+PYREFLY = os.path.basename(sys.argv[0]).startswith("pyrefly")
+BUNDLED = "meta.pyrefly-*/bin/pyrefly" if PYREFLY else "astral-sh.ty-*/bundled/libs/bin/ty"
 
 
 def turned_off(name, text):
@@ -64,7 +70,8 @@ def options():
             text = settings.read()
     except OSError:
         text = ""
-    return {"drop": not turned_off("dropSetRequests", text), "complete": not turned_off("completeLists", text)}
+    return {"drop": not turned_off("dropSetRequests", text),
+            "complete": not PYREFLY and not turned_off("completeLists", text)}
 
 
 def real_setters():
@@ -79,6 +86,8 @@ def real_setters():
 def short(kind, text):
     if kind in WORDS:
         return WORDS[kind]
+    if "\n" in text:
+        return ""
     while "[" in text and (bare := GENERIC.sub("", text)) != text:  # innermost first
         text = bare
     return text if len(text) <= MAX_TYPE else text[: MAX_TYPE - 1] + "…"
@@ -92,12 +101,14 @@ def tidy(body, drop=True, real={}, complete=True):
         kept = []
         for item in items:
             details = item.get("labelDetails") or {}
+            text = details.get("description") or item.get("detail") or ""
             if drop and PHANTOM.fullmatch(item["label"]):
-                owner = OWNER.match(details.get("description") or "")
-                if owner and owner[1] in real and item["label"] not in real[owner[1]]:
+                owner = OWNER.match(text)
+                owner = owner and (owner[1] or owner[2])
+                if owner in real and item["label"] not in real[owner]:
                     continue
-            if details.get("description"):
-                details["description"] = short(item.get("kind"), details["description"])
+            if word := short(item.get("kind"), text):
+                item["labelDetails"] = {**details, "description": word}
             kept.append(item)
         if isinstance(result, dict):
             result["items"] = kept
@@ -111,25 +122,31 @@ def tidy(body, drop=True, real={}, complete=True):
 
 
 if sys.argv[1:] == ["--self-test"]:
-    rows = [("split", 2, "bound method StratifiedKFold.split(X, y, groups=None) -> Unknown", "method"),
-            ("set_fit_request", 2, "bound method A.set_fit_request(**kwargs) -> Unknown", "method"),
-            ("set_score_request", 2, "bound method A.set_score_request(**kwargs) -> Unknown", None),
-            ("set_user_request", 2, "bound method A.set_user_request(user) -> None", "method"),
-            ("set_params", 2, "bound method A.set_params(**params) -> Unknown", "method"),
-            ("n_splits", 22, "int", "int"),
-            ("coef_", 22, "Unknown | ndarray[tuple[Any, ...], dtype[Unknown]] | csr_matrix", "Unknown | ndarray |…"),
-            ("KFold", 7, "<class 'KFold'>", "class")]
-    items = [{"label": name, "kind": kind, "labelDetails": {"description": kind_text}} for name, kind, kind_text, _ in rows]
-    body = json.dumps({"id": 1, "result": {"isIncomplete": True, "items": items}}).encode()
+    def row(name, kind, text, pyrefly=False):
+        return {"label": name, "kind": kind, **({"detail": text} if pyrefly else {"labelDetails": {"description": text}})}
+
+    rows = [(row("split", 2, "bound method StratifiedKFold.split(X, y, groups=None) -> Unknown"), "method"),
+            (row("set_fit_request", 2, "bound method A.set_fit_request(**kwargs) -> Unknown"), "method"),
+            (row("set_score_request", 2, "bound method A.set_score_request(**kwargs) -> Unknown"), None),
+            (row("set_user_request", 2, "bound method A.set_user_request(user) -> None"), "method"),
+            (row("set_params", 2, "bound method A.set_params(**params) -> Unknown"), "method"),
+            (row("n_splits", 22, "int"), "int"),
+            (row("coef_", 22, "Unknown | ndarray[tuple[Any, ...], dtype[Unknown]] | csr_matrix"), "Unknown | ndarray |…"),
+            (row("KFold", 7, "<class 'KFold'>"), "class"),
+            (row("predict", 2, "def predict(\n    self: A,\n    X: ndarray\n) -> ndarray: ...", pyrefly=True), "method"),
+            (row("set_predict_request", 2, "def set_predict_request(\n    self: A,\n    **kwargs: Unknown\n) -> Unknown: ...", pyrefly=True), None),
+            (row("classes_", 5, "ndarray[Any, dtype[Any]]", pyrefly=True), "ndarray"),
+            ({"label": "for", "kind": 14}, "")]
+    body = json.dumps({"id": 1, "result": {"isIncomplete": True, "items": [item for item, _ in rows]}}).encode()
 
     def labels(**options):
-        return [(i["label"], i["labelDetails"]["description"]) for i in json.loads(tidy(body, **options))["result"]["items"]]
+        items = json.loads(tidy(body, **options))["result"]["items"]
+        return [(i["label"], (i.get("labelDetails") or {}).get("description", "")) for i in items]
 
-    want = [(name, expected) for name, _, _, expected in rows if expected]
+    want = [(item["label"], expected) for item, expected in rows if expected is not None]
     assert labels(real={"A": {"set_fit_request"}}) == want, labels(real={"A": {"set_fit_request"}})
-    unknown_class = [name for name, _ in labels()]
-    assert unknown_class == [name for name, *_ in rows], unknown_class
-    assert [name for name, _ in labels(drop=False)] == [name for name, *_ in rows], labels(drop=False)
+    assert [name for name, _ in labels()] == [item["label"] for item, _ in rows], labels()  # a class the table lacks
+    assert [name for name, _ in labels(drop=False, real={"A": set()})] == [item["label"] for item, _ in rows]
     assert json.loads(tidy(body))["result"]["isIncomplete"] is False
     assert json.loads(tidy(body, complete=False))["result"]["isIncomplete"] is True
     many = json.dumps({"id": 1, "result": {"isIncomplete": True, "items": [{"label": str(n)} for n in range(LIMIT)]}}).encode()
@@ -164,9 +181,9 @@ if sys.argv[1:] == ["--make-table"]:
               sys.stdout, indent=0)
     sys.exit()
 
-# The newest installed extension, so that an update of ty is picked up by itself.
-REAL = max(glob.glob(os.path.expanduser("~/.vscode/extensions/astral-sh.ty-*/bundled/libs/bin/ty")), key=os.path.getmtime)
-if sys.argv[1:2] != ["server"]:
+# The extension installed last, so that an update of the server is picked up by itself.
+REAL = max(glob.glob(os.path.expanduser("~/.vscode/extensions/" + BUNDLED)), key=os.path.getctime)
+if sys.argv[1:2] != ["lsp" if PYREFLY else "server"]:
     os.execv(REAL, [REAL] + sys.argv[1:])
 
 setters = real_setters()
@@ -181,7 +198,7 @@ while True:
     if not length:
         break
     body = server.stdout.read(length)
-    if b'"labelDetails"' in body:
+    if b'"sortText"' in body:
         body = tidy(body, real=setters, **options())
     out.write(b"Content-Length: %d\r\n\r\n" % len(body) + body)
     out.flush()
