@@ -12,9 +12,17 @@ on its way back, the completion lists:
     every estimator, and creates the real ones when it is imported. Which
     class really has which is in ty-filter-sklearn.json, next to this script.
     A class missing from it keeps all ten, so that no method that exists is
-    ever hidden. To keep them everywhere, add
-    `"tyFilter.dropSetRequests": false` to settings.json. The file is read
-    again for every list, so saving it is enough.
+    ever hidden;
+  - the list is declared complete. ty flags every list as incomplete, so VS
+    Code asks for a new one at each key, and ty answers nothing when the
+    cursor is no longer at the end of the word, which is where a request sent
+    one key earlier points. The popup then flickers or closes while a key is
+    held. A complete list is narrowed by VS Code itself, as with pyrefly.
+    Lists near ty's limit of a thousand entries are left as they are.
+
+The last two can be turned off in settings.json, `"tyFilter.dropSetRequests":
+false` and `"tyFilter.completeLists": false`. The file is read again for
+every list, so saving it is enough.
 
 Everything else is passed through untouched, and what VS Code sends goes to
 ty directly. If a list cannot be edited it is passed through as it came.
@@ -40,18 +48,23 @@ OWNER = re.compile(r"^bound method (\w+)\.")
 WORDS = {2: "method", 3: "function", 7: "class", 9: "module"}  # CompletionItemKind
 GENERIC = re.compile(r"\[[^\[\]]*\]")
 HERE = os.path.dirname(os.path.abspath(__file__))
-# Not a setting VS Code knows, hence read here, from the settings.json next to this script.
+# Not settings VS Code knows, hence read here, from the settings.json next to this script.
 SETTINGS = os.path.join(HERE, "settings.json")
-KEEP_PHANTOMS = re.compile(r'^\s*"tyFilter\.dropSetRequests"\s*:\s*false\b', re.M)
+LIMIT = 900  # with auto-import ty stops near a thousand entries: such a list really is incomplete
 TABLE = os.path.join(HERE, "ty-filter-sklearn.json")
 
 
-def drop_phantoms():
+def turned_off(name, text):
+    return bool(re.search(rf'^\s*"tyFilter\.{name}"\s*:\s*false\b', text, re.M))
+
+
+def options():
     try:
         with open(SETTINGS) as settings:
-            return not KEEP_PHANTOMS.search(settings.read())
+            text = settings.read()
     except OSError:
-        return True
+        text = ""
+    return {"drop": not turned_off("dropSetRequests", text), "complete": not turned_off("completeLists", text)}
 
 
 def real_setters():
@@ -71,7 +84,7 @@ def short(kind, text):
     return text if len(text) <= MAX_TYPE else text[: MAX_TYPE - 1] + "…"
 
 
-def tidy(body, drop=True, real={}):
+def tidy(body, drop=True, real={}, complete=True):
     try:
         message = json.loads(body)
         result = message["result"]
@@ -88,6 +101,8 @@ def tidy(body, drop=True, real={}):
             kept.append(item)
         if isinstance(result, dict):
             result["items"] = kept
+            if complete and len(items) < LIMIT:
+                result["isIncomplete"] = False
         else:
             message["result"] = kept
         return json.dumps(message, separators=(",", ":")).encode()
@@ -105,7 +120,7 @@ if sys.argv[1:] == ["--self-test"]:
             ("coef_", 22, "Unknown | ndarray[tuple[Any, ...], dtype[Unknown]] | csr_matrix", "Unknown | ndarray |…"),
             ("KFold", 7, "<class 'KFold'>", "class")]
     items = [{"label": name, "kind": kind, "labelDetails": {"description": kind_text}} for name, kind, kind_text, _ in rows]
-    body = json.dumps({"id": 1, "result": {"items": items}}).encode()
+    body = json.dumps({"id": 1, "result": {"isIncomplete": True, "items": items}}).encode()
 
     def labels(**options):
         return [(i["label"], i["labelDetails"]["description"]) for i in json.loads(tidy(body, **options))["result"]["items"]]
@@ -115,8 +130,12 @@ if sys.argv[1:] == ["--self-test"]:
     unknown_class = [name for name, _ in labels()]
     assert unknown_class == [name for name, *_ in rows], unknown_class
     assert [name for name, _ in labels(drop=False)] == [name for name, *_ in rows], labels(drop=False)
-    assert KEEP_PHANTOMS.search('{\n    "tyFilter.dropSetRequests": false,\n}')
-    assert not KEEP_PHANTOMS.search('{\n    // "tyFilter.dropSetRequests": false,\n    "tyFilter.dropSetRequests": true\n}')
+    assert json.loads(tidy(body))["result"]["isIncomplete"] is False
+    assert json.loads(tidy(body, complete=False))["result"]["isIncomplete"] is True
+    many = json.dumps({"id": 1, "result": {"isIncomplete": True, "items": [{"label": str(n)} for n in range(LIMIT)]}}).encode()
+    assert json.loads(tidy(many))["result"]["isIncomplete"] is True
+    assert turned_off("dropSetRequests", '{\n    "tyFilter.dropSetRequests": false,\n}')
+    assert not turned_off("dropSetRequests", '{\n    // "tyFilter.dropSetRequests": false,\n    "tyFilter.dropSetRequests": true\n}')
     assert tidy(b"not json") == b"not json"
     assert real_setters().get("LogisticRegression") == {"set_fit_request", "set_score_request"}, "ty-filter-sklearn.json"
     sys.exit(print("ok"))
@@ -163,7 +182,7 @@ while True:
         break
     body = server.stdout.read(length)
     if b'"labelDetails"' in body:
-        body = tidy(body, drop_phantoms(), setters)
+        body = tidy(body, real=setters, **options())
     out.write(b"Content-Length: %d\r\n\r\n" % len(body) + body)
     out.flush()
 sys.exit(server.wait())

@@ -157,6 +157,9 @@
         "scminput": false,
         "python": false
     },
+    // Python language server: ty, with Pylance and pyrefly disabled in the
+    // Extensions view. Back to plain Pylance: disable ty there, enable Pylance,
+    // reload the window. The lines below then do nothing and can stay.
     "ty.completions.autoImport": false,
     // ty behind a filter that tidies the suggestion list (see the header of the
     // script). Remove this line to get the plain ty back.
@@ -164,6 +167,9 @@
     // Read by the script, not by VS Code (which greys it out as unknown):
     // true hides the set_*_request methods of scikit-learn that the class does
     // not really have, false shows all ten.
-    "tyFilter.dropSetRequests": true
+    "tyFilter.dropSetRequests": true,
+    // true lets VS Code narrow the list by itself while a word is typed, false
+    // has it ask ty again at every key, as ty wants.
+    "tyFilter.completeLists": true
 
 }
