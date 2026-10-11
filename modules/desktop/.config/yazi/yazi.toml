@@ -17,7 +17,7 @@ play = [
 	{ run = "mediainfo %s1; echo 'Press enter to exit'; read _", desc = "Show media info", block = true, for = "unix" },
 ]
 pdf = [
-	{ run = 'pdf %s1',     desc = "Okular (default)", orphan = true, for = "linux" },
+	{ run = 'pdf %s',      desc = "Okular (default)", orphan = true, for = "linux" },
 	{ run = 'pdfz %s1',    desc = "Zathura",          orphan = true, for = "linux" },
 	{ run = 'firefox %s1', desc = "Firefox",          orphan = true, for = "linux" },
 	{ run = 'jopdf %s1',   desc = "Jopdf",            orphan = true, for = "linux" },

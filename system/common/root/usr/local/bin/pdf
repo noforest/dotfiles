@@ -2,7 +2,7 @@
 
 case "$1" in
     --help|-h)
-        echo "Usage: pdf <filename>"
+        echo "Usage: pdf <file>..."
         echo "Wrapper around okular: opens multiple PDFs in a single instance using tabs."
         exit 0
         ;;
@@ -12,16 +12,20 @@ case "$1" in
         exit 1
         ;;
     "")
-        echo "Usage: pdf <filename>"
+        echo "Usage: pdf <file>..."
         echo "Wrapper around okular: opens multiple PDFs in a single instance using tabs."
         exit 1
         ;;
 esac
 
 
-instance=$(qdbus | grep 'org.kde.okular-' | awk '{print $1}')
+# One call takes every file: several calls racing each other all find no
+# instance yet and each start their own okular.
+instance=$(qdbus | awk '/org.kde.okular-/ {print $1; exit}')
 if [ -z "$instance" ]; then
-    okular "$1" >/dev/null 2>&1 &
+    okular "$@" >/dev/null 2>&1 &
 else
-    qdbus "$instance" /okularshell org.kde.okular.openDocument "file://$(realpath "$1")" >/dev/null 2>&1
+    for file in "$@"; do
+        qdbus "$instance" /okularshell org.kde.okular.openDocument "file://$(realpath "$file")" >/dev/null 2>&1
+    done
 fi
