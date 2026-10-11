@@ -3,8 +3,10 @@
 
 Runs the ty bundled with the VS Code extension and edits one kind of message
 on its way back, the completion lists:
-  - the type shown at the right of each row is cut to MAX_TYPE characters
-    (the full type stays in the details panel);
+  - the type shown at the right of each row becomes a short word, as in the
+    nvim config: the kind of a callable, class or module, and for a value its
+    type without the generic arguments, cut to MAX_TYPE characters (the full
+    type stays in the details panel);
   - scikit-learn's `set_*_request` methods are dropped: the library declares
     all ten of them for type checkers only, on every estimator.
 
@@ -23,11 +25,15 @@ import sys
 
 MAX_TYPE = 20
 PHANTOM = re.compile(r"set_\w+_request")
-BOUND_METHOD = re.compile(r"^bound method [\w.]+")  # the name is already the row's label
+WORDS = {2: "method", 3: "function", 7: "class", 9: "module"}  # CompletionItemKind
+GENERIC = re.compile(r"\[[^\[\]]*\]")
 
 
-def shorten(text):
-    text = BOUND_METHOD.sub("", text)
+def short(kind, text):
+    if kind in WORDS:
+        return WORDS[kind]
+    while "[" in text and (bare := GENERIC.sub("", text)) != text:  # innermost first
+        text = bare
     return text if len(text) <= MAX_TYPE else text[: MAX_TYPE - 1] + "…"
 
 
@@ -42,7 +48,7 @@ def tidy(body):
                 continue
             details = item.get("labelDetails")
             if details and details.get("description"):
-                details["description"] = shorten(details["description"])
+                details["description"] = short(item.get("kind"), details["description"])
             kept.append(item)
         if isinstance(result, dict):
             result["items"] = kept
@@ -54,17 +60,16 @@ def tidy(body):
 
 
 if sys.argv[1:] == ["--self-test"]:
-    def rows(*pairs):
-        items = [{"label": name, "labelDetails": {"description": kind}} for name, kind in pairs]
-        body = json.dumps({"id": 1, "result": {"items": items}}, separators=(",", ":")).encode()
-        return [(i["label"], i["labelDetails"]["description"]) for i in json.loads(tidy(body))["result"]["items"]]
-
-    split = ("split", "bound method StratifiedKFold.split(X, y, groups=None) -> Unknown")
-    quoted = ("mode", 'Literal["a", "b"] | None | int')
-    cut = [("split", "(X, y, groups=None)…"), ("mode", 'Literal["a", "b"] |…')]
-    assert rows(split, quoted) == cut, rows(split, quoted)
-    with_phantom = rows(split, ("set_fit_request", "bound method A.set_fit_request(**kwargs) -> Unknown"), quoted, ("set_params", "int"))
-    assert with_phantom == cut + [("set_params", "int")], with_phantom
+    rows = [("split", 2, "bound method StratifiedKFold.split(X, y, groups=None) -> Unknown", "method"),
+            ("set_fit_request", 2, "bound method A.set_fit_request(**kwargs) -> Unknown", None),
+            ("set_params", 2, "bound method A.set_params(**params) -> Unknown", "method"),
+            ("n_splits", 22, "int", "int"),
+            ("coef_", 22, "Unknown | ndarray[tuple[Any, ...], dtype[Unknown]] | csr_matrix", "Unknown | ndarray |…"),
+            ("KFold", 7, "<class 'KFold'>", "class")]
+    items = [{"label": name, "kind": kind, "labelDetails": {"description": kind_text}} for name, kind, kind_text, _ in rows]
+    got = json.loads(tidy(json.dumps({"id": 1, "result": {"items": items}}).encode()))["result"]["items"]
+    want = [(name, expected) for name, _, _, expected in rows if expected]
+    assert [(i["label"], i["labelDetails"]["description"]) for i in got] == want, got
     assert tidy(b"not json") == b"not json"
     sys.exit(print("ok"))
 
