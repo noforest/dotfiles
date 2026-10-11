@@ -10,8 +10,9 @@ on its way back, the completion lists:
   - scikit-learn's `set_*_request` methods are dropped where the class does
     not have them. The library declares all ten for type checkers only, on
     every estimator, and creates the real ones when it is imported. Which
-    class really has which is in ty-filter-sklearn.json, next to this script,
-    and a class missing from it loses all ten. To keep them all instead, add
+    class really has which is in ty-filter-sklearn.json, next to this script.
+    A class missing from it keeps all ten, so that no method that exists is
+    ever hidden. To keep them everywhere, add
     `"tyFilter.dropSetRequests": false` to settings.json. The file is read
     again for every list, so saving it is enough.
 
@@ -21,7 +22,7 @@ ty directly. If a list cannot be edited it is passed through as it came.
 `ty-filter.py --self-test` checks the editing without starting ty.
 `<python that has scikit-learn> ty-filter.py --make-table > ty-filter-sklearn.json`
 writes the table again, after scikit-learn gained classes. A stale table only
-hides the methods of the classes it does not know.
+leaves the ten methods on the classes it does not know.
 """
 import glob
 import json
@@ -32,7 +33,9 @@ import subprocess
 import sys
 
 MAX_TYPE = 20
-PHANTOM = re.compile(r"set_\w+_request")
+# The ten scikit-learn declares, and no other name: `set_user_request` may be yours.
+PHANTOM = re.compile(r"set_(fit|partial_fit|predict|predict_proba|predict_log_proba|decision_function|score|split"
+                     r"|transform|inverse_transform)_request")
 OWNER = re.compile(r"^bound method (\w+)\.")
 WORDS = {2: "method", 3: "function", 7: "class", 9: "module"}  # CompletionItemKind
 GENERIC = re.compile(r"\[[^\[\]]*\]")
@@ -78,7 +81,7 @@ def tidy(body, drop=True, real={}):
             details = item.get("labelDetails") or {}
             if drop and PHANTOM.fullmatch(item["label"]):
                 owner = OWNER.match(details.get("description") or "")
-                if not owner or item["label"] not in real.get(owner[1], ()):
+                if owner and owner[1] in real and item["label"] not in real[owner[1]]:
                     continue
             if details.get("description"):
                 details["description"] = short(item.get("kind"), details["description"])
@@ -96,6 +99,7 @@ if sys.argv[1:] == ["--self-test"]:
     rows = [("split", 2, "bound method StratifiedKFold.split(X, y, groups=None) -> Unknown", "method"),
             ("set_fit_request", 2, "bound method A.set_fit_request(**kwargs) -> Unknown", "method"),
             ("set_score_request", 2, "bound method A.set_score_request(**kwargs) -> Unknown", None),
+            ("set_user_request", 2, "bound method A.set_user_request(user) -> None", "method"),
             ("set_params", 2, "bound method A.set_params(**params) -> Unknown", "method"),
             ("n_splits", 22, "int", "int"),
             ("coef_", 22, "Unknown | ndarray[tuple[Any, ...], dtype[Unknown]] | csr_matrix", "Unknown | ndarray |…"),
@@ -108,7 +112,8 @@ if sys.argv[1:] == ["--self-test"]:
 
     want = [(name, expected) for name, _, _, expected in rows if expected]
     assert labels(real={"A": {"set_fit_request"}}) == want, labels(real={"A": {"set_fit_request"}})
-    assert [name for name, _ in labels()] == [name for name, _ in want if name != "set_fit_request"], labels()
+    unknown_class = [name for name, _ in labels()]
+    assert unknown_class == [name for name, *_ in rows], unknown_class
     assert [name for name, _ in labels(drop=False)] == [name for name, *_ in rows], labels(drop=False)
     assert KEEP_PHANTOMS.search('{\n    "tyFilter.dropSetRequests": false,\n}')
     assert not KEEP_PHANTOMS.search('{\n    // "tyFilter.dropSetRequests": false,\n    "tyFilter.dropSetRequests": true\n}')
