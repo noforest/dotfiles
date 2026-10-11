@@ -20,7 +20,10 @@ and edits one kind of message on its way back, the completion lists:
     cursor is no longer at the end of the word, which is where a request sent
     one key earlier points. The popup then flickers or closes while a key is
     held. A complete list is narrowed by VS Code itself, as with pyrefly.
-    Lists near ty's limit of a thousand entries are left as they are.
+    Lists near ty's limit of a thousand entries are left as they are;
+  - for ty, a value loses its documentation: ty puts the one of its type
+    there, so an `int` attribute came with the manual of `int`. pyrefly gives
+    the attribute's own docstring, which is kept.
 
 The last two can be turned off in settings.json, `"tyFilter.dropSetRequests":
 false` and `"tyFilter.completeLists": false`. The file is read again for
@@ -109,6 +112,8 @@ def tidy(body, drop=True, real={}, complete=True):
                     continue
             if word := short(item.get("kind"), text):
                 item["labelDetails"] = {**details, "description": word}
+            if not PYREFLY and item.get("kind") not in WORDS:
+                item.pop("documentation", None)
             kept.append(item)
         if isinstance(result, dict):
             result["items"] = kept
@@ -153,6 +158,9 @@ if sys.argv[1:] == ["--self-test"]:
     assert json.loads(tidy(many))["result"]["isIncomplete"] is True
     assert turned_off("dropSetRequests", '{\n    "tyFilter.dropSetRequests": false,\n}')
     assert not turned_off("dropSetRequests", '{\n    // "tyFilter.dropSetRequests": false,\n    "tyFilter.dropSetRequests": true\n}')
+    documented = json.dumps({"id": 1, "result": {"items": [{"label": "n_splits", "kind": 22, "documentation": "int([x])"},
+                                                           {"label": "split", "kind": 2, "documentation": "Generate"}]}}).encode()
+    assert ["documentation" in item for item in json.loads(tidy(documented))["result"]["items"]] == [PYREFLY, True]
     assert tidy(b"not json") == b"not json"
     assert real_setters().get("LogisticRegression") == {"set_fit_request", "set_score_request"}, "ty-filter-sklearn.json"
     sys.exit(print("ok"))
