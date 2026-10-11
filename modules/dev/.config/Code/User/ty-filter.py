@@ -11,7 +11,10 @@ and edits one kind of message on its way back, the completion lists:
     code block, hence in colours: `def split(` with a parameter per line,
     `n_splits: int`, `class KFold`. Both servers send it as plain text, which
     VS Code prints in grey, and ty words it `bound method A.split(X, y)`.
-    The docstring follows;
+    The docstring follows. The panel cuts a long line, it does not wrap it:
+    hence the parameter per line, a def for each overload where ty writes
+    them all on one line, and pyrefly's default values brought back next to
+    the types, which it aligns in a column far at the right;
   - a value has the icon of a variable, the one Pylance gives an attribute.
     pyrefly has another for a field, and ty picks from the type: bars for an
     instance and, having no kind for it, a wrench for `Unknown`;
@@ -44,6 +47,7 @@ the server directly. If a list cannot be edited it is passed through as it came.
 writes the table again, after scikit-learn gained classes. A stale table only
 leaves the ten methods on the classes it does not know.
 """
+import functools
 import glob
 import json
 import os
@@ -58,6 +62,8 @@ PHANTOM = re.compile(r"set_(fit|partial_fit|predict|predict_proba|predict_log_pr
 # The class a method is shown on, as ty writes it, then as pyrefly does.
 OWNER = re.compile(r"^bound method (\w+)\.|^def \w+\(\s*self\s*:\s*(\w+)")
 BOUND = re.compile(r"^bound method .*?\.(?=\w+[\[(])")
+PADDING = re.compile(r"  +=")
+WIDTH = 32  # characters of a signature the details panel shows at the width VS Code opens it with
 # A string, skipped as a whole, or what opens, closes and separates the parameters of a signature.
 TOKEN = re.compile(r""""[^"]*"|'[^']*'|[()\[\]{},]""")
 # CompletionItemKind of a value: Field and Variable from pyrefly, Value and Struct from ty, which has none for Unknown.
@@ -94,35 +100,47 @@ def real_setters():
         return {}
 
 
-def one_per_line(text):
-    """`def f(a, b) -> c` with each parameter on its own line, as Pylance and pyrefly lay it out."""
-    start = text.find("(")
-    depth, commas = 0, []
+def inside(text, start):
+    """What the commas separate inside the bracket opening at `start`, and where that bracket closes."""
+    depth, cuts = 0, [start]
     for found in TOKEN.finditer(text, start):
-        char, at = found[0], found.start()
+        char = found[0]
         if char in "([{":
             depth += 1
         elif char in ")]}":
             depth -= 1
             if not depth:
-                break
+                cuts.append(found.start())
+                return [text[a + 1:b].strip() for a, b in zip(cuts, cuts[1:])], found.start()
         elif char == "," and depth == 1:
-            commas.append(at)
-    if depth or not commas:
+            cuts.append(found.start())
+    return [], start
+
+
+def one_per_line(text):
+    """`def f(a, b) -> c` with each parameter on its own line, as Pylance and pyrefly lay it out."""
+    start = text.find("(")
+    params, end = inside(text, start) if start > 0 else ([], 0)
+    if params in ([], [""]) or len(params) == 1 and len(text) <= WIDTH:
         return text
-    params = [text[a + 1:b].strip() for a, b in zip([start] + commas, commas + [at])]
-    return text[:start + 1] + "\n    " + ",\n    ".join(params) + "\n" + text[at:]
+    return text[:start + 1] + "\n    " + ",\n    ".join(params) + "\n" + text[end:]
 
 
+# numpy alone has 440 KB of overloads, 50 ms to lay out: paid once, the lists that follow hold the same signatures.
+@functools.lru_cache(maxsize=4096)
 def signature(label, kind, text):
     """What the server tells of a completion, as the Python source Pylance shows for it."""
     text = text.strip()
+    if text.startswith("Overload["):  # ty: `Overload[(a) -> b, [T](a: T) -> T]`, a def for each as Pylance and pyrefly show
+        return "\n\n".join(one_per_line(f"def {label}{each}") if each[:1] in ("(", "[") else each for each in inside(text, 8)[0]) or text
     if kind in VALUES:
         return f"{label}: {text}"
     text = re.sub(r"^<class '(.+)'>$", r"class \1", BOUND.sub("def ", text))  # the wording of ty
     if text.startswith("("):  # pyrefly, for a function of which it has the type only
         text = f"def {label}{text}"
-    return one_per_line(text) if text.startswith("def ") and "\n" not in text else text
+    if "\n" in text:  # pyrefly aligns the default values in a column, far out of the panel when one type is long
+        return PADDING.sub(" =", text)
+    return one_per_line(text) if text.startswith("def ") else text
 
 
 def tidy(body, drop=True, real={}, complete=True):
@@ -169,19 +187,26 @@ if sys.argv[1:] == ["--self-test"]:
     predict = "def predict(\n    self: A,\n    X: ndarray\n) -> ndarray: ..."
     rows = [(row("split", 2, "bound method StratifiedKFold.split(X, y, groups=None) -> Unknown", doc="Generate indices."),
              "def split(\n    X,\n    y,\n    groups=None\n) -> Unknown\n```\n---\nGenerate indices."),
-            (row("set_fit_request", 2, "bound method A.set_fit_request(**kwargs) -> Unknown"), "def set_fit_request(**kwargs) -> Unknown"),
+            (row("set_fit_request", 2, "bound method A.set_fit_request(**kwargs) -> Unknown"), "def set_fit_request(\n    **kwargs\n) -> Unknown"),
             (row("set_score_request", 2, "bound method A.set_score_request(**kwargs) -> Unknown"), None),
-            (row("set_user_request", 2, "bound method A.set_user_request(user) -> None"), "def set_user_request(user) -> None"),
+            (row("set_user_request", 2, "bound method A.set_user_request(user) -> None"), "def set_user_request(\n    user\n) -> None"),
+            (row("fit", 2, "bound method A.fit(X) -> A"), "def fit(X) -> A"),
             (row("merge", 2, 'bound method DataFrame.merge(how: Literal["a, b", "c"] = "a, b", on: tuple[int, int] = (1, 2)) -> DataFrame'),
              'def merge(\n    how: Literal["a, b", "c"] = "a, b",\n    on: tuple[int, int] = (1, 2)\n) -> DataFrame'),
             (row("len", 3, "def len(obj: Sized, /) -> int"), "def len(\n    obj: Sized,\n    /\n) -> int"),
+            (row("kind", 2, "bound method <class 'ArrowDtype'>.construct_from_string(string: str) -> ArrowDtype"),
+             "def construct_from_string(\n    string: str\n) -> ArrowDtype"),
+            (row("concat", 3, 'Overload[[T](objs: Iterable[T], *, axis: Literal[0, "index"] = ...) -> T, (objs: None) -> None]', doc="Concatenate."),
+             'def concat[T](\n    objs: Iterable[T],\n    *,\n    axis: Literal[0, "index"] = ...\n) -> T\n\ndef concat(objs: None) -> None\n```\n---\nConcatenate.'),
+            (row("mean", 3, "def mean(\n    a   : int,\n    axis: None           = None\n) -> Any: ...", pyrefly=True),
+             "def mean(\n    a   : int,\n    axis: None = None\n) -> Any: ..."),
             (row("n_splits", 22, "int", doc="int([x]) -> integer"), "n_splits: int" + ("\n```\n---\nint([x]) -> integer" if PYREFLY else "")),
             (row("w", None, "Unknown"), "w: Unknown"),
             (row("KFold", 7, "<class 'KFold'>"), "class KFold"),
             (row("predict", 2, predict, pyrefly=True), predict),
             (row("set_predict_request", 2, "def set_predict_request(\n    self: A,\n    **kwargs: Unknown\n) -> Unknown: ...", pyrefly=True), None),
             (row("classes_", 5, "ndarray[Any, dtype[Any]]", pyrefly=True), "classes_: ndarray[Any, dtype[Any]]"),
-            (row("cross_val_score", 3, "(estimator: BaseEstimator) -> ndarray", pyrefly=True), "def cross_val_score(estimator: BaseEstimator) -> ndarray"),
+            (row("cross_val_score", 3, "(estimator: BaseEstimator) -> ndarray", pyrefly=True), "def cross_val_score(\n    estimator: BaseEstimator\n) -> ndarray"),
             ({"label": "for", "kind": 14}, "")]
     body = json.dumps({"id": 1, "result": {"isIncomplete": True, "items": [item for item, _ in rows]}}).encode()
 
