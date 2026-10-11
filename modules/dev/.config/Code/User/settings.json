@@ -162,7 +162,8 @@
     // script). Remove this line to get the plain ty back.
     "ty.path": ["${userHome}/.config/Code/User/ty-filter.py"],
     // Read by the script, not by VS Code (which greys it out as unknown):
-    // true hides scikit-learn's set_*_request methods, false shows them.
-    "tyFilter.dropSetRequests": false
+    // true hides the set_*_request methods of scikit-learn that the class does
+    // not really have, false shows all ten.
+    "tyFilter.dropSetRequests": true
 
 }
