@@ -23,7 +23,10 @@ and edits one kind of message on its way back, the completion lists:
     Lists near ty's limit of a thousand entries are left as they are;
   - for ty, a value loses its documentation: ty puts the one of its type
     there, so an `int` attribute came with the manual of `int`. pyrefly gives
-    the attribute's own docstring, which is kept.
+    the attribute's own docstring, which is kept;
+  - for ty, every value gets the icon of a field, the blue cube pyrefly shows.
+    ty picks the icon from the type, bars for an instance and, having no kind
+    for it, a wrench for `Unknown`, which the word at the right already tells.
 
 The last two can be turned off in settings.json, `"tyFilter.dropSetRequests":
 false` and `"tyFilter.completeLists": false`. The file is read again for
@@ -53,6 +56,7 @@ PHANTOM = re.compile(r"set_(fit|partial_fit|predict|predict_proba|predict_log_pr
 # The class a method is shown on, as ty writes it, then as pyrefly does.
 OWNER = re.compile(r"^bound method (\w+)\.|^def \w+\(\s*self\s*:\s*(\w+)")
 WORDS = {2: "method", 3: "function", 7: "class", 9: "module"}  # CompletionItemKind
+VALUES = {22, 12, None}  # the kinds ty gives a value: Struct, Value for a literal, none for Unknown
 GENERIC = re.compile(r"\[[^\[\]]*\]")
 HERE = os.path.dirname(os.path.abspath(__file__))
 # Not settings VS Code knows, hence read here, from the settings.json next to this script.
@@ -114,6 +118,8 @@ def tidy(body, drop=True, real={}, complete=True):
                 item["labelDetails"] = {**details, "description": word}
             if not PYREFLY and item.get("kind") not in WORDS:
                 item.pop("documentation", None)
+                if item.get("kind") in VALUES:
+                    item["kind"] = 5  # Field
             kept.append(item)
         if isinstance(result, dict):
             result["items"] = kept
@@ -160,7 +166,9 @@ if sys.argv[1:] == ["--self-test"]:
     assert not turned_off("dropSetRequests", '{\n    // "tyFilter.dropSetRequests": false,\n    "tyFilter.dropSetRequests": true\n}')
     documented = json.dumps({"id": 1, "result": {"items": [{"label": "n_splits", "kind": 22, "documentation": "int([x])"},
                                                            {"label": "split", "kind": 2, "documentation": "Generate"}]}}).encode()
-    assert ["documentation" in item for item in json.loads(tidy(documented))["result"]["items"]] == [PYREFLY, True]
+    documented = json.loads(tidy(documented))["result"]["items"]
+    assert ["documentation" in item for item in documented] == [PYREFLY, True]
+    assert [item["kind"] for item in documented] == [22 if PYREFLY else 5, 2]
     assert tidy(b"not json") == b"not json"
     assert real_setters().get("LogisticRegression") == {"set_fit_request", "set_score_request"}, "ty-filter-sklearn.json"
     sys.exit(print("ok"))
