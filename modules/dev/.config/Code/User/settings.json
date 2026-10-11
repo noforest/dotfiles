@@ -1,0 +1,165 @@
+{
+    "editor.minimap.enabled": false,
+    "editor.tabSize": 4,
+    "editor.mouseWheelZoom": true,
+    "terminal.integrated.mouseWheelZoom": true,
+    "files.watcherExclude": {
+    "**/target/**": true,
+    "**/node_modules/**": true,
+    "**/.git/objects/**": true,
+    "**/.venv/**": true,
+    "**/__pycache__/**": true
+    },
+    // "search.followSymlinks": false,
+
+    "notebook.output.scrolling": true,
+    "notebook.cellToolbarLocation": {
+        "default": "right",
+        "jupyter-notebook": "left"
+    },
+    "notebook.markup.fontSize": 16,
+    "jupyter.generateSVGPlots": true,
+    "jupyter.themeMatplotlibPlots": false,
+    "editor.fontFamily": "Hack Nerd Font Mono",
+    "extensions.ignoreRecommendations": true,
+    "redhat.telemetry.enabled": false,
+    "editor.stickyScroll.enabled": false,
+    "java.completion.enabled": false,
+    "editor.cursorBlinking": "solid",
+    "keyboard.dispatch": "keyCode",
+    "vimNotebook.keyboardLayout": "azerty",
+    // Vim (and Vim Notebook, which drives it) in their own extension host:
+    // they start without waiting for Pylance, Jupyter and the rest, so :q
+    // and Ctrl-W work as soon as the window is up (VSCodeVim's recommendation).
+    "extensions.experimental.affinity": {
+        "vscodevim.vim": 1,
+        "for56.vim-jupyter": 1
+    },
+    "vim.useSystemClipboard": true,
+    "vim.leader": "<space>",
+    "vim.normalModeKeyBindingsNonRecursive": [
+        { "before": [","], "commands": ["workbench.action.previousEditor"] },
+        { "before": [";"], "commands": ["workbench.action.nextEditor"] },
+        { "before": ["<leader>", "c"], "commands": ["workbench.action.closeActiveEditor"] },
+        { "before": ["g", "d"], "commands": ["vimNotebook.goToDefinition"] },
+        { "before": ["<leader>", "g", "d"], "commands": ["vimNotebook.goToDefinition"] },
+        { "before": ["<leader>", "g", "h"], "commands": ["editor.action.showHover"] },
+        // Move the line up/down, as in nvim (keymaps.lua)
+        { "before": ["K"], "commands": ["editor.action.moveLinesUpAction"] },
+        { "before": ["J"], "commands": ["editor.action.moveLinesDownAction"] }
+    ],
+    "vim.visualModeKeyBindingsNonRecursive": [
+        { "before": ["K"], "commands": ["editor.action.moveLinesUpAction"] },
+        { "before": ["J"], "commands": ["editor.action.moveLinesDownAction"] }
+    ],
+    "editor.fontSize": 15,
+    "workbench.secondarySideBar.defaultVisibility": "visible",
+    "github.copilot.nextEditSuggestions.enabled": true,
+
+    "todohighlight.isEnable": true,
+    "todohighlight.isCaseSensitive": true,
+    "todohighlight.keywords": [
+        "DEBUG:",
+        "REVIEW:",
+        {
+            "text": "NOTE:",
+            "color": "#00ff9c",
+            "backgroundColor": "rgba(0,255,156,0.12)",
+            "border": "1px solid #00ff9c",
+            "borderRadius": "2px",
+            "overviewRulerColor": "#00ff9c"
+        },
+        {
+            "text": "HACK:",
+            "color": "#e0aaff",
+            "backgroundColor": "rgba(224,170,255,0.12)",
+            "border": "1px solid #e0aaff",
+            "borderRadius": "2px",
+            "overviewRulerColor": "#e0aaff"
+        },
+        {
+            "text": "TEST:",
+            "color": "#e0aaff",
+            "backgroundColor": "rgba(224,170,255,0.12)",
+            "border": "1px solid #e0aaff",
+            "borderRadius": "2px",
+            "overviewRulerColor": "#e0aaff"
+        },
+        {
+            "text": "TODO:",
+            "color": "#00eaff",
+            "backgroundColor": "rgba(0,234,255,0.12)",
+            "border": "1px solid #00eaff",
+            "borderRadius": "2px",
+            "overviewRulerColor": "#00eaff"
+        },
+        {
+            "text": "FIXME:",
+            "color": "#ff3b3b",
+            "backgroundColor": "rgba(255,59,59,0.12)",
+            "border": "1px solid #ff3b3b",
+            "borderRadius": "2px",
+            "overviewRulerColor": "#ff3b3b"
+        },
+        {
+            "text": "WARN:",
+            "color": "#fff176",
+            "backgroundColor": "rgba(255,241,118,0.12)",
+            "border": "1px solid #fff176",
+            "borderRadius": "2px",
+            "overviewRulerColor": "#fff176"
+        }
+    ],
+    "telemetry.telemetryLevel": "off",
+    "editor.parameterHints.enabled": true,
+    "python.analysis.typeCheckingMode": "basic",
+    "python.analysis.inlayHints.callArgumentNames": "partial",
+    "editor.inlayHints.enabled": "offUnlessPressed",
+    
+    // NOTE: EXTENSION signature hints
+    "signatureHints.enabled": true,
+    "signatureHints.exclude": {
+        "python": [
+            "print"
+        ]
+    },
+    // Most overloads stacked in the popup (default 10).
+    "signatureHints.maxOverloads": 0,
+    // "editor.inlayHints.maximumLength": 2,
+
+    // The focus blue of VS Code (focusBorder of Dark Modern), the one around a
+    // selected notebook cell. The hover is a shared widget: this colours the
+    // hovers opened with the mouse as well.
+    "workbench.colorCustomizations": {
+        // "editorHoverWidget.border": "#0078D4"
+        // "editorHoverWidget.border": "#569CD6"
+        "editorHoverWidget.border": "#336a96" // Dark 2026
+    },
+
+    "workbench.iconTheme": "material-icon-theme",
+    "network.meteredConnection": "off",
+    "workbench.settings.applyToAllProfiles": [
+        "python.defaultInterpreterPath",
+        "python-envs.globalSearchPaths",
+        "claudeCode.initialPermissionMode"
+    ],
+    "claudeCode.initialPermissionMode": "default",
+    "vsicons.dontShowNewVersionMessage": true,
+    "jupyter.askForKernelRestart": false,
+    "gitlens.graph.details.location": "auto",
+    "git.confirmSync": false,
+    "window.newWindowProfile": "Data Science Profile",
+    "claudeCode.hideOnboarding": true,
+    "github.copilot.enable": {
+        "*": false,
+        "plaintext": false,
+        "markdown": false,
+        "scminput": false,
+        "python": false
+    },
+    "ty.completions.autoImport": false,
+    // ty behind a filter that tidies the suggestion list (see the header of the
+    // script). Remove this line to get the plain ty back.
+    "ty.path": ["${userHome}/.config/Code/User/ty-filter.py"]
+
+}
