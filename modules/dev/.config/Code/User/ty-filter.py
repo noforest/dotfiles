@@ -1,14 +1,23 @@
 #!/usr/bin/python3
-"""ty or pyrefly for VS Code with a tidier suggestion list.
+"""ty or pyrefly for VS Code with the suggestion list of Pylance.
 
 Set as "ty.path" in settings.json, and under its other name, pyrefly-filter.py,
 as "pyrefly.lspPath". It runs the server bundled with the VS Code extension
 and edits one kind of message on its way back, the completion lists:
-  - each row gets a short word at its right, as in the nvim config: the kind
-    of a callable, class or module, and for a value its type without the
-    generic arguments, cut to MAX_TYPE characters (the full type stays in the
-    details panel). ty writes whole signatures there, which truncates the
-    names, and pyrefly writes one on the selected row only;
+  - a row is its icon and its name, nothing at its right. ty writes whole
+    signatures there, which truncates the names, and pyrefly writes one on
+    the selected row;
+  - the details panel opens on that signature, written as Python source in a
+    code block, hence in colours: `def split(` with a parameter per line,
+    `n_splits: int`, `class KFold`. Both servers send it as plain text, which
+    VS Code prints in grey, and ty words it `bound method A.split(X, y)`.
+    The docstring follows;
+  - a value has the icon of a variable, the one Pylance gives an attribute.
+    pyrefly has another for a field, and ty picks from the type: bars for an
+    instance and, having no kind for it, a wrench for `Unknown`;
+  - for ty, a value loses its documentation: ty puts the one of its type
+    there, so an `int` attribute came with the manual of `int`. pyrefly gives
+    the attribute's own docstring, which is kept;
   - scikit-learn's `set_*_request` methods are dropped where the class does
     not have them. The library declares all ten for type checkers only, on
     every estimator, and creates the real ones when it is imported. Which
@@ -20,13 +29,7 @@ and edits one kind of message on its way back, the completion lists:
     cursor is no longer at the end of the word, which is where a request sent
     one key earlier points. The popup then flickers or closes while a key is
     held. A complete list is narrowed by VS Code itself, as with pyrefly.
-    Lists near ty's limit of a thousand entries are left as they are;
-  - for ty, a value loses its documentation: ty puts the one of its type
-    there, so an `int` attribute came with the manual of `int`. pyrefly gives
-    the attribute's own docstring, which is kept;
-  - for ty, every value gets the icon of a field, the blue cube pyrefly shows.
-    ty picks the icon from the type, bars for an instance and, having no kind
-    for it, a wrench for `Unknown`, which the word at the right already tells.
+    Lists near ty's limit of a thousand entries are left as they are.
 
 The last two can be turned off in settings.json, `"tyFilter.dropSetRequests":
 false` and `"tyFilter.completeLists": false`. The file is read again for
@@ -49,15 +52,16 @@ import signal
 import subprocess
 import sys
 
-MAX_TYPE = 20
 # The ten scikit-learn declares, and no other name: `set_user_request` may be yours.
 PHANTOM = re.compile(r"set_(fit|partial_fit|predict|predict_proba|predict_log_proba|decision_function|score|split"
                      r"|transform|inverse_transform)_request")
 # The class a method is shown on, as ty writes it, then as pyrefly does.
 OWNER = re.compile(r"^bound method (\w+)\.|^def \w+\(\s*self\s*:\s*(\w+)")
-WORDS = {2: "method", 3: "function", 7: "class", 9: "module"}  # CompletionItemKind
-VALUES = {22, 12, None}  # the kinds ty gives a value: Struct, Value for a literal, none for Unknown
-GENERIC = re.compile(r"\[[^\[\]]*\]")
+BOUND = re.compile(r"^bound method .*?\.(?=\w+[\[(])")
+# A string, skipped as a whole, or what opens, closes and separates the parameters of a signature.
+TOKEN = re.compile(r""""[^"]*"|'[^']*'|[()\[\]{},]""")
+# CompletionItemKind of a value: Field and Variable from pyrefly, Value and Struct from ty, which has none for Unknown.
+VALUES = {5, 6, 12, 22, None}
 HERE = os.path.dirname(os.path.abspath(__file__))
 # Not settings VS Code knows, hence read here, from the settings.json next to this script.
 SETTINGS = os.path.join(HERE, "settings.json")
@@ -90,14 +94,35 @@ def real_setters():
         return {}
 
 
-def short(kind, text):
-    if kind in WORDS:
-        return WORDS[kind]
-    if "\n" in text:
-        return ""
-    while "[" in text and (bare := GENERIC.sub("", text)) != text:  # innermost first
-        text = bare
-    return text if len(text) <= MAX_TYPE else text[: MAX_TYPE - 1] + "…"
+def one_per_line(text):
+    """`def f(a, b) -> c` with each parameter on its own line, as Pylance and pyrefly lay it out."""
+    start = text.find("(")
+    depth, commas = 0, []
+    for found in TOKEN.finditer(text, start):
+        char, at = found[0], found.start()
+        if char in "([{":
+            depth += 1
+        elif char in ")]}":
+            depth -= 1
+            if not depth:
+                break
+        elif char == "," and depth == 1:
+            commas.append(at)
+    if depth or not commas:
+        return text
+    params = [text[a + 1:b].strip() for a, b in zip([start] + commas, commas + [at])]
+    return text[:start + 1] + "\n    " + ",\n    ".join(params) + "\n" + text[at:]
+
+
+def signature(label, kind, text):
+    """What the server tells of a completion, as the Python source Pylance shows for it."""
+    text = text.strip()
+    if kind in VALUES:
+        return f"{label}: {text}"
+    text = re.sub(r"^<class '(.+)'>$", r"class \1", BOUND.sub("def ", text))  # the wording of ty
+    if text.startswith("("):  # pyrefly, for a function of which it has the type only
+        text = f"def {label}{text}"
+    return one_per_line(text) if text.startswith("def ") and "\n" not in text else text
 
 
 def tidy(body, drop=True, real={}, complete=True):
@@ -107,19 +132,23 @@ def tidy(body, drop=True, real={}, complete=True):
         items = result["items"] if isinstance(result, dict) else result
         kept = []
         for item in items:
-            details = item.get("labelDetails") or {}
-            text = details.get("description") or item.get("detail") or ""
+            described = (item.get("labelDetails") or {}).pop("description", None)
+            text = item.pop("detail", None) or described or ""
             if drop and PHANTOM.fullmatch(item["label"]):
                 owner = OWNER.match(text)
                 owner = owner and (owner[1] or owner[2])
                 if owner in real and item["label"] not in real[owner]:
                     continue
-            if word := short(item.get("kind"), text):
-                item["labelDetails"] = {**details, "description": word}
-            if not PYREFLY and item.get("kind") not in WORDS:
-                item.pop("documentation", None)
-                if item.get("kind") in VALUES:
-                    item["kind"] = 5  # Field
+            kind = item.get("kind")
+            if kind in VALUES:
+                item["kind"] = 6  # Variable
+                if not PYREFLY:
+                    item.pop("documentation", None)
+            if text:
+                doc = item.get("documentation")
+                doc = doc.get("value") if isinstance(doc, dict) else doc
+                item["documentation"] = {"kind": "markdown", "value": f"```python\n{signature(item['label'], kind, text)}\n```"
+                                                                      + (f"\n---\n{doc}" if doc else "")}
             kept.append(item)
         if isinstance(result, dict):
             result["items"] = kept
@@ -133,43 +162,48 @@ def tidy(body, drop=True, real={}, complete=True):
 
 
 if sys.argv[1:] == ["--self-test"]:
-    def row(name, kind, text, pyrefly=False):
-        return {"label": name, "kind": kind, **({"detail": text} if pyrefly else {"labelDetails": {"description": text}})}
+    def row(name, kind, text, doc=None, pyrefly=False):
+        return {"label": name, "kind": kind, **({"detail": text} if pyrefly else {"detail": text, "labelDetails": {"description": text}}),
+                **({"documentation": {"kind": "markdown", "value": doc}} if doc else {})}
 
-    rows = [(row("split", 2, "bound method StratifiedKFold.split(X, y, groups=None) -> Unknown"), "method"),
-            (row("set_fit_request", 2, "bound method A.set_fit_request(**kwargs) -> Unknown"), "method"),
+    predict = "def predict(\n    self: A,\n    X: ndarray\n) -> ndarray: ..."
+    rows = [(row("split", 2, "bound method StratifiedKFold.split(X, y, groups=None) -> Unknown", doc="Generate indices."),
+             "def split(\n    X,\n    y,\n    groups=None\n) -> Unknown\n```\n---\nGenerate indices."),
+            (row("set_fit_request", 2, "bound method A.set_fit_request(**kwargs) -> Unknown"), "def set_fit_request(**kwargs) -> Unknown"),
             (row("set_score_request", 2, "bound method A.set_score_request(**kwargs) -> Unknown"), None),
-            (row("set_user_request", 2, "bound method A.set_user_request(user) -> None"), "method"),
-            (row("set_params", 2, "bound method A.set_params(**params) -> Unknown"), "method"),
-            (row("n_splits", 22, "int"), "int"),
-            (row("coef_", 22, "Unknown | ndarray[tuple[Any, ...], dtype[Unknown]] | csr_matrix"), "Unknown | ndarray |…"),
-            (row("KFold", 7, "<class 'KFold'>"), "class"),
-            (row("predict", 2, "def predict(\n    self: A,\n    X: ndarray\n) -> ndarray: ...", pyrefly=True), "method"),
+            (row("set_user_request", 2, "bound method A.set_user_request(user) -> None"), "def set_user_request(user) -> None"),
+            (row("merge", 2, 'bound method DataFrame.merge(how: Literal["a, b", "c"] = "a, b", on: tuple[int, int] = (1, 2)) -> DataFrame'),
+             'def merge(\n    how: Literal["a, b", "c"] = "a, b",\n    on: tuple[int, int] = (1, 2)\n) -> DataFrame'),
+            (row("len", 3, "def len(obj: Sized, /) -> int"), "def len(\n    obj: Sized,\n    /\n) -> int"),
+            (row("n_splits", 22, "int", doc="int([x]) -> integer"), "n_splits: int" + ("\n```\n---\nint([x]) -> integer" if PYREFLY else "")),
+            (row("w", None, "Unknown"), "w: Unknown"),
+            (row("KFold", 7, "<class 'KFold'>"), "class KFold"),
+            (row("predict", 2, predict, pyrefly=True), predict),
             (row("set_predict_request", 2, "def set_predict_request(\n    self: A,\n    **kwargs: Unknown\n) -> Unknown: ...", pyrefly=True), None),
-            (row("classes_", 5, "ndarray[Any, dtype[Any]]", pyrefly=True), "ndarray"),
+            (row("classes_", 5, "ndarray[Any, dtype[Any]]", pyrefly=True), "classes_: ndarray[Any, dtype[Any]]"),
+            (row("cross_val_score", 3, "(estimator: BaseEstimator) -> ndarray", pyrefly=True), "def cross_val_score(estimator: BaseEstimator) -> ndarray"),
             ({"label": "for", "kind": 14}, "")]
     body = json.dumps({"id": 1, "result": {"isIncomplete": True, "items": [item for item, _ in rows]}}).encode()
 
-    def labels(**options):
+    def shown(**options):
         items = json.loads(tidy(body, **options))["result"]["items"]
-        return [(i["label"], (i.get("labelDetails") or {}).get("description", "")) for i in items]
+        assert not any("detail" in i or (i.get("labelDetails") or {}).get("description") for i in items), "a right-hand column is left"
+        return [(i["label"], i.get("documentation", {}).get("value", "").removeprefix("```python\n").removesuffix("\n```")) for i in items]
 
     want = [(item["label"], expected) for item, expected in rows if expected is not None]
-    assert labels(real={"A": {"set_fit_request"}}) == want, labels(real={"A": {"set_fit_request"}})
-    assert [name for name, _ in labels()] == [item["label"] for item, _ in rows], labels()  # a class the table lacks
-    assert [name for name, _ in labels(drop=False, real={"A": set()})] == [item["label"] for item, _ in rows]
+    assert shown(real={"A": {"set_fit_request"}}) == want, shown(real={"A": {"set_fit_request"}})
+    assert [name for name, _ in shown()] == [item["label"] for item, _ in rows], shown()  # a class the table lacks
+    assert [name for name, _ in shown(drop=False, real={"A": set()})] == [item["label"] for item, _ in rows]
+    kinds = {i["label"]: i.get("kind") for i in json.loads(tidy(body))["result"]["items"]}
+    assert (kinds["n_splits"], kinds["w"], kinds["classes_"], kinds["split"], kinds["for"]) == (6, 6, 6, 2, 14), kinds
     assert json.loads(tidy(body))["result"]["isIncomplete"] is False
     assert json.loads(tidy(body, complete=False))["result"]["isIncomplete"] is True
     many = json.dumps({"id": 1, "result": {"isIncomplete": True, "items": [{"label": str(n)} for n in range(LIMIT)]}}).encode()
     assert json.loads(tidy(many))["result"]["isIncomplete"] is True
     assert turned_off("dropSetRequests", '{\n    "tyFilter.dropSetRequests": false,\n}')
     assert not turned_off("dropSetRequests", '{\n    // "tyFilter.dropSetRequests": false,\n    "tyFilter.dropSetRequests": true\n}')
-    documented = json.dumps({"id": 1, "result": {"items": [{"label": "n_splits", "kind": 22, "documentation": "int([x])"},
-                                                           {"label": "split", "kind": 2, "documentation": "Generate"}]}}).encode()
-    documented = json.loads(tidy(documented))["result"]["items"]
-    assert ["documentation" in item for item in documented] == [PYREFLY, True]
-    assert [item["kind"] for item in documented] == [22 if PYREFLY else 5, 2]
-    assert tidy(b"not json") == b"not json"
+    resolved = b'{"id":2,"result":{"label":"fit","kind":2,"sortText":"0"}}'  # pyrefly echoes the row VS Code asks about
+    assert tidy(resolved) == resolved and tidy(b"not json") == b"not json"
     assert real_setters().get("LogisticRegression") == {"set_fit_request", "set_score_request"}, "ty-filter-sklearn.json"
     sys.exit(print("ok"))
 
