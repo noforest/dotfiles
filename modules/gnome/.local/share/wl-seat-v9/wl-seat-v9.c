@@ -21,7 +21,33 @@
 #include <dlfcn.h>
 #include <stdarg.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
+
+/* Only ghostty needs this library. Left in the environment, LD_PRELOAD went
+ * to every shell and tmux server started from it, and each command they ran
+ * printed an ld.so error once `dot gnome-settings` had removed the library.
+ * ponytail: drops the whole variable, so another preloaded library stops at
+ * ghostty too; filter out this one's path if that ever matters.
+ *
+ * glibc hands its constructors the arguments of main(). unsetenv() alone is
+ * not enough: it may work on a copy of the environment, and a program that
+ * reads the envp of its main(), as bash does, would still see the variable. */
+__attribute__((constructor))
+static void
+keep_out_of_children(int argc, char **argv, char **envp)
+{
+    char **in, **out;
+
+    (void)argc;
+    (void)argv;
+    for (in = out = envp; envp && *in; in++)
+        if (strncmp(*in, "LD_PRELOAD=", 11) != 0)
+            *out++ = *in;
+    if (envp)
+        *out = NULL;
+    unsetenv("LD_PRELOAD");
+}
 
 struct wl_proxy;
 /* Only the head of the real struct is needed. */
