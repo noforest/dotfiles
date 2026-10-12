@@ -141,9 +141,13 @@
     // The venv of the home directory, offered as interpreter and notebook
     // kernel in every folder. Both are named in applyToAllProfiles below, and
     // such a setting is read from this file alone: the copy a profile holds is
-    // ignored, so without these two lines no profile sees the venv. "~" is
-    // expanded by both extensions, which keeps the user name out of the file.
-    "python.defaultInterpreterPath": "~/.venv/bin/python",
+    // ignored, so without these two lines no profile sees the venv. Neither
+    // line names the user. The interpreter path is read by two extensions that
+    // agree on ${env:HOME} only: Python Environments does not expand "~" there
+    // ("Could not resolve interpreter path" at every start) and the Python
+    // extension does not know ${userHome}. The search paths belong to Python
+    // Environments alone, which expands "~" in them and nothing else.
+    "python.defaultInterpreterPath": "${env:HOME}/.venv/bin/python",
     "python-envs.globalSearchPaths": ["~/.venv"],
     "workbench.settings.applyToAllProfiles": [
         "python.defaultInterpreterPath",
