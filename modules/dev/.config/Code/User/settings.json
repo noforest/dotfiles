@@ -20,7 +20,11 @@
     "notebook.markup.fontSize": 16,
     "jupyter.generateSVGPlots": true,
     "jupyter.themeMatplotlibPlots": false,
-    "editor.fontFamily": "Hack Nerd Font Mono",
+    // A list ending in monospace, not one name: Ubuntu has no Hack Nerd Font
+    // (fonts-hack ships plain "Hack"), and the notebook webview, unlike the
+    // editor, adds no fallback of its own. With the single name, inline code
+    // in markdown cells and the cell outputs came out in a serif font there.
+    "editor.fontFamily": "'Hack Nerd Font Mono', 'Hack', monospace",
     "extensions.ignoreRecommendations": true,
     "redhat.telemetry.enabled": false,
     "editor.stickyScroll.enabled": false,
