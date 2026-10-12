@@ -42,6 +42,16 @@ at all, comment out its "ty.path" or "pyrefly.lspPath" line.
 Everything else is passed through untouched, and what VS Code sends goes to
 the server directly. If a list cannot be edited it is passed through as it came.
 
+For ty the script also keeps an eye on the type stubs of pandas and
+scikit-learn, the folder ~/.config/ty/ty.toml gives to ty. Without them ty reads
+the code of both libraries, most of which has no types: nothing is suggested
+after `df["a"].` or `cross_val_score(...).`, and `clf.fit` is `Unknown`.
+`ty-filter.py --make-stubs` writes that folder from the stubs the Pylance
+extension ships, which needs it installed (disabled will do). When the folder
+is missing, or older than the Pylance installed, ty starts with a message in
+VS Code that gives the command, as long as ty.toml names the folder. See
+docs/vscode-python-ty.md in the dotfiles.
+
 `ty-filter.py --self-test` checks the editing without starting a server.
 `<python that has scikit-learn> ty-filter.py --make-table > ty-filter-sklearn.json`
 writes the table again, after scikit-learn gained classes. A stale table only
@@ -75,18 +85,73 @@ LIMIT = 900  # with auto-import ty stops near a thousand entries: such a list re
 TABLE = os.path.join(HERE, "ty-filter-sklearn.json")
 PYREFLY = os.path.basename(sys.argv[0]).startswith("pyrefly")
 BUNDLED = "meta.pyrefly-*/bin/pyrefly" if PYREFLY else "astral-sh.ty-*/bundled/libs/bin/ty"
+PYLANCE = "ms-python.vscode-pylance-*/dist/bundled/stubs"
+STUBS = os.path.expanduser("~/.local/share/ty-stubs")  # the `extra-paths` of ~/.config/ty/ty.toml
+STAMP = os.path.join(STUBS, "SOURCE")  # the Pylance the stubs were copied from
+MAKE_STUBS = os.path.join(HERE, "ty-filter.py") + " --make-stubs"
+
+
+def newest(pattern):
+    """The extension installed last, so that an update is picked up by itself."""
+    return max(glob.glob(os.path.expanduser("~/.vscode/extensions/" + pattern)), key=os.path.getctime, default=None)
+
+
+def version(stubs):
+    return stubs and stubs.split(os.sep)[-4]  # ms-python.vscode-pylance-2026.4.1
+
+
+def stubs_notice(made_from, pylance):
+    """What VS Code is told when ty starts with no stubs, or with stubs that an update of Pylance left behind."""
+    if not made_from:
+        return ("ty has no type stubs for pandas and scikit-learn, so it suggests less. "
+                f"Run {MAKE_STUBS} in a terminal, then restart ty. The Pylance extension must be installed, disabled will do.")
+    if pylance and pylance != made_from:
+        return (f"Pylance was updated: the stubs of ty come from {made_from}, {pylance} is installed. "
+                f"Run {MAKE_STUBS} in a terminal, then restart ty.")
+
+
+def with_attributes(text):
+    """A stub in which each class declares the parameters of its `__init__` as attributes.
+
+    scikit-learn keeps every one of them under its own name (`self.n_splits = n_splits`)
+    and its stubs only declare the methods: with them as they are, ty no longer
+    suggests `skf.n_splits`, which it finds when it reads the code.
+    """
+    import ast
+
+    lines, added = text.split("\n"), []
+    for cls in ast.walk(ast.parse(text)):
+        if not isinstance(cls, ast.ClassDef):
+            continue
+        declared = {getattr(node, "name", None) or getattr(getattr(node, "target", None), "id", None) for node in cls.body}
+        declared |= {target.id for node in cls.body if isinstance(node, ast.Assign) for target in node.targets if isinstance(target, ast.Name)}
+        for init in cls.body:
+            if isinstance(init, ast.FunctionDef) and init.name == "__init__":
+                above = min([init.lineno] + [decorator.lineno for decorator in init.decorator_list]) - 1
+                for param in init.args.posonlyargs + init.args.args[1:] + init.args.kwonlyargs:
+                    if param.arg not in declared:
+                        declared.add(param.arg)
+                        kind = ast.unparse(param.annotation) if param.annotation else "_Any"
+                        added.append((above, f"{' ' * init.col_offset}{param.arg}: {kind}"))
+    for at, line in sorted(added, reverse=True):
+        lines.insert(at, line)
+    return ("from typing import Any as _Any\n" if added else "") + "\n".join(lines)
 
 
 def turned_off(name, text):
     return bool(re.search(rf'^\s*"tyFilter\.{name}"\s*:\s*false\b', text, re.M))
 
 
-def options():
+def read(path):
     try:
-        with open(SETTINGS) as settings:
-            text = settings.read()
+        with open(os.path.expanduser(path)) as file:
+            return file.read()
     except OSError:
-        text = ""
+        return ""
+
+
+def options():
+    text = read(SETTINGS)
     return {"drop": not turned_off("dropSetRequests", text),
             "complete": not PYREFLY and not turned_off("completeLists", text)}
 
@@ -230,6 +295,13 @@ if sys.argv[1:] == ["--self-test"]:
     resolved = b'{"id":2,"result":{"label":"fit","kind":2,"sortText":"0"}}'  # pyrefly echoes the row VS Code asks about
     assert tidy(resolved) == resolved and tidy(b"not json") == b"not json"
     assert real_setters().get("LogisticRegression") == {"set_fit_request", "set_score_request"}, "ty-filter-sklearn.json"
+    stub = "class KFold(Base):\n    shuffle: bool\n    @overload\n    def __init__(self, n_splits: int = 5, *, shuffle=False, seed=None) -> None: ...\n"
+    assert with_attributes(stub).split("\n")[:5] == ["from typing import Any as _Any", "class KFold(Base):", "    shuffle: bool",
+                                                     "    n_splits: int", "    seed: _Any"], with_attributes(stub)
+    assert with_attributes("def f(): ...") == "def f(): ..."
+    assert version("/x/extensions/ms-python.vscode-pylance-2026.4.1/dist/bundled/stubs") == "ms-python.vscode-pylance-2026.4.1"
+    assert "--make-stubs" in stubs_notice(None, "pylance-2") and "pylance-1, pylance-2" in stubs_notice("pylance-1", "pylance-2")
+    assert stubs_notice("pylance-1", "pylance-1") is None and stubs_notice("pylance-1", None) is None  # Pylance removed: the stubs still serve
     sys.exit(print("ok"))
 
 if sys.argv[1:] == ["--make-table"]:
@@ -256,11 +328,36 @@ if sys.argv[1:] == ["--make-table"]:
               sys.stdout, indent=0)
     sys.exit()
 
-# The extension installed last, so that an update of the server is picked up by itself.
-REAL = max(glob.glob(os.path.expanduser("~/.vscode/extensions/" + BUNDLED)), key=os.path.getctime)
+if sys.argv[1:] == ["--make-stubs"]:
+    import shutil
+
+    pylance = newest(PYLANCE)
+    if not pylance:
+        sys.exit("The Pylance extension is not installed in VS Code. The stubs are copied from it, and it can stay disabled.")
+    shutil.rmtree(STUBS, ignore_errors=True)
+    for package in ("pandas", "sklearn"):
+        shutil.copytree(os.path.join(pylance, package), os.path.join(STUBS, package))
+    for path in glob.glob(os.path.join(STUBS, "sklearn", "**", "*.pyi"), recursive=True):
+        with open(path) as stub:
+            text = stub.read()
+        with open(path, "w") as stub:
+            stub.write(with_attributes(text))
+    with open(STAMP, "w") as stamp:  # last, so that stubs half written still count as missing
+        stamp.write(version(pylance))
+    sys.exit(print(f"pandas and scikit-learn stubs of {version(pylance)} written to {STUBS}. Restart ty to read them."))
+
+REAL = newest(BUNDLED)
 if sys.argv[1:2] != ["lsp" if PYREFLY else "server"]:
     os.execv(REAL, [REAL] + sys.argv[1:])
 
+
+def send(body):
+    out.write(b"Content-Length: %d\r\n\r\n" % len(body) + body)
+
+
+# No word of the stubs where ty is not given them.
+asked = not PYREFLY and re.search(r"^[^#\n]*ty-stubs", read("~/.config/ty/ty.toml"), re.M)
+notice = stubs_notice(read(STAMP).strip(), version(newest(PYLANCE))) if asked else None
 setters = real_setters()
 server = subprocess.Popen([REAL] + sys.argv[1:], stdout=subprocess.PIPE)
 signal.signal(signal.SIGTERM, lambda *_: server.terminate())
@@ -275,6 +372,9 @@ while True:
     body = server.stdout.read(length)
     if b'"sortText"' in body:
         body = tidy(body, real=setters, **options())
-    out.write(b"Content-Length: %d\r\n\r\n" % len(body) + body)
+    send(body)
+    if notice:  # once, behind the first words of the server: a warning that VS Code pops up
+        send(json.dumps({"jsonrpc": "2.0", "method": "window/showMessage", "params": {"type": 2, "message": notice}}).encode())
+        notice = None
     out.flush()
 sys.exit(server.wait())

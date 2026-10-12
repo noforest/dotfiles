@@ -1,0 +1,10 @@
+# Settings of ty for every project of this user, a project's own ty.toml or
+# pyproject.toml winning where both set the same thing (its `extra-paths` are
+# added to these).
+
+[environment]
+# Type stubs of pandas and scikit-learn, which ty reads instead of the code of
+# both libraries. The folder is not in the dotfiles: it is written by
+# `~/.config/Code/User/ty-filter.py --make-stubs`, and ty runs as before while
+# it does not exist. See docs/vscode-python-ty.md in the dotfiles.
+extra-paths = ["~/.local/share/ty-stubs"]
