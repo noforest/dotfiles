@@ -161,7 +161,7 @@
     // Extensions view. Back to plain Pylance: disable ty there, enable Pylance,
     // reload the window. The lines below then do nothing and can stay.
     "ty.completions.autoImport": false,
-    // ty and pyrefly both run behind a script that tidies the suggestion list
+    // NOTE: ty and pyrefly both run behind a script that tidies the suggestion list
     // (see its header). For the plain server, comment its line out: ty then
     // restarts by itself, pyrefly needs "Developer: Reload Window".
     "ty.path": ["${userHome}/.config/Code/User/ty-filter.py"],
@@ -172,6 +172,9 @@
     "tyFilter.dropSetRequests": true,
     // true lets VS Code narrow the list by itself while a word is typed, false
     // has it ask ty again at every key, as ty wants.
-    "tyFilter.completeLists": true
+    "tyFilter.completeLists": true,
+    // No second language server from the Python extension next to ty. Written
+    // by pyrefly when it is enabled, and Pylance sets it back to "Pylance".
+    "python.languageServer": "None"
 
 }
