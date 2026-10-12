@@ -138,6 +138,13 @@
 
     "workbench.iconTheme": "material-icon-theme",
     "network.meteredConnection": "off",
+    // The venv of the home directory, offered as interpreter and notebook
+    // kernel in every folder. Both are named in applyToAllProfiles below, and
+    // such a setting is read from this file alone: the copy a profile holds is
+    // ignored, so without these two lines no profile sees the venv. "~" is
+    // expanded by both extensions, which keeps the user name out of the file.
+    "python.defaultInterpreterPath": "~/.venv/bin/python",
+    "python-envs.globalSearchPaths": ["~/.venv"],
     "workbench.settings.applyToAllProfiles": [
         "python.defaultInterpreterPath",
         "python-envs.globalSearchPaths",
