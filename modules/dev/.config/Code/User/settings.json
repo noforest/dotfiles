@@ -142,17 +142,20 @@
 
     "workbench.iconTheme": "material-icon-theme",
     "network.meteredConnection": "off",
-    // The venv of the home directory, offered as interpreter and notebook
-    // kernel in every folder. Both are named in applyToAllProfiles below, and
-    // such a setting is read from this file alone: the copy a profile holds is
-    // ignored, so without these two lines no profile sees the venv. Neither
-    // line names the user. The interpreter path is read by two extensions that
-    // agree on ${env:HOME} only: Python Environments does not expand "~" there
-    // ("Could not resolve interpreter path" at every start) and the Python
-    // extension does not know ${userHome}. The search paths belong to Python
-    // Environments alone, which expands "~" in them and nothing else.
-    "python.defaultInterpreterPath": "${env:HOME}/.venv/bin/python",
-    "python-envs.globalSearchPaths": ["~/.venv"],
+    // The interpreter and notebook kernel a folder starts from: the venv of the
+    // home directory on a machine that has one, the system python on the
+    // others. This file is shared by all of them and the Python extension keeps
+    // a path that does not exist as the active interpreter, so the choice is
+    // made in ~/.zshenv, which exports VSCODE_PYTHON. The two extensions that
+    // read the path both expand ${env:...}, and neither falls back when the
+    // variable is missing: VS Code has to be started from a zsh.
+    // The search paths belong to Python Environments alone, which expands "~"
+    // in them. Both settings are named in applyToAllProfiles below, and such a
+    // setting is read from this file alone: the copy a profile holds is ignored.
+    "python.defaultInterpreterPath": "${env:VSCODE_PYTHON}",
+    "python-envs.globalSearchPaths": [
+        "~/.venv"
+    ],
     "workbench.settings.applyToAllProfiles": [
         "python.defaultInterpreterPath",
         "python-envs.globalSearchPaths",
@@ -179,7 +182,9 @@
     // NOTE: ty and pyrefly both run behind a script that tidies the suggestion list
     // (see its header). For the plain server, comment its line out: ty then
     // restarts by itself, pyrefly needs "Developer: Reload Window".
-    "ty.path": ["${userHome}/.config/Code/User/ty-filter.py"],
+    "ty.path": [
+        "${userHome}/.config/Code/User/ty-filter.py"
+    ],
     "pyrefly.lspPath": "~/.config/Code/User/pyrefly-filter.py",
     // Read by the script, not by VS Code (which greys them out as unknown):
     // true hides the set_*_request methods of scikit-learn that the class does
