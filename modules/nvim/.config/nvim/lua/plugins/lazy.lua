@@ -2182,6 +2182,13 @@ require("lazy").setup({
         "folke/persistence.nvim",
         event = "BufReadPre",
         opts = {},
+        -- tmux-resurrect starts nvim with this: its restore command is split on
+        -- spaces and evaluated, so it cannot carry a quoted lua call.
+        init = function()
+            vim.api.nvim_create_user_command("SessionRestore", function()
+                require("persistence").load()
+            end, { desc = "Restore the session of the current directory" })
+        end,
         -- stylua: ignore
         keys = {
             { "<leader>qs", function() require("persistence").load() end,                desc = "Restore Session" },
