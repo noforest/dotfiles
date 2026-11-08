@@ -39,6 +39,12 @@
         "vscodevim.vim": 1,
         "for56.vim-jupyter": 1
     },
+    // Vim Notebook next to VSCodeVim, on the local side: its manifest has no
+    // extensionKind, so over SSH it was looked for on the remote host, where
+    // it is not installed, and gd failed with "command not found".
+    "remote.extensionKind": {
+        "for56.vim-jupyter": ["ui"]
+    },
     "vim.useSystemClipboard": true,
     "vim.leader": "<space>",
     "vim.normalModeKeyBindingsNonRecursive": [
@@ -48,6 +54,8 @@
         { "before": ["g", "d"], "commands": ["vimNotebook.goToDefinition"] },
         { "before": ["<leader>", "g", "d"], "commands": ["vimNotebook.goToDefinition"] },
         { "before": ["<leader>", "g", "h"], "commands": ["editor.action.showHover"] },
+        // The error under the cursor, as nvim's <leader>dd: the mouse hover.
+        { "before": ["<leader>", "d", "d"], "commands": ["editor.action.showHover"] },
         // Move the line up/down, as in nvim (keymaps.lua)
         { "before": ["K"], "commands": ["editor.action.moveLinesUpAction"] },
         { "before": ["J"], "commands": ["editor.action.moveLinesDownAction"] }
