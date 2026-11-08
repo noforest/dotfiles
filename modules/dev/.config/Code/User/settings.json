@@ -203,6 +203,9 @@
     "tyFilter.completeLists": true,
     // No second language server from the Python extension next to ty. Written
     // by pyrefly when it is enabled, and Pylance sets it back to "Pylance".
-    "python.languageServer": "None"
+    "python.languageServer": "None",
+    "claudeCode.preferredLocation": "panel",
+    "python.createEnvironment.trigger": "off",
+    "chat.viewSessions.orientation": "stacked"
 
 }
