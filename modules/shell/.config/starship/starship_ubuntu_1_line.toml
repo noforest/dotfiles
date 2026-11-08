@@ -1,12 +1,23 @@
 # The stock Ubuntu prompt, user@host:path$, with the git branch and status
 # before the $ and the command duration on the right. For Ubuntu, see .zshrc.
 #
-#   user@host:~/dir  [main][!?]$                                 [9m25s]
+#   (.venv) user@host:~/dir  [main][!?]$                         [9m25s]
 
-format = '$username$hostname:$directory$git_branch$git_state$git_status$character'
+format = '${custom.venv}$username$hostname:$directory$git_branch$git_state$git_status$character'
 right_format = '$cmd_duration'
 
 add_newline = false
+
+# The name of an activated project venv, in front like activate's own (.venv),
+# which starship's prompt replaces. ~/.venv is left out: it is the default
+# environment of every shell (on PATH from ~/.zshrc.local), so showing it would
+# say nothing. The python module cannot compare paths, hence a custom module;
+# `when` costs one sh per prompt.
+[custom.venv]
+when = '[ -n "$VIRTUAL_ENV" ] && [ "$VIRTUAL_ENV" != "$HOME/.venv" ]'
+command = 'echo "${VIRTUAL_ENV##*/}"'
+shell = ['sh']
+format = '(\($output\) )'
 
 [username]
 show_always = true
