@@ -44,11 +44,11 @@ image_bound = [0, 0]
 [plugin]
 prepend_previewers = [
 	{ mime = "image/svg+xml", run = "magick" },
-	{ url = "*.{csv,tsv,json,parquet,txt,xlsx,db,duckdb}", run = "duckdb" },
+	{ url = "*.{csv,tsv,json,parquet,xlsx,db,duckdb}", run = "duckdb" },
 ]
 prepend_spotters = [
 	{ mime = "image/svg+xml", run = "magick" },
-	{ url = "*.{csv,tsv,json,parquet,txt,xlsx}", run = "duckdb", multi = false },
+	{ url = "*.{csv,tsv,json,parquet,xlsx}", run = "duckdb", multi = false },
 	{ url = "*/", run = "spot-rich" },  # directories need their own glob
 	{ url = "*", run = "spot-rich" },  # fallback, must stay last
 ]

@@ -56,6 +56,22 @@ adapting.
 `log --graph --oneline` alias of `.gitconfig`. To get the originals back,
 `cargo install git-graph`, and `make install` from the vimpager repository.
 
+## 1c. duckdb, for the yazi previews of tables
+
+yazi previews `csv`, `tsv`, `json`, `parquet`, `xlsx` and `db` files through the
+`duckdb` plugin, which runs the `duckdb` binary. It is not packaged here (Arch
+gets it from the AUR as `duckdb-bin`). Without it the plugin does not fall back:
+the preview of those files is a Lua error, `attempt to index a nil value`. Take
+the CLI from the GitHub releases and put it in `~/.local/bin`. Up to 1.x the asset
+was `duckdb_cli-linux-amd64.zip`; from 2.0 it is a tarball, so check the name on
+the release page and compare the SHA256 with the one GitHub shows next to it:
+
+```sh
+curl -fsSLO https://github.com/duckdb/duckdb/releases/download/v2.0.0/duckdb-cli-linux-amd64.tar.gz
+sha256sum duckdb-cli-linux-amd64.tar.gz   # c6507206baf7793c6013dbd82368469a45f20dc0e17a6f92f204602f652ed2bc
+tar xzf duckdb-cli-linux-amd64.tar.gz -C ~/.local/bin duckdb && rm duckdb-cli-linux-amd64.tar.gz
+```
+
 ## 2. Called by `.xinitrc`, so the session needs them
 
 | Tool | Where it is used | How to get it |
