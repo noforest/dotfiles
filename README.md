@@ -157,7 +157,8 @@ The bootstrap already made zsh the login shell, enabled the system services of t
 
 ```sh
 sudo usermod -aG docker "$USER"                    # plus vboxusers on the full profile
-pyenv install 3.11.11                              # the Python .zshrc puts on the PATH
+pyenv install 3.11.11                              # Arch: the Python .zshrc puts on the PATH
+pyenv install 3.12.11 && pyenv global 3.12.11      # Ubuntu: its python3 refuses pip (PEP 668)
 
 rclone config                                      # create the gdrive: remote, backup_gdrive.timer needs it
 systemctl --user enable --now pipewire pipewire-pulse wireplumber \
