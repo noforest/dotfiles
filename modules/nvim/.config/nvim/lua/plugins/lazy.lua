@@ -20,6 +20,22 @@ local function should_show_image()
     return ui and ui.width > 50 and ui.height > 40 -- Adjust these values to your needs
 end
 
+-- Snacks rebuilds every dashboard section on each update, that is on each
+-- WinResized, so on each <leader>e. The git diff section ran git diff --stat
+-- synchronously every time, about half a second in a repository with large
+-- files. It is now built once per directory and commit, the "r" key rebuilds it.
+local dashboard_diff = {}
+local function cached_diff_section(build)
+    return function()
+        local cwd = vim.fn.getcwd()
+        local key = cwd .. vim.fn.system({ "git", "-C", cwd, "rev-parse", "HEAD" })
+        if dashboard_diff.key ~= key then
+            dashboard_diff = { key = key, section = build() }
+        end
+        return dashboard_diff.section
+    end
+end
+
 
 local picker_state = {
     history = {},
@@ -2182,6 +2198,13 @@ require("lazy").setup({
         "folke/persistence.nvim",
         event = "BufReadPre",
         opts = {},
+        -- tmux-resurrect starts nvim with this: its restore command is split on
+        -- spaces and evaluated, so it cannot carry a quoted lua call.
+        init = function()
+            vim.api.nvim_create_user_command("SessionRestore", function()
+                require("persistence").load()
+            end, { desc = "Restore the session of the current directory" })
+        end,
         -- stylua: ignore
         keys = {
             { "<leader>qs", function() require("persistence").load() end,                desc = "Restore Session" },
@@ -2650,7 +2673,7 @@ require("lazy").setup({
                     keys = {
                         { icon = " ", key = "n", desc = "New File", action = ":ene | startinsert" },
                         { icon = " ", key = "d", desc = "CodeDiff HEAD~1", action = ":CodeDiff HEAD~1" },
-                        { icon = " ", key = "r", desc = "Refresh Git Diff HEAD~1", action = function() Snacks.dashboard.update() end },
+                        { icon = " ", key = "r", desc = "Refresh Git Diff HEAD~1", action = function() dashboard_diff = {}; Snacks.dashboard.update() end },
                         -- { icon = " ", key = "f", desc = "Find File", action = function() Snacks.picker.files() end },
                         -- { icon = " ", key = "g", desc = "Find Text", action = ":Telescope live_grep" },
                         -- { icon = " ", key = "r", desc = "Recent Files", action = function() Snacks.picker.oldfiles() end },
@@ -2688,7 +2711,7 @@ require("lazy").setup({
                     { section = "keys", gap = 1, padding = 1 },
                     -- { pane = 1, icon = " ", title = "Recent Files", section = "recent_files", indent = 2, padding = 1, limit = 5 },
 
-                    function()
+                    cached_diff_section(function()
                         -- Use getcwd() rather than Snacks.git.get_root(), which is unreliable on the first launch
                         local cwd = vim.fn.getcwd()
                         local git_root_handle = io.popen("git -C " .. cwd .. " rev-parse --show-toplevel 2>/dev/null")
@@ -2724,16 +2747,6 @@ require("lazy").setup({
                             }
                         end
 
-                        -- Count the changed files (without the summary line)
-                        local handle = io.popen("git -C " .. git_root .. " diff --stat HEAD~1 2>/dev/null | tail -n 1 | awk '{print $1}'")
-                        local raw = handle:read("*a")
-                        handle:close()
-                        local file_count = tonumber((raw:gsub("%s+", ""))) or 0
-
-                        local title = file_count == 1
-                        and "Git Diff HEAD~1 (1 file)"
-                        or ("Git Diff HEAD~1 (" .. file_count .. " files)")
-
                         -- local height = math.max(1, math.min(file_count+1, 7))
                         local height = 7
                         local visible = height - 1
@@ -2753,6 +2766,12 @@ require("lazy").setup({
                         while #dlines > 0 and dlines[#dlines] == "" do
                             table.remove(dlines)
                         end
+
+                        -- The summary line, uncoloured, gives the count of changed files
+                        local file_count = tonumber((dlines[#dlines] or ""):match("(%d+) files? changed")) or 0
+                        local title = file_count == 1
+                        and "Git Diff HEAD~1 (1 file)"
+                        or ("Git Diff HEAD~1 (" .. file_count .. " files)")
                         if #dlines > visible then
                             dlines = vim.list_slice(dlines, 1, visible)
                         end
@@ -2768,7 +2787,7 @@ require("lazy").setup({
                                 padding = 1,
                             },
                         }
-                    end,
+                    end),
 
 
                     { section = "startup" },

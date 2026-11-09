@@ -1,5 +1,11 @@
 [ -r "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 
+# The interpreter VS Code starts from, read by python.defaultInterpreterPath in
+# its settings.json: the venv of the home directory where there is one, the
+# system python elsewhere. ~/.zshenv.local, read next, can name another.
+export VSCODE_PYTHON=$HOME/.venv/bin/python
+[[ -x $VSCODE_PYTHON ]] || VSCODE_PYTHON=/usr/bin/python3
+
 [ -f "$HOME/.zshenv.local" ] && . "$HOME/.zshenv.local"
 
 # ghostty: drop the `cursor` shell-integration feature, which turns the block

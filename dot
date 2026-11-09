@@ -1102,6 +1102,9 @@ ghostty_key_repeat() {
     command -v cc >/dev/null || { warn "no C compiler, ghostty key repeat left alone ${D}(dot install, then dot gnome-settings)${N}"; return 0; }
     mkdir -p "$(dirname "$lib")" "$dir" &&
     cc -shared -fPIC -O2 -o "$lib.new" "$src" -ldl &&
+    # The library takes LD_PRELOAD out of the environment it is loaded in, so
+    # that nothing started from ghostty inherits it. Not installed otherwise.
+    LD_PRELOAD="$lib.new" sh -c '[ -z "$LD_PRELOAD" ]' &&
     mv "$lib.new" "$lib" &&
     printf '[Service]\nEnvironment=LD_PRELOAD=%s\n' "$lib" > "$dir/key-repeat.conf" &&
     systemctl --user daemon-reload &&

@@ -1,0 +1,9 @@
+# Arch only: `dot system-apply` deploys the arch scope nowhere else, and
+# ~/.config/ghostty/config includes this file when it exists.
+#
+# alacritty's line height. Same font and size in both (Roboto Mono Nerd Font
+# 12.5, Xft.dpi 100), and the same 10 px cell width, but alacritty makes the
+# cell 24 px high where ghostty makes it 22: 44 rows against 48 on a 1080p
+# screen. The cursor follows, as alacritty's fills the cell.
+adjust-cell-height = 2
+adjust-cursor-height = 2

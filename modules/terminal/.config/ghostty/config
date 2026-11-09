@@ -44,6 +44,9 @@
 
 font-family = Roboto Mono Nerd Font
 font-size=12.5
+# What only one distribution wants, the line height on Arch for instance. The
+# `?` makes the file optional: system/arch/ ships it, so Ubuntu has none.
+config-file = ?/etc/ghostty/arch
 # shell-integration-features = no-cursor,sudo,no-title
 cursor-style = block
 cursor-invert-fg-bg=true

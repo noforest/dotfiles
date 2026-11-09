@@ -1,0 +1,380 @@
+#!/usr/bin/python3
+"""ty or pyrefly for VS Code with the suggestion list of Pylance.
+
+Set as "ty.path" in settings.json, and under its other name, pyrefly-filter.py,
+as "pyrefly.lspPath". It runs the server bundled with the VS Code extension
+and edits one kind of message on its way back, the completion lists:
+  - a row is its icon and its name, nothing at its right. ty writes whole
+    signatures there, which truncates the names, and pyrefly writes one on
+    the selected row;
+  - the details panel opens on that signature, written as Python source in a
+    code block, hence in colours: `def split(` with a parameter per line,
+    `n_splits: int`, `class KFold`. Both servers send it as plain text, which
+    VS Code prints in grey, and ty words it `bound method A.split(X, y)`.
+    The docstring follows. The panel cuts a long line, it does not wrap it:
+    hence the parameter per line, a def for each overload where ty writes
+    them all on one line, and pyrefly's default values brought back next to
+    the types, which it aligns in a column far at the right;
+  - a value has the icon of a variable, the one Pylance gives an attribute.
+    pyrefly has another for a field, and ty picks from the type: bars for an
+    instance and, having no kind for it, a wrench for `Unknown`;
+  - for ty, a value loses its documentation: ty puts the one of its type
+    there, so an `int` attribute came with the manual of `int`. pyrefly gives
+    the attribute's own docstring, which is kept;
+  - scikit-learn's `set_*_request` methods are dropped where the class does
+    not have them. The library declares all ten for type checkers only, on
+    every estimator, and creates the real ones when it is imported. Which
+    class really has which is in ty-filter-sklearn.json, next to this script.
+    A class missing from it keeps all ten, so that no method that exists is
+    ever hidden;
+  - for ty, the list is declared complete. ty flags every list as incomplete,
+    so VS Code asks for a new one at each key, and ty answers nothing when the
+    cursor is no longer at the end of the word, which is where a request sent
+    one key earlier points. The popup then flickers or closes while a key is
+    held. A complete list is narrowed by VS Code itself, as with pyrefly.
+    Lists near ty's limit of a thousand entries are left as they are.
+
+The last two can be turned off in settings.json, `"tyFilter.dropSetRequests":
+false` and `"tyFilter.completeLists": false`. The file is read again for
+every list, so saving it is enough. For the plain server, without this script
+at all, comment out its "ty.path" or "pyrefly.lspPath" line.
+
+Everything else is passed through untouched, and what VS Code sends goes to
+the server directly. If a list cannot be edited it is passed through as it came.
+
+For ty the script also keeps an eye on the type stubs of pandas and
+scikit-learn, the folder ~/.config/ty/ty.toml gives to ty. Without them ty reads
+the code of both libraries, most of which has no types: nothing is suggested
+after `df["a"].` or `cross_val_score(...).`, and `clf.fit` is `Unknown`.
+`ty-filter.py --make-stubs` writes that folder from the stubs the Pylance
+extension ships, which needs it installed (disabled will do). When the folder
+is missing, or older than the Pylance installed, ty starts with a message in
+VS Code that gives the command, as long as ty.toml names the folder. See
+docs/vscode-python-ty.md in the dotfiles.
+
+`ty-filter.py --self-test` checks the editing without starting a server.
+`<python that has scikit-learn> ty-filter.py --make-table > ty-filter-sklearn.json`
+writes the table again, after scikit-learn gained classes. A stale table only
+leaves the ten methods on the classes it does not know.
+"""
+import functools
+import glob
+import json
+import os
+import re
+import signal
+import subprocess
+import sys
+
+# The ten scikit-learn declares, and no other name: `set_user_request` may be yours.
+PHANTOM = re.compile(r"set_(fit|partial_fit|predict|predict_proba|predict_log_proba|decision_function|score|split"
+                     r"|transform|inverse_transform)_request")
+# The class a method is shown on, as ty writes it, then as pyrefly does.
+OWNER = re.compile(r"^bound method (\w+)\.|^def \w+\(\s*self\s*:\s*(\w+)")
+BOUND = re.compile(r"^bound method .*?\.(?=\w+[\[(])")
+PADDING = re.compile(r"  +=")
+WIDTH = 32  # characters of a signature the details panel shows at the width VS Code opens it with
+# A string, skipped as a whole, or what opens, closes and separates the parameters of a signature.
+TOKEN = re.compile(r""""[^"]*"|'[^']*'|[()\[\]{},]""")
+# CompletionItemKind of a value: Field and Variable from pyrefly, Value and Struct from ty, which has none for Unknown.
+VALUES = {5, 6, 12, 22, None}
+HERE = os.path.dirname(os.path.abspath(__file__))
+# Not settings VS Code knows, hence read here, from the settings.json next to this script.
+SETTINGS = os.path.join(HERE, "settings.json")
+LIMIT = 900  # with auto-import ty stops near a thousand entries: such a list really is incomplete
+TABLE = os.path.join(HERE, "ty-filter-sklearn.json")
+PYREFLY = os.path.basename(sys.argv[0]).startswith("pyrefly")
+BUNDLED = "meta.pyrefly-*/bin/pyrefly" if PYREFLY else "astral-sh.ty-*/bundled/libs/bin/ty"
+PYLANCE = "ms-python.vscode-pylance-*/dist/bundled/stubs"
+STUBS = os.path.expanduser("~/.local/share/ty-stubs")  # the `extra-paths` of ~/.config/ty/ty.toml
+STAMP = os.path.join(STUBS, "SOURCE")  # the Pylance the stubs were copied from
+MAKE_STUBS = os.path.join(HERE, "ty-filter.py") + " --make-stubs"
+
+
+def newest(pattern):
+    """The extension installed last, so that an update is picked up by itself."""
+    return max(glob.glob(os.path.expanduser("~/.vscode/extensions/" + pattern)), key=os.path.getctime, default=None)
+
+
+def version(stubs):
+    return stubs and stubs.split(os.sep)[-4]  # ms-python.vscode-pylance-2026.4.1
+
+
+def stubs_notice(made_from, pylance):
+    """What VS Code is told when ty starts with no stubs, or with stubs that an update of Pylance left behind."""
+    if not made_from:
+        return ("ty has no type stubs for pandas and scikit-learn, so it suggests less. "
+                f"Run {MAKE_STUBS} in a terminal, then restart ty. The Pylance extension must be installed, disabled will do.")
+    if pylance and pylance != made_from:
+        return (f"Pylance was updated: the stubs of ty come from {made_from}, {pylance} is installed. "
+                f"Run {MAKE_STUBS} in a terminal, then restart ty.")
+
+
+def with_attributes(text):
+    """A stub in which each class declares the parameters of its `__init__` as attributes.
+
+    scikit-learn keeps every one of them under its own name (`self.n_splits = n_splits`)
+    and its stubs only declare the methods: with them as they are, ty no longer
+    suggests `skf.n_splits`, which it finds when it reads the code.
+    """
+    import ast
+
+    lines, added = text.split("\n"), []
+    for cls in ast.walk(ast.parse(text)):
+        if not isinstance(cls, ast.ClassDef):
+            continue
+        declared = {getattr(node, "name", None) or getattr(getattr(node, "target", None), "id", None) for node in cls.body}
+        declared |= {target.id for node in cls.body if isinstance(node, ast.Assign) for target in node.targets if isinstance(target, ast.Name)}
+        for init in cls.body:
+            if isinstance(init, ast.FunctionDef) and init.name == "__init__":
+                above = min([init.lineno] + [decorator.lineno for decorator in init.decorator_list]) - 1
+                for param in init.args.posonlyargs + init.args.args[1:] + init.args.kwonlyargs:
+                    if param.arg not in declared:
+                        declared.add(param.arg)
+                        kind = ast.unparse(param.annotation) if param.annotation else "_Any"
+                        added.append((above, f"{' ' * init.col_offset}{param.arg}: {kind}"))
+    for at, line in sorted(added, reverse=True):
+        lines.insert(at, line)
+    return ("from typing import Any as _Any\n" if added else "") + "\n".join(lines)
+
+
+def turned_off(name, text):
+    return bool(re.search(rf'^\s*"tyFilter\.{name}"\s*:\s*false\b', text, re.M))
+
+
+def read(path):
+    try:
+        with open(os.path.expanduser(path)) as file:
+            return file.read()
+    except OSError:
+        return ""
+
+
+def options():
+    text = read(SETTINGS)
+    return {"drop": not turned_off("dropSetRequests", text),
+            "complete": not PYREFLY and not turned_off("completeLists", text)}
+
+
+def real_setters():
+    try:
+        with open(TABLE) as table:
+            return {name: {f"set_{method}_request" for method in methods.split()}
+                    for name, methods in json.load(table)["classes"].items()}
+    except (OSError, ValueError, KeyError):
+        return {}
+
+
+def inside(text, start):
+    """What the commas separate inside the bracket opening at `start`, and where that bracket closes."""
+    depth, cuts = 0, [start]
+    for found in TOKEN.finditer(text, start):
+        char = found[0]
+        if char in "([{":
+            depth += 1
+        elif char in ")]}":
+            depth -= 1
+            if not depth:
+                cuts.append(found.start())
+                return [text[a + 1:b].strip() for a, b in zip(cuts, cuts[1:])], found.start()
+        elif char == "," and depth == 1:
+            cuts.append(found.start())
+    return [], start
+
+
+def one_per_line(text):
+    """`def f(a, b) -> c` with each parameter on its own line, as Pylance and pyrefly lay it out."""
+    start = text.find("(")
+    params, end = inside(text, start) if start > 0 else ([], 0)
+    if params in ([], [""]) or len(params) == 1 and len(text) <= WIDTH:
+        return text
+    return text[:start + 1] + "\n    " + ",\n    ".join(params) + "\n" + text[end:]
+
+
+# numpy alone has 440 KB of overloads, 50 ms to lay out: paid once, the lists that follow hold the same signatures.
+@functools.lru_cache(maxsize=4096)
+def signature(label, kind, text):
+    """What the server tells of a completion, as the Python source Pylance shows for it."""
+    text = text.strip()
+    if text.startswith("Overload["):  # ty: `Overload[(a) -> b, [T](a: T) -> T]`, a def for each as Pylance and pyrefly show
+        return "\n\n".join(one_per_line(f"def {label}{each}") if each[:1] in ("(", "[") else each for each in inside(text, 8)[0]) or text
+    if kind in VALUES:
+        return f"{label}: {text}"
+    text = re.sub(r"^<class '(.+)'>$", r"class \1", BOUND.sub("def ", text))  # the wording of ty
+    if text.startswith("("):  # pyrefly, for a function of which it has the type only
+        text = f"def {label}{text}"
+    if "\n" in text:  # pyrefly aligns the default values in a column, far out of the panel when one type is long
+        return PADDING.sub(" =", text)
+    return one_per_line(text) if text.startswith("def ") else text
+
+
+def tidy(body, drop=True, real={}, complete=True):
+    try:
+        message = json.loads(body)
+        result = message["result"]
+        items = result["items"] if isinstance(result, dict) else result
+        kept = []
+        for item in items:
+            described = (item.get("labelDetails") or {}).pop("description", None)
+            text = item.pop("detail", None) or described or ""
+            if drop and PHANTOM.fullmatch(item["label"]):
+                owner = OWNER.match(text)
+                owner = owner and (owner[1] or owner[2])
+                if owner in real and item["label"] not in real[owner]:
+                    continue
+            kind = item.get("kind")
+            if kind in VALUES:
+                item["kind"] = 6  # Variable
+                if not PYREFLY:
+                    item.pop("documentation", None)
+            if text:
+                doc = item.get("documentation")
+                doc = doc.get("value") if isinstance(doc, dict) else doc
+                item["documentation"] = {"kind": "markdown", "value": f"```python\n{signature(item['label'], kind, text)}\n```"
+                                                                      + (f"\n---\n{doc}" if doc else "")}
+            kept.append(item)
+        if isinstance(result, dict):
+            result["items"] = kept
+            if complete and len(items) < LIMIT:
+                result["isIncomplete"] = False
+        else:
+            message["result"] = kept
+        return json.dumps(message, separators=(",", ":")).encode()
+    except Exception:
+        return body
+
+
+if sys.argv[1:] == ["--self-test"]:
+    def row(name, kind, text, doc=None, pyrefly=False):
+        return {"label": name, "kind": kind, **({"detail": text} if pyrefly else {"detail": text, "labelDetails": {"description": text}}),
+                **({"documentation": {"kind": "markdown", "value": doc}} if doc else {})}
+
+    predict = "def predict(\n    self: A,\n    X: ndarray\n) -> ndarray: ..."
+    rows = [(row("split", 2, "bound method StratifiedKFold.split(X, y, groups=None) -> Unknown", doc="Generate indices."),
+             "def split(\n    X,\n    y,\n    groups=None\n) -> Unknown\n```\n---\nGenerate indices."),
+            (row("set_fit_request", 2, "bound method A.set_fit_request(**kwargs) -> Unknown"), "def set_fit_request(\n    **kwargs\n) -> Unknown"),
+            (row("set_score_request", 2, "bound method A.set_score_request(**kwargs) -> Unknown"), None),
+            (row("set_user_request", 2, "bound method A.set_user_request(user) -> None"), "def set_user_request(\n    user\n) -> None"),
+            (row("fit", 2, "bound method A.fit(X) -> A"), "def fit(X) -> A"),
+            (row("merge", 2, 'bound method DataFrame.merge(how: Literal["a, b", "c"] = "a, b", on: tuple[int, int] = (1, 2)) -> DataFrame'),
+             'def merge(\n    how: Literal["a, b", "c"] = "a, b",\n    on: tuple[int, int] = (1, 2)\n) -> DataFrame'),
+            (row("len", 3, "def len(obj: Sized, /) -> int"), "def len(\n    obj: Sized,\n    /\n) -> int"),
+            (row("kind", 2, "bound method <class 'ArrowDtype'>.construct_from_string(string: str) -> ArrowDtype"),
+             "def construct_from_string(\n    string: str\n) -> ArrowDtype"),
+            (row("concat", 3, 'Overload[[T](objs: Iterable[T], *, axis: Literal[0, "index"] = ...) -> T, (objs: None) -> None]', doc="Concatenate."),
+             'def concat[T](\n    objs: Iterable[T],\n    *,\n    axis: Literal[0, "index"] = ...\n) -> T\n\ndef concat(objs: None) -> None\n```\n---\nConcatenate.'),
+            (row("mean", 3, "def mean(\n    a   : int,\n    axis: None           = None\n) -> Any: ...", pyrefly=True),
+             "def mean(\n    a   : int,\n    axis: None = None\n) -> Any: ..."),
+            (row("n_splits", 22, "int", doc="int([x]) -> integer"), "n_splits: int" + ("\n```\n---\nint([x]) -> integer" if PYREFLY else "")),
+            (row("w", None, "Unknown"), "w: Unknown"),
+            (row("KFold", 7, "<class 'KFold'>"), "class KFold"),
+            (row("predict", 2, predict, pyrefly=True), predict),
+            (row("set_predict_request", 2, "def set_predict_request(\n    self: A,\n    **kwargs: Unknown\n) -> Unknown: ...", pyrefly=True), None),
+            (row("classes_", 5, "ndarray[Any, dtype[Any]]", pyrefly=True), "classes_: ndarray[Any, dtype[Any]]"),
+            (row("cross_val_score", 3, "(estimator: BaseEstimator) -> ndarray", pyrefly=True), "def cross_val_score(\n    estimator: BaseEstimator\n) -> ndarray"),
+            ({"label": "for", "kind": 14}, "")]
+    body = json.dumps({"id": 1, "result": {"isIncomplete": True, "items": [item for item, _ in rows]}}).encode()
+
+    def shown(**options):
+        items = json.loads(tidy(body, **options))["result"]["items"]
+        assert not any("detail" in i or (i.get("labelDetails") or {}).get("description") for i in items), "a right-hand column is left"
+        return [(i["label"], i.get("documentation", {}).get("value", "").removeprefix("```python\n").removesuffix("\n```")) for i in items]
+
+    want = [(item["label"], expected) for item, expected in rows if expected is not None]
+    assert shown(real={"A": {"set_fit_request"}}) == want, shown(real={"A": {"set_fit_request"}})
+    assert [name for name, _ in shown()] == [item["label"] for item, _ in rows], shown()  # a class the table lacks
+    assert [name for name, _ in shown(drop=False, real={"A": set()})] == [item["label"] for item, _ in rows]
+    kinds = {i["label"]: i.get("kind") for i in json.loads(tidy(body))["result"]["items"]}
+    assert (kinds["n_splits"], kinds["w"], kinds["classes_"], kinds["split"], kinds["for"]) == (6, 6, 6, 2, 14), kinds
+    assert json.loads(tidy(body))["result"]["isIncomplete"] is False
+    assert json.loads(tidy(body, complete=False))["result"]["isIncomplete"] is True
+    many = json.dumps({"id": 1, "result": {"isIncomplete": True, "items": [{"label": str(n)} for n in range(LIMIT)]}}).encode()
+    assert json.loads(tidy(many))["result"]["isIncomplete"] is True
+    assert turned_off("dropSetRequests", '{\n    "tyFilter.dropSetRequests": false,\n}')
+    assert not turned_off("dropSetRequests", '{\n    // "tyFilter.dropSetRequests": false,\n    "tyFilter.dropSetRequests": true\n}')
+    resolved = b'{"id":2,"result":{"label":"fit","kind":2,"sortText":"0"}}'  # pyrefly echoes the row VS Code asks about
+    assert tidy(resolved) == resolved and tidy(b"not json") == b"not json"
+    assert real_setters().get("LogisticRegression") == {"set_fit_request", "set_score_request"}, "ty-filter-sklearn.json"
+    stub = "class KFold(Base):\n    shuffle: bool\n    @overload\n    def __init__(self, n_splits: int = 5, *, shuffle=False, seed=None) -> None: ...\n"
+    assert with_attributes(stub).split("\n")[:5] == ["from typing import Any as _Any", "class KFold(Base):", "    shuffle: bool",
+                                                     "    n_splits: int", "    seed: _Any"], with_attributes(stub)
+    assert with_attributes("def f(): ...") == "def f(): ..."
+    assert version("/x/extensions/ms-python.vscode-pylance-2026.4.1/dist/bundled/stubs") == "ms-python.vscode-pylance-2026.4.1"
+    assert "--make-stubs" in stubs_notice(None, "pylance-2") and "pylance-1, pylance-2" in stubs_notice("pylance-1", "pylance-2")
+    assert stubs_notice("pylance-1", "pylance-1") is None and stubs_notice("pylance-1", None) is None  # Pylance removed: the stubs still serve
+    sys.exit(print("ok"))
+
+if sys.argv[1:] == ["--make-table"]:
+    import importlib
+    import inspect
+    import pkgutil
+    import warnings
+
+    import sklearn
+
+    warnings.simplefilter("ignore")
+    classes = {}
+    for found in pkgutil.walk_packages(sklearn.__path__, "sklearn."):
+        if re.search(r"\.tests(\.|$)|conftest|_build_utils|externals", found.name):
+            continue
+        try:
+            module = importlib.import_module(found.name)
+        except Exception:
+            continue
+        for name, cls in vars(module).items():
+            if inspect.isclass(cls) and cls.__module__.startswith("sklearn.") and hasattr(cls, "get_metadata_routing"):
+                classes.setdefault(name, set()).update(a[4:-8] for a in dir(cls) if PHANTOM.fullmatch(a))
+    json.dump({"scikit-learn": sklearn.__version__, "classes": {k: " ".join(sorted(v)) for k, v in sorted(classes.items())}},
+              sys.stdout, indent=0)
+    sys.exit()
+
+if sys.argv[1:] == ["--make-stubs"]:
+    import shutil
+
+    pylance = newest(PYLANCE)
+    if not pylance:
+        sys.exit("The Pylance extension is not installed in VS Code. The stubs are copied from it, and it can stay disabled.")
+    shutil.rmtree(STUBS, ignore_errors=True)
+    for package in ("pandas", "sklearn"):
+        shutil.copytree(os.path.join(pylance, package), os.path.join(STUBS, package))
+    for path in glob.glob(os.path.join(STUBS, "sklearn", "**", "*.pyi"), recursive=True):
+        with open(path) as stub:
+            text = stub.read()
+        with open(path, "w") as stub:
+            stub.write(with_attributes(text))
+    with open(STAMP, "w") as stamp:  # last, so that stubs half written still count as missing
+        stamp.write(version(pylance))
+    sys.exit(print(f"pandas and scikit-learn stubs of {version(pylance)} written to {STUBS}. Restart ty to read them."))
+
+REAL = newest(BUNDLED)
+if sys.argv[1:2] != ["lsp" if PYREFLY else "server"]:
+    os.execv(REAL, [REAL] + sys.argv[1:])
+
+
+def send(body):
+    out.write(b"Content-Length: %d\r\n\r\n" % len(body) + body)
+
+
+# No word of the stubs where ty is not given them.
+asked = not PYREFLY and re.search(r"^[^#\n]*ty-stubs", read("~/.config/ty/ty.toml"), re.M)
+notice = stubs_notice(read(STAMP).strip(), version(newest(PYLANCE))) if asked else None
+setters = real_setters()
+server = subprocess.Popen([REAL] + sys.argv[1:], stdout=subprocess.PIPE)
+signal.signal(signal.SIGTERM, lambda *_: server.terminate())
+out = sys.stdout.buffer
+while True:
+    length = 0
+    while (line := server.stdout.readline()) not in (b"\r\n", b""):
+        if line.lower().startswith(b"content-length"):
+            length = int(line.split(b":")[1])
+    if not length:
+        break
+    body = server.stdout.read(length)
+    if b'"sortText"' in body:
+        body = tidy(body, real=setters, **options())
+    send(body)
+    if notice:  # once, behind the first words of the server: a warning that VS Code pops up
+        send(json.dumps({"jsonrpc": "2.0", "method": "window/showMessage", "params": {"type": 2, "message": notice}}).encode())
+        notice = None
+    out.flush()
+sys.exit(server.wait())

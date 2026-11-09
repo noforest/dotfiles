@@ -52,3 +52,27 @@ require("custom-shell"):setup({
 -- undo.yazi records file operations from yazi's own DDS events. Without this
 -- call nothing is recorded and `u` has an empty journal to work from.
 require("undo"):setup()
+
+-- Under tmux the preview of the file yazi opens on is sometimes never drawn,
+-- about one start in two with ghostty: an image is there as soon as the cursor
+-- moves, and always there without tmux. Whatever loses that first image at
+-- startup, asking for the preview once more shortly after brings it back.
+-- 0.15 s is the shortest wait that never missed: 8 starts of 8, against 5 of 8
+-- at 0.05 s and 3 of 8 with no wait at all.
+-- Not on Ubuntu, which keeps yazi's own startup.
+local function ubuntu()
+	local f = io.open("/etc/os-release")
+	if not f then
+		return false
+	end
+	local s = "\n" .. f:read("a")
+	f:close()
+	return s:find("\nID=ubuntu\n", 1, true) ~= nil
+end
+
+if os.getenv("TMUX") and not ubuntu() then
+	ya.async(function()
+		ya.sleep(0.15)
+		ya.emit("peek", { force = true })
+	end)
+end
