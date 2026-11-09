@@ -39,6 +39,8 @@ wmctrl
 # Screenshots
 maim
 scrot
+# Screen recording (Super+² in dwm)
+gpu-screen-recorder-ui
 # Terminal and display
 alacritty
 ghostty

@@ -284,6 +284,9 @@ static const Key keys[] = {
     {MODKEY, XK_e, spawn, SHCMD("thunar")},
     {MODKEY | ShiftMask, XK_l, spawn, SHCMD("xset s activate")},
     {MODKEY, XK_r, spawn, SHCMD("screen_menu")}, // r comme reload screen
+    // screen recorder overlay: start gsr-ui on first press, toggle it after
+    {MODKEY, XK_twosuperior, spawn,
+     SHCMD("pgrep -x gsr-ui >/dev/null && gsr-ui-cli toggle-show || gsr-ui launch-show")},
 
 };
 
