@@ -206,6 +206,16 @@
     "python.languageServer": "None",
     "claudeCode.preferredLocation": "panel",
     "python.createEnvironment.trigger": "off",
+    // Path Intellisense: completes paths inside strings ("data/..."), which
+    // no Python language server does. Over SSH it reads the remote file
+    // system, so it must run on the host: installed there at each first
+    // connection. A host already known needs "Install in SSH" once.
+    "remote.SSH.defaultExtensions": ["christian-kohler.path-intellisense"],
+    // Paths resolve from the open file by default (src/data/...). Project
+    // scripts resolve them from the root, so "data" points there.
+    "path-intellisense.mappings": {
+        "data": "${workspaceFolder}/data"
+    },
     "chat.viewSessions.orientation": "stacked"
 
 }
