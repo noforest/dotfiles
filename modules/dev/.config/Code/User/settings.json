@@ -150,16 +150,6 @@
 
     "workbench.iconTheme": "material-icon-theme",
     "network.meteredConnection": "off",
-    // The interpreter and notebook kernel a folder starts from: the venv of the
-    // home directory on a machine that has one, the system python on the
-    // others. This file is shared by all of them and the Python extension keeps
-    // a path that does not exist as the active interpreter, so the choice is
-    // made in ~/.zshenv, which exports VSCODE_PYTHON. The two extensions that
-    // read the path both expand ${env:...}, and neither falls back when the
-    // variable is missing: VS Code has to be started from a zsh.
-    // The search paths belong to Python Environments alone, which expands "~"
-    // in them. Both settings are named in applyToAllProfiles below, and such a
-    // setting is read from this file alone: the copy a profile holds is ignored.
     "python.defaultInterpreterPath": "${env:VSCODE_PYTHON}",
     "python-envs.globalSearchPaths": [
         "~/.venv"
