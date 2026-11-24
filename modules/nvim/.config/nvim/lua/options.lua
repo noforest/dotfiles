@@ -256,3 +256,15 @@ if exists('$TMUX')
 --     desc = "Marks Rust files as modified when opened"
 -- })
 
+
+-- Files nvim cannot show go to the desktop's default app (xdg-open, so okular
+-- for a PDF, qimgv for an image), whether they come from neo-tree, a picker or
+-- :e. The empty buffer left behind is wiped.
+vim.api.nvim_create_autocmd("BufReadCmd", {
+    pattern = { "*.pdf", "*.png", "*.jpg", "*.jpeg", "*.gif", "*.webp", "*.bmp", "*.tiff" },
+    callback = function(ev)
+        vim.ui.open(ev.match)
+        vim.schedule(function() pcall(vim.api.nvim_buf_delete, ev.buf, { force = true }) end)
+    end,
+    desc = "Opens PDFs and images in an external viewer",
+})
