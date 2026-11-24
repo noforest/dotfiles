@@ -206,6 +206,11 @@
     "path-intellisense.mappings": {
         "data": "${workspaceFolder}/data"
     },
-    "chat.viewSessions.orientation": "stacked"
+    "chat.viewSessions.orientation": "stacked",
+    "explorer.confirmDragAndDrop": false,
+    "jupyter.widgetScriptSources": [
+        "jsdelivr.com",
+        "unpkg.com"
+    ]
 
 }
